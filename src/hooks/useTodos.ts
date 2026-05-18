@@ -7,55 +7,147 @@ import {
   onSnapshot,
   query,
   Timestamp,
+  type FirestoreError,
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
 
-export const useTodos = () => {
+const parseTimestamp = (value: unknown): Date => {
+  if (value instanceof Timestamp) {
+    return value.toDate();
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (value == null) {
+    console.warn('parseTimestamp received a missing timestamp value; falling back to Unix epoch.');
+  } else {
+    console.warn('parseTimestamp received an unsupported timestamp value; falling back to Unix epoch.', value);
+  }
+
+  return new Date(0);
+};
+
+const isFirestoreError = (error: unknown): error is FirestoreError => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  );
+};
+
+const getFirestoreErrorMessage = (error: unknown): string => {
+  const firestoreError = isFirestoreError(error) ? error : undefined;
+  const message = firestoreError?.message ?? '';
+
+  if (
+    firestoreError?.code === 'permission-denied' &&
+    (message.includes('Cloud Firestore API') ||
+      message.includes('firestore.googleapis.com') ||
+      message.includes('SERVICE_DISABLED'))
+  ) {
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'your-project-id';
+    return `Cloud Firestore API is disabled for project ${projectId}. Enable Firestore API in Google Cloud Console, then retry in a few minutes.`;
+  }
+
+  if (firestoreError?.code === 'permission-denied') {
+    return 'Access denied by Firestore rules. Verify your Firestore Security Rules for authenticated users.';
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unexpected Firestore error';
+};
+
+export const useTodos = (userId: string | null) => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(Boolean(auth.currentUser));
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const user = auth.currentUser;
-
-    if (!user) {
+    if (!userId) {
+      setTodos([]);
+      setError(null);
+      setLoading(false);
       return;
     }
 
-    const q = query(collection(db, 'todos'), where('userId', '==', user.uid));
+    setLoading(true);
+    setError(null);
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const nextTodos = snapshot.docs.map((item) => ({
-          ...(item.data() as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
-          id: item.id,
-          createdAt: (item.data().createdAt as Timestamp).toDate(),
-          updatedAt: (item.data().updatedAt as Timestamp).toDate(),
-        }));
-
-        setTodos(nextTodos);
+    let unsubscribeSnapshot: (() => void) | null = null;
+    let hasSnapshotResponse = false;
+    const snapshotTimeout = window.setTimeout(() => {
+      if (!hasSnapshotResponse) {
         setLoading(false);
-      },
-      (snapshotError) => {
-        setError(snapshotError.message);
-        setLoading(false);
+        setError('Timed out while loading todos. Firestore may be unavailable or blocked by project configuration.');
       }
-    );
+    }, 10000);
 
-    return () => unsubscribe();
-  }, []);
+    try {
+      const q = query(collection(db, 'todos'), where('userId', '==', userId));
+
+      unsubscribeSnapshot = onSnapshot(
+        q,
+        (snapshot) => {
+          hasSnapshotResponse = true;
+          window.clearTimeout(snapshotTimeout);
+
+          try {
+            const nextTodos = snapshot.docs.map((item) => {
+              const data = item.data();
+
+              return {
+                ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
+                id: item.id,
+                createdAt: parseTimestamp(data.createdAt),
+                updatedAt: parseTimestamp(data.updatedAt),
+              };
+            });
+
+            setTodos(nextTodos);
+          } catch (parseError) {
+            setError(parseError instanceof Error ? parseError.message : 'Failed to parse todos');
+          } finally {
+            setLoading(false);
+          }
+        },
+        (snapshotError) => {
+          hasSnapshotResponse = true;
+          window.clearTimeout(snapshotTimeout);
+          setError(getFirestoreErrorMessage(snapshotError));
+          setLoading(false);
+        }
+      );
+    } catch (subscribeError) {
+      window.clearTimeout(snapshotTimeout);
+      setError(getFirestoreErrorMessage(subscribeError));
+      setLoading(false);
+    }
+
+    return () => {
+      window.clearTimeout(snapshotTimeout);
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+    };
+  }, [userId]);
 
   const addTodo = async (todo: Omit<TodoInput, 'userId'>) => {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User must be authenticated');
+    if (!userId) throw new Error('User must be authenticated');
 
     const docRef = await addDoc(collection(db, 'todos'), {
       ...todo,
-      userId: user.uid,
+      userId,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });

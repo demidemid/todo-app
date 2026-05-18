@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import type { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User,
@@ -12,9 +14,32 @@ interface LoginProps {
 }
 
 const getErrorMessage = (error: unknown) => {
+  const firebaseError = error as FirebaseError;
+
+  if (firebaseError?.code === 'auth/configuration-not-found') {
+    return 'Firebase Authentication is not configured for this project. Open Firebase Console -> Authentication -> Sign-in method and enable Email/Password.';
+  }
+
+  if (firebaseError?.code === 'auth/operation-not-allowed') {
+    return 'Email/password sign-in is disabled. Enable Email/Password in Firebase Console -> Authentication -> Sign-in method.';
+  }
+
+  if (firebaseError?.code === 'auth/invalid-credential') {
+    return 'Invalid email or password. Check your credentials, or reset password if you already have an account.';
+  }
+
+  if (firebaseError?.code === 'auth/invalid-email') {
+    return 'Invalid email format. Please enter a valid email address.';
+  }
+
+  if (firebaseError?.code === 'auth/user-not-found') {
+    return 'Invalid email or password. Check your credentials, or reset password if you already have an account.';
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
+
   return 'Unexpected auth error';
 };
 
@@ -23,23 +48,45 @@ export const Login = ({ user }: LoginProps) => {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setLoading(true);
+
+    const normalizedEmail = email.trim().toLowerCase();
 
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, normalizedEmail, password);
       }
     } catch (err: unknown) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    setError('');
+    setInfo('');
+
+    if (!normalizedEmail) {
+      setError('Enter your email first, then click Forgot password.');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      setInfo('Password reset email sent. Check your inbox and spam folder.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -107,6 +154,12 @@ export const Login = ({ user }: LoginProps) => {
           </p>
         )}
 
+        {info && (
+          <p className="mb-4 rounded-lg border border-emerald-300/30 bg-emerald-400/10 p-2 text-sm text-emerald-200">
+            {info}
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={loading}
@@ -122,6 +175,16 @@ export const Login = ({ user }: LoginProps) => {
         >
           {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
         </button>
+
+        {!isSignUp && (
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            className="mt-4 block w-full text-center text-xs font-medium text-cyan-200 underline decoration-cyan-200/70 underline-offset-4 transition hover:text-cyan-100"
+          >
+            Forgot password?
+          </button>
+        )}
       </form>
     </div>
   );
