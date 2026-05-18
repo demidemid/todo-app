@@ -32,20 +32,50 @@ const parseTimestamp = (value: unknown): Date => {
   return new Date(0);
 };
 
-const parseStatus = (status: unknown): TodoStatus => {
+const parseStatus = (status: unknown, completed?: unknown): TodoStatus => {
   if (status === 'todo' || status === 'in_progress' || status === 'done') {
     return status;
   }
 
-  throw new Error('Invalid todo status in Firestore document');
+  if (typeof completed === 'boolean') {
+    console.warn('parseStatus received a missing or unsupported status value; using legacy completed fallback.', {
+      status,
+      completed,
+    });
+    return completed ? 'done' : 'todo';
+  }
+
+  if (status == null) {
+    console.warn('parseStatus received a missing status value; falling back to "todo".');
+  } else {
+    console.warn('parseStatus received an unsupported status value; falling back to "todo".', status);
+  }
+
+  return 'todo';
 };
 
-const parseWeight = (weight: unknown): number => {
+const parseWeight = (weight: unknown, createdAt?: unknown): number => {
   if (typeof weight === 'number' && Number.isFinite(weight)) {
     return weight;
   }
 
-  throw new Error('Invalid todo weight in Firestore document');
+  if (createdAt != null) {
+    const fallbackWeight = parseTimestamp(createdAt).getTime();
+    console.warn('parseWeight received a missing or unsupported weight value; using createdAt fallback.', {
+      weight,
+      createdAt,
+      fallbackWeight,
+    });
+    return fallbackWeight;
+  }
+
+  if (weight == null) {
+    console.warn('parseWeight received a missing weight value; falling back to 0.');
+  } else {
+    console.warn('parseWeight received an unsupported weight value; falling back to 0.', weight);
+  }
+
+  return 0;
 };
 
 const isFirestoreError = (error: unknown): error is FirestoreError => {
