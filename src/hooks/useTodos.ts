@@ -11,7 +11,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
 
 const parseTimestamp = (value: unknown): Date => {
@@ -143,12 +143,11 @@ export const useTodos = (userId: string | null) => {
   }, [userId]);
 
   const addTodo = async (todo: Omit<TodoInput, 'userId'>) => {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User must be authenticated');
+    if (!userId) throw new Error('User must be authenticated');
 
     const docRef = await addDoc(collection(db, 'todos'), {
       ...todo,
-      userId: user.uid,
+      userId,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
