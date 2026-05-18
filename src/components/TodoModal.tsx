@@ -169,23 +169,25 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         {/* Правая колонка: комментарии */}
         <div className="w-full md:w-80 shrink-0 border-l border-white/10 pl-0 md:pl-6 mt-8 md:mt-0">
           <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>
-          <form onSubmit={handleAddComment} className="mb-4 flex gap-2">
-            <input
-              type="text"
+          <form onSubmit={handleAddComment} className="mb-4 flex flex-col gap-2">
+            <textarea
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               placeholder="Add a comment..."
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+              rows={4}
+              className="flex-1 resize-none rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
               disabled={commentSubmitting}
               maxLength={500}
             />
-            <button
-              type="submit"
-              className="rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:opacity-60"
-              disabled={commentSubmitting || !commentText.trim()}
-            >
-              Send
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:opacity-60"
+                disabled={commentSubmitting || !commentText.trim()}
+              >
+                Send
+              </button>
+            </div>
           </form>
           {commentError && <div className="mb-2 text-sm text-rose-300">{commentError}</div>}
           {commentsLoading ? (
