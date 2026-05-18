@@ -12,7 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Todo, TodoInput } from '../types/todo';
+import type { Todo, TodoInput, TodoStatus } from '../types/todo';
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -30,6 +30,52 @@ const parseTimestamp = (value: unknown): Date => {
   }
 
   return new Date(0);
+};
+
+const parseStatus = (status: unknown, completed?: unknown): TodoStatus => {
+  if (status === 'todo' || status === 'in_progress' || status === 'done') {
+    return status;
+  }
+
+  if (typeof completed === 'boolean') {
+    console.warn('parseStatus received a missing or unsupported status value; using legacy completed fallback.', {
+      status,
+      completed,
+    });
+    return completed ? 'done' : 'todo';
+  }
+
+  if (status == null) {
+    console.warn('parseStatus received a missing status value; falling back to "todo".');
+  } else {
+    console.warn('parseStatus received an unsupported status value; falling back to "todo".', status);
+  }
+
+  return 'todo';
+};
+
+const parseWeight = (weight: unknown, createdAt?: unknown): number => {
+  if (typeof weight === 'number' && Number.isFinite(weight)) {
+    return weight;
+  }
+
+  if (createdAt != null) {
+    const fallbackWeight = parseTimestamp(createdAt).getTime();
+    console.warn('parseWeight received a missing or unsupported weight value; using createdAt fallback.', {
+      weight,
+      createdAt,
+      fallbackWeight,
+    });
+    return fallbackWeight;
+  }
+
+  if (weight == null) {
+    console.warn('parseWeight received a missing weight value; falling back to 0.');
+  } else {
+    console.warn('parseWeight received an unsupported weight value; falling back to 0.', weight);
+  }
+
+  return 0;
 };
 
 const isFirestoreError = (error: unknown): error is FirestoreError => {
@@ -105,11 +151,17 @@ export const useTodos = (userId: string | null) => {
           try {
             const nextTodos = snapshot.docs.map((item) => {
               const data = item.data();
+              const createdAt = parseTimestamp(data.createdAt);
+              const status = parseStatus(data.status);
+              const weight = parseWeight(data.weight);
 
               return {
                 ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
                 id: item.id,
-                createdAt: parseTimestamp(data.createdAt),
+                status,
+                weight,
+                completed: status === 'done',
+                createdAt,
                 updatedAt: parseTimestamp(data.updatedAt),
               };
             });
@@ -142,12 +194,15 @@ export const useTodos = (userId: string | null) => {
     };
   }, [userId]);
 
-  const addTodo = async (todo: Omit<TodoInput, 'userId'>) => {
+  const addTodo = async (todo: Pick<TodoInput, 'title' | 'description'>) => {
     if (!userId) throw new Error('User must be authenticated');
 
     const docRef = await addDoc(collection(db, 'todos'), {
       ...todo,
       userId,
+      status: 'todo',
+      weight: Date.now(),
+      completed: false,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
