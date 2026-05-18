@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { TodoModal } from './TodoModal';
+import { CardMenu } from './CardMenu';
 import { useTodos } from '../hooks/useTodos';
 import type { Todo, TodoStatus } from '../types/todo';
 
@@ -35,6 +36,8 @@ export const TodoList = ({ userId }: TodoListProps) => {
   const [editingTitle, setEditingTitle] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
   const [modalTodo, setModalTodo] = useState<Todo | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const groupedTodos: Record<TodoStatus, Todo[]> = {
     todo: sortByWeight(todos.filter((todo) => todo.status === 'todo')),
@@ -371,29 +374,42 @@ export const TodoList = ({ userId }: TodoListProps) => {
                               <p className="mt-1 text-xs text-slate-300">{todo.description}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="relative flex items-center gap-2">
                             <button
                               type="button"
+                              aria-label="Open menu"
+                              data-testid={`card-menu-trigger-${todo.id}`}
+                              className="rounded-full p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
                               onClick={e => {
                                 e.stopPropagation();
-                                startEdit(todo);
+                                setMenuOpenId(menuOpenId === todo.id ? null : todo.id);
                               }}
-                              data-testid={`edit-start-${todo.id}`}
-                              className="rounded-md border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/20"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              onClick={e => {
-                                e.stopPropagation();
-                                handleDeleteTodo(todo.id);
+                              ref={el => {
+                                menuButtonRefs.current[todo.id] = el;
+                                if (el && menuOpenId === todo.id) el.focus();
                               }}
-                              data-testid={`delete-${todo.id}`}
-                              className="rounded-md border border-rose-300/40 bg-rose-400/10 px-2 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-400/20"
                             >
-                              Delete
+                              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" aria-hidden="true">
+                                <circle cx="10" cy="4" r="1.5" fill="currentColor"/>
+                                <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+                                <circle cx="10" cy="16" r="1.5" fill="currentColor"/>
+                              </svg>
                             </button>
+                            {menuOpenId === todo.id && (
+                              <CardMenu
+                                anchorRef={menuButtonRefs}
+                                anchorId={todo.id}
+                                onEdit={() => {
+                                  setMenuOpenId(null);
+                                  startEdit(todo);
+                                }}
+                                onDelete={() => {
+                                  setMenuOpenId(null);
+                                  handleDeleteTodo(todo.id);
+                                }}
+                                onClose={() => setMenuOpenId(null)}
+                              />
+                            )}
                           </div>
                         </div>
                       )}
@@ -433,7 +449,12 @@ export const TodoList = ({ userId }: TodoListProps) => {
       )}
 
       {modalTodo && (
-        <TodoModal todo={modalTodo} onClose={() => setModalTodo(null)} />
+        <TodoModal
+          todo={modalTodo}
+          onClose={() => setModalTodo(null)}
+          updateTodo={updateTodo}
+          deleteTodo={deleteTodo}
+        />
       )}
     </div>
   );
