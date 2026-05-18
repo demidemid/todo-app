@@ -12,7 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Todo, TodoInput } from '../types/todo';
+import type { Todo, TodoInput, TodoStatus } from '../types/todo';
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -30,6 +30,22 @@ const parseTimestamp = (value: unknown): Date => {
   }
 
   return new Date(0);
+};
+
+const parseStatus = (status: unknown): TodoStatus => {
+  if (status === 'todo' || status === 'in_progress' || status === 'done') {
+    return status;
+  }
+
+  throw new Error('Invalid todo status in Firestore document');
+};
+
+const parseWeight = (weight: unknown): number => {
+  if (typeof weight === 'number' && Number.isFinite(weight)) {
+    return weight;
+  }
+
+  throw new Error('Invalid todo weight in Firestore document');
 };
 
 const isFirestoreError = (error: unknown): error is FirestoreError => {
@@ -105,11 +121,17 @@ export const useTodos = (userId: string | null) => {
           try {
             const nextTodos = snapshot.docs.map((item) => {
               const data = item.data();
+              const createdAt = parseTimestamp(data.createdAt);
+              const status = parseStatus(data.status);
+              const weight = parseWeight(data.weight);
 
               return {
                 ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
                 id: item.id,
-                createdAt: parseTimestamp(data.createdAt),
+                status,
+                weight,
+                completed: status === 'done',
+                createdAt,
                 updatedAt: parseTimestamp(data.updatedAt),
               };
             });
@@ -142,12 +164,15 @@ export const useTodos = (userId: string | null) => {
     };
   }, [userId]);
 
-  const addTodo = async (todo: Omit<TodoInput, 'userId'>) => {
+  const addTodo = async (todo: Pick<TodoInput, 'title' | 'description'>) => {
     if (!userId) throw new Error('User must be authenticated');
 
     const docRef = await addDoc(collection(db, 'todos'), {
       ...todo,
       userId,
+      status: 'todo',
+      weight: Date.now(),
+      completed: false,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });

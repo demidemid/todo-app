@@ -47,7 +47,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_55%)]">
       <header className="border-b border-white/10 bg-slate-900/40 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-6">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">
               Offline Todo
@@ -58,7 +58,7 @@ function App() {
           </div>
           {user ? (
             <div className="flex items-center gap-3">
-              <p className="max-w-[11.25rem] truncate text-sm text-slate-200 md:max-w-[16.25rem]" title={user.email ?? 'Signed user'}>
+              <p className="max-w-45 truncate text-sm text-slate-200 md:max-w-65" title={user.email ?? 'Signed user'}>
                 {user.email ?? 'Signed user'}
               </p>
               <button
@@ -83,7 +83,7 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-3xl px-5 py-10">
+      <main className="mx-auto flex w-full max-w-6xl px-5 py-10">
         <div className="w-full rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-2xl shadow-slate-950/40 md:p-6">
           {authActionError && (
             <p className="mb-4 rounded-lg border border-rose-300/30 bg-rose-400/10 p-2 text-sm text-rose-200">
