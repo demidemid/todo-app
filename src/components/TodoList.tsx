@@ -6,6 +6,7 @@ import type { Todo, TodoStatus } from '../types/todo';
 
 interface TodoListProps {
   userId: string;
+  userEmail?: string;
 }
 
 interface DragState {
@@ -25,7 +26,7 @@ const COLUMNS: Array<{ status: TodoStatus; title: string }> = [
 
 const sortByWeight = (items: Todo[]) => [...items].sort((a, b) => a.weight - b.weight);
 
-export const TodoList = ({ userId }: TodoListProps) => {
+export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -452,6 +453,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
         <TodoModal
           todo={modalTodo}
           userId={userId}
+          userEmail={userEmail}
           onClose={() => setModalTodo(null)}
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}

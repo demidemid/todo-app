@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  addDoc,
-  collection,
+  arrayUnion,
+  doc,
   onSnapshot,
-  query,
   Timestamp,
-  where,
-  orderBy,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Comment } from '../types/comment';
@@ -24,26 +22,34 @@ export const useComments = (todoId: string | null) => {
 
   useEffect(() => {
     if (!todoId) return;
-    const q = query(
-      collection(db, 'comments'),
-      where('todoId', '==', todoId),
-      orderBy('createdAt', 'asc')
-    );
+    const todoRef = doc(db, 'todos', todoId);
     const unsub = onSnapshot(
-      q,
+      todoRef,
       (snapshot) => {
-        setComments(
-          snapshot.docs.map((doc) => {
-            const data = doc.data();
+        if (!snapshot.exists()) {
+          setComments([]);
+          setError(null);
+          setLoadedTodoId(todoId);
+          return;
+        }
+
+        const data = snapshot.data();
+        const rawComments = Array.isArray(data.comments) ? data.comments : [];
+
+        const normalizedComments = rawComments.map((item, index) => {
+            const record = item as Partial<Comment> & { createdAt?: unknown };
             return {
-              id: doc.id,
-              todoId: data.todoId,
-              userId: data.userId,
-              text: data.text,
-              createdAt: parseTimestamp(data.createdAt),
+              id: typeof record.id === 'string' ? record.id : `${todoId}-${index}`,
+              todoId: typeof record.todoId === 'string' ? record.todoId : todoId,
+              userId: typeof record.userId === 'string' ? record.userId : 'unknown',
+              userEmail: typeof record.userEmail === 'string' ? record.userEmail : undefined,
+              text: typeof record.text === 'string' ? record.text : '',
+              createdAt: parseTimestamp(record.createdAt),
             };
-          })
-        );
+          });
+
+        normalizedComments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setComments(normalizedComments);
         setError(null);
         setLoadedTodoId(todoId);
       },
@@ -56,13 +62,22 @@ export const useComments = (todoId: string | null) => {
     return () => unsub();
   }, [todoId]);
 
-  const addComment = async (userId: string, text: string) => {
+  const addComment = async (userId: string, text: string, userEmail?: string) => {
     if (!todoId) throw new Error('No todoId');
-    await addDoc(collection(db, 'comments'), {
-      todoId,
-      userId,
-      text,
-      createdAt: Timestamp.now(),
+    const todoRef = doc(db, 'todos', todoId);
+    const commentId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    await updateDoc(todoRef, {
+      comments: arrayUnion({
+        id: commentId,
+        todoId,
+        userId,
+        userEmail,
+        text,
+        createdAt: Timestamp.now(),
+      }),
     });
   };
 

@@ -127,7 +127,8 @@ src/
 │   ├── TodoList.tsx       # Todo list component
 │   └── TodoList.css
 ├── hooks/
-│   └── useTodos.ts        # Custom hook for todo operations
+│   ├── useTodos.ts        # Custom hook for todo operations
+│   └── useComments.ts     # Custom hook for todo comments
 ├── types/
 │   └── todo.ts            # TypeScript types
 ├── firebase.ts            # Firebase configuration
@@ -145,11 +146,22 @@ src/
   userId: string,          // User UID (Firebase Auth)
   title: string,           // Todo title
   description?: string,    // Optional description
+  comments?: [             // Optional comments stored inside todo doc
+    {
+      id: string,
+      todoId: string,
+      userId: string,
+      text: string,
+      createdAt: Timestamp
+    }
+  ],
   completed: boolean,      // Completion status
   createdAt: Timestamp,    // Creation date
   updatedAt: Timestamp     // Last update date
 }
 ```
+
+Comments are stored in the todo document itself (field comments) so they follow the same access rules as todos.
 
 ## Offline Functionality
 

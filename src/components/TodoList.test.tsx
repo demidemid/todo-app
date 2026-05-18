@@ -6,11 +6,17 @@ import { TodoList } from './TodoList';
 const mockAddTodo = vi.fn();
 const mockUpdateTodo = vi.fn();
 const mockDeleteTodo = vi.fn();
+const mockAddComment = vi.fn();
 
 const mockUseTodos = vi.fn();
+const mockUseComments = vi.fn();
 
 vi.mock('../hooks/useTodos', () => ({
   useTodos: (userId: string) => mockUseTodos(userId),
+}));
+
+vi.mock('../hooks/useComments', () => ({
+  useComments: (todoId: string | null) => mockUseComments(todoId),
 }));
 
 describe('TodoList', () => {
@@ -23,6 +29,103 @@ describe('TodoList', () => {
       addTodo: mockAddTodo,
       updateTodo: mockUpdateTodo,
       deleteTodo: mockDeleteTodo,
+    });
+    mockUseComments.mockReturnValue({
+      comments: [],
+      loading: false,
+      error: null,
+      addComment: mockAddComment,
+    });
+  });
+
+  it('opens card modal and shows comments list', async () => {
+    const user = userEvent.setup();
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          weight: 1000,
+          completed: false,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    mockUseComments.mockReturnValue({
+      comments: [
+        {
+          id: 'c-1',
+          todoId: 't-1',
+          userId: 'user-2',
+          userEmail: 'user2@example.com',
+          text: 'Looks good',
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addComment: mockAddComment,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-t-1'));
+
+    expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    expect(screen.getByText('Comments')).toBeInTheDocument();
+    expect(screen.getByText('user2@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Looks good')).toBeInTheDocument();
+    expect(mockUseComments).toHaveBeenCalledWith('t-1');
+  });
+
+  it('adds a comment from card modal', async () => {
+    const user = userEvent.setup();
+
+    mockAddComment.mockResolvedValue(undefined);
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          weight: 1000,
+          completed: false,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-t-1'));
+    await user.type(screen.getByPlaceholderText('Add a comment...'), 'Need API key');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => {
+      expect(mockAddComment).toHaveBeenCalledWith('user-1', 'Need API key');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Add a comment...')).toHaveValue('');
     });
   });
 
@@ -72,7 +175,8 @@ describe('TodoList', () => {
 
     render(<TodoList userId="user-1" />);
 
-    await user.click(screen.getByTestId('edit-start-t-1'));
+    await user.click(screen.getByTestId('card-menu-trigger-t-1'));
+    await user.click(screen.getByTestId('card-menu-edit'));
     const titleInput = screen.getByTestId('edit-title-t-1');
     expect(titleInput).toBeInTheDocument();
 
@@ -111,7 +215,8 @@ describe('TodoList', () => {
 
     render(<TodoList userId="user-1" />);
 
-    await user.click(screen.getByTestId('edit-start-t-1'));
+    await user.click(screen.getByTestId('card-menu-trigger-t-1'));
+    await user.click(screen.getByTestId('card-menu-edit'));
     const titleInput = screen.getByTestId('edit-title-t-1');
 
     await user.clear(titleInput);

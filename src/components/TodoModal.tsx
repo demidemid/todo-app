@@ -5,12 +5,13 @@ import type { Todo } from '../types/todo';
 interface TodoModalProps {
   todo: Todo;
   userId: string;
+  userEmail?: string;
   onClose: () => void;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
 }
 
-export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, onClose, updateTodo, deleteTodo }) => {
+export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo }) => {
     // Comments logic
     const { comments, loading: commentsLoading, error: commentsError, addComment } = useComments(todo.id);
     const [commentText, setCommentText] = useState('');
@@ -24,7 +25,11 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, onClose, upd
       setCommentSubmitting(true);
       setCommentError('');
       try {
-        await addComment(userId, text);
+        if (userEmail) {
+          await addComment(userId, text, userEmail);
+        } else {
+          await addComment(userId, text);
+        }
         setCommentText('');
       } catch {
         setCommentError('Failed to add comment');
@@ -193,7 +198,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, onClose, upd
             <ul className="space-y-3">
               {comments.map((c) => (
                 <li key={c.id} className="rounded-lg bg-slate-800/60 px-3 py-2">
-                  <div className="text-xs text-slate-300 mb-1">{c.userId}</div>
+                  <div className="text-xs text-slate-300 mb-1">{c.userEmail ?? c.userId}</div>
                   <div className="text-sm text-slate-100 whitespace-pre-line">{c.text}</div>
                   <div className="mt-1 text-[11px] text-slate-400">{c.createdAt instanceof Date ? c.createdAt.toLocaleString() : String(c.createdAt)}</div>
                 </li>
