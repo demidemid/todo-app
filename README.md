@@ -46,6 +46,11 @@ npm install
 4. Create a Firestore Database
 5. Copy your Firebase config
 
+Important for sign-up/login:
+- Open Firebase Console -> Authentication -> Sign-in method
+- Enable provider `Email/Password`
+- (Optional) Add your domain in Authentication -> Settings -> Authorized domains for production
+
 ### 4. Configure environment variables
 
 1. Copy `.env.example` to `.env.local`:

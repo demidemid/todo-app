@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   addDoc,
   collection,
@@ -13,40 +14,86 @@ import {
 import { auth, db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
 
+const parseTimestamp = (value: unknown): Date => {
+  if (value instanceof Timestamp) {
+    return value.toDate();
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  return new Date(0);
+};
+
 export const useTodos = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(Boolean(auth.currentUser));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const user = auth.currentUser;
+    let unsubscribeSnapshot: (() => void) | null = null;
 
-    if (!user) {
-      return;
-    }
+    const unsubscribeAuth = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (unsubscribeSnapshot) {
+          unsubscribeSnapshot();
+          unsubscribeSnapshot = null;
+        }
 
-    const q = query(collection(db, 'todos'), where('userId', '==', user.uid));
+        if (!user) {
+          setTodos([]);
+          setError(null);
+          setLoading(false);
+          return;
+        }
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const nextTodos = snapshot.docs.map((item) => ({
-          ...(item.data() as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
-          id: item.id,
-          createdAt: (item.data().createdAt as Timestamp).toDate(),
-          updatedAt: (item.data().updatedAt as Timestamp).toDate(),
-        }));
+        setLoading(true);
+        setError(null);
 
-        setTodos(nextTodos);
-        setLoading(false);
+        const q = query(collection(db, 'todos'), where('userId', '==', user.uid));
+
+        unsubscribeSnapshot = onSnapshot(
+          q,
+          (snapshot) => {
+            try {
+              const nextTodos = snapshot.docs.map((item) => {
+                const data = item.data();
+
+                return {
+                  ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
+                  id: item.id,
+                  createdAt: parseTimestamp(data.createdAt),
+                  updatedAt: parseTimestamp(data.updatedAt),
+                };
+              });
+
+              setTodos(nextTodos);
+            } catch (parseError) {
+              setError(parseError instanceof Error ? parseError.message : 'Failed to parse todos');
+            } finally {
+              setLoading(false);
+            }
+          },
+          (snapshotError) => {
+            setError(snapshotError.message);
+            setLoading(false);
+          }
+        );
       },
-      (snapshotError) => {
-        setError(snapshotError.message);
+      (authError) => {
+        setError(authError.message);
         setLoading(false);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+      }
+      unsubscribeAuth();
+    };
   }, []);
 
   const addTodo = async (todo: Omit<TodoInput, 'userId'>) => {

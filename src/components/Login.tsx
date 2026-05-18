@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -12,9 +13,20 @@ interface LoginProps {
 }
 
 const getErrorMessage = (error: unknown) => {
+  const firebaseError = error as FirebaseError;
+
+  if (firebaseError?.code === 'auth/configuration-not-found') {
+    return 'Firebase Authentication is not configured for this project. Open Firebase Console -> Authentication -> Sign-in method and enable Email/Password.';
+  }
+
+  if (firebaseError?.code === 'auth/operation-not-allowed') {
+    return 'Email/password sign-in is disabled. Enable Email/Password in Firebase Console -> Authentication -> Sign-in method.';
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
+
   return 'Unexpected auth error';
 };
 
