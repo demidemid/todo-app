@@ -451,6 +451,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
       {modalTodo && (
         <TodoModal
           todo={modalTodo}
+          userId={userId}
           onClose={() => setModalTodo(null)}
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}
