@@ -23,6 +23,12 @@ const parseTimestamp = (value: unknown): Date => {
     return value;
   }
 
+  if (value == null) {
+    console.warn('parseTimestamp received a missing timestamp value; falling back to Unix epoch.');
+  } else {
+    console.warn('parseTimestamp received an unsupported timestamp value; falling back to Unix epoch.', value);
+  }
+
   return new Date(0);
 };
 
