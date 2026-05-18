@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useTodos } from '../hooks/useTodos';
 
-export const TodoList = () => {
-  const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos();
+interface TodoListProps {
+  userId: string;
+}
+
+export const TodoList = ({ userId }: TodoListProps) => {
+  const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
   const [input, setInput] = useState('');
 
   const handleAddTodo = async (e: React.FormEvent) => {

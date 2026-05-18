@@ -180,7 +180,7 @@ export const Login = ({ user }: LoginProps) => {
           <button
             type="button"
             onClick={handleResetPassword}
-            className="mt-3 w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
+            className="mt-4 block w-full text-center text-xs font-medium text-cyan-200 underline decoration-cyan-200/70 underline-offset-4 transition hover:text-cyan-100"
           >
             Forgot password?
           </button>
