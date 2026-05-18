@@ -191,6 +191,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
         <button
           type="button"
           onClick={() => setIsCreateModalOpen(true)}
+          data-testid="new-card-button"
           className="rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-slate-900 transition hover:bg-cyan-300"
         >
           New card
@@ -204,6 +205,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
         >
           <form
             onSubmit={handleAddTodo}
+            data-testid="create-card-modal"
             className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -214,6 +216,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              data-testid="create-card-title"
               placeholder="Task title"
               className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
               autoFocus
@@ -223,6 +226,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              data-testid="create-card-description"
               placeholder="Optional details"
               rows={4}
               className="mb-5 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
@@ -232,12 +236,14 @@ export const TodoList = ({ userId }: TodoListProps) => {
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
+                data-testid="create-card-cancel"
                 className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
               >
                 Cancel
               </button>
               <button
                 type="submit"
+                data-testid="create-card-submit"
                 className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300"
               >
                 Add card
@@ -254,6 +260,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
           return (
             <section
               key={column.status}
+              data-testid={`column-${column.status}`}
               className="rounded-xl border border-white/10 bg-slate-800/50 p-3"
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -276,6 +283,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                 {columnTodos.map((todo, index) => (
                   <div key={todo.id}>
                     <div
+                      data-testid={`drop-${column.status}-${index}`}
                       className={`h-2 rounded border border-dashed transition-all duration-150 ${
                         dropTarget?.status === column.status && dropTarget.index === index
                           ? 'animate-pulse border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
@@ -287,6 +295,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if (!dragState) return;
 
                         void handleMoveTodo(dragState.todoId, column.status, index);
@@ -296,6 +305,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                     />
 
                     <article
+                      data-testid={`card-${todo.id}`}
                       draggable={editingTodoId !== todo.id}
                       onDragStart={() => setDragState({ todoId: todo.id })}
                       onDragEnd={() => {
@@ -314,6 +324,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             value={editingTitle}
                             onChange={(e) => setEditingTitle(e.target.value)}
                             onKeyDown={(e) => handleEditKeyDown(e, todo.id)}
+                            data-testid={`edit-title-${todo.id}`}
                             className="mb-3 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
                             autoFocus
                           />
@@ -323,6 +334,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             value={editingDescription}
                             onChange={(e) => setEditingDescription(e.target.value)}
                             onKeyDown={(e) => handleEditKeyDown(e, todo.id)}
+                            data-testid={`edit-description-${todo.id}`}
                             rows={3}
                             className="mb-3 w-full resize-none rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
                           />
@@ -331,6 +343,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             <button
                               type="button"
                               onClick={cancelEdit}
+                              data-testid={`edit-cancel-${todo.id}`}
                               className="rounded-md border border-white/20 bg-white/5 px-2 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
                             >
                               Cancel
@@ -338,6 +351,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             <button
                               type="button"
                               onClick={() => void handleSaveEdit(todo.id)}
+                              data-testid={`edit-save-${todo.id}`}
                               className="rounded-md bg-cyan-400 px-2 py-1 text-xs font-semibold text-slate-900 transition hover:bg-cyan-300"
                             >
                               Save
@@ -356,6 +370,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             <button
                               type="button"
                               onClick={() => startEdit(todo)}
+                              data-testid={`edit-start-${todo.id}`}
                               className="rounded-md border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/20"
                             >
                               Edit
@@ -363,6 +378,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                             <button
                               type="button"
                               onClick={() => handleDeleteTodo(todo.id)}
+                              data-testid={`delete-${todo.id}`}
                               className="rounded-md border border-rose-300/40 bg-rose-400/10 px-2 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-400/20"
                             >
                               Delete
@@ -375,6 +391,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                 ))}
 
                 <div
+                  data-testid={`drop-${column.status}-end`}
                   className={`h-3 rounded border border-dashed transition-all duration-150 ${
                     dropTarget?.status === column.status && dropTarget.index === columnTodos.length
                       ? 'animate-pulse border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
@@ -386,6 +403,7 @@ export const TodoList = ({ userId }: TodoListProps) => {
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     if (!dragState) return;
 
                     void handleMoveTodo(dragState.todoId, column.status, columnTodos.length);
