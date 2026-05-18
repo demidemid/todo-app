@@ -32,8 +32,19 @@ const parseTimestamp = (value: unknown): Date => {
   return new Date(0);
 };
 
+const isFirestoreError = (error: unknown): error is FirestoreError => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  );
+};
+
 const getFirestoreErrorMessage = (error: unknown): string => {
-  const firestoreError = error as FirestoreError;
+  const firestoreError = isFirestoreError(error) ? error : undefined;
   const message = firestoreError?.message ?? '';
 
   if (
