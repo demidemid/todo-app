@@ -33,7 +33,7 @@ const getErrorMessage = (error: unknown) => {
   }
 
   if (firebaseError?.code === 'auth/user-not-found') {
-    return 'No account found for this email. Use Create account first.';
+    return 'Invalid email or password. Check your credentials, or reset password if you already have an account.';
   }
 
   if (error instanceof Error) {
