@@ -7,6 +7,7 @@ import {
   onSnapshot,
   query,
   Timestamp,
+  type FirestoreError,
   updateDoc,
   where,
 } from 'firebase/firestore';
@@ -23,6 +24,31 @@ const parseTimestamp = (value: unknown): Date => {
   }
 
   return new Date(0);
+};
+
+const getFirestoreErrorMessage = (error: unknown): string => {
+  const firestoreError = error as FirestoreError;
+  const message = firestoreError?.message ?? '';
+
+  if (
+    firestoreError?.code === 'permission-denied' &&
+    (message.includes('Cloud Firestore API') ||
+      message.includes('firestore.googleapis.com') ||
+      message.includes('SERVICE_DISABLED'))
+  ) {
+    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'your-project-id';
+    return `Cloud Firestore API is disabled for project ${projectId}. Enable Firestore API in Google Cloud Console, then retry in a few minutes.`;
+  }
+
+  if (firestoreError?.code === 'permission-denied') {
+    return 'Access denied by Firestore rules. Verify your Firestore Security Rules for authenticated users.';
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Unexpected Firestore error';
 };
 
 export const useTodos = (userId: string | null) => {
@@ -42,6 +68,13 @@ export const useTodos = (userId: string | null) => {
     setError(null);
 
     let unsubscribeSnapshot: (() => void) | null = null;
+    let hasSnapshotResponse = false;
+    const snapshotTimeout = window.setTimeout(() => {
+      if (!hasSnapshotResponse) {
+        setLoading(false);
+        setError('Timed out while loading todos. Firestore may be unavailable or blocked by project configuration.');
+      }
+    }, 10000);
 
     try {
       const q = query(collection(db, 'todos'), where('userId', '==', userId));
@@ -49,6 +82,9 @@ export const useTodos = (userId: string | null) => {
       unsubscribeSnapshot = onSnapshot(
         q,
         (snapshot) => {
+          hasSnapshotResponse = true;
+          window.clearTimeout(snapshotTimeout);
+
           try {
             const nextTodos = snapshot.docs.map((item) => {
               const data = item.data();
@@ -69,16 +105,20 @@ export const useTodos = (userId: string | null) => {
           }
         },
         (snapshotError) => {
-          setError(snapshotError.message);
+          hasSnapshotResponse = true;
+          window.clearTimeout(snapshotTimeout);
+          setError(getFirestoreErrorMessage(snapshotError));
           setLoading(false);
         }
       );
     } catch (subscribeError) {
-      setError(subscribeError instanceof Error ? subscribeError.message : 'Failed to subscribe todos');
+      window.clearTimeout(snapshotTimeout);
+      setError(getFirestoreErrorMessage(subscribeError));
       setLoading(false);
     }
 
     return () => {
+      window.clearTimeout(snapshotTimeout);
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
       }
