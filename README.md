@@ -179,6 +179,23 @@ This app uses Firestore's built-in offline persistence:
 
 ## Deployment
 
+### Deploy to GitHub Pages
+
+1. Push this repository to GitHub.
+2. In repository settings, open **Pages** and set **Source** to **GitHub Actions**.
+3. In repository settings, open **Secrets and variables -> Actions** and add these repository secrets:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+4. Push to `main` (or run the workflow manually in Actions).
+5. Deployment workflow: `.github/workflows/deploy-pages.yml`.
+6. Your site URL will be available in the workflow output (typically `https://<user>.github.io/<repo>/`).
+
 ### Deploy to Firebase Hosting
 
 1. Install Firebase CLI:
