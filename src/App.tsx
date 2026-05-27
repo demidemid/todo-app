@@ -58,7 +58,7 @@ function App() {
           </div>
           {user ? (
             <div className="flex items-center gap-3">
-              <p className="max-w-45 truncate text-sm text-slate-200 md:max-w-65" title={user.email ?? 'Signed user'}>
+              <p className="max-w-44 truncate text-sm text-slate-200 md:max-w-64" title={user.email ?? 'Signed user'}>
                 {user.email ?? 'Signed user'}
               </p>
               <button
