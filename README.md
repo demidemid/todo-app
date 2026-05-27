@@ -183,7 +183,7 @@ This app uses Firestore's built-in offline persistence:
 
 1. Push this repository to GitHub.
 2. In repository settings, open **Pages** and set **Source** to **GitHub Actions**.
-3. In repository settings, open **Secrets and variables -> Actions** and add these repository variables (you can still store them as Actions secrets for convenience):
+3. In repository settings, open **Secrets and variables -> Actions** and add these **repository secrets** (the deploy workflow reads them from `secrets.*`):
 
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
@@ -192,7 +192,7 @@ This app uses Firestore's built-in offline persistence:
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 
-Note: these `VITE_FIREBASE_*` values are bundled into the client build and are visible in the deployed JavaScript. They are configuration values, not confidential server secrets. Security must rely on Firebase Authentication and Firestore Security Rules.
+Note: these `VITE_FIREBASE_*` values are bundled into the client build and are visible in the deployed JavaScript. They are configuration values, not confidential server secrets. We still store them as Actions secrets to match the workflow interface. Security must rely on Firebase Authentication and Firestore Security Rules.
 
 4. Push to `main` (or run the workflow manually in Actions).
 5. Deployment workflow: `.github/workflows/deploy-pages.yml`.
