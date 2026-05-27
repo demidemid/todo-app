@@ -12,6 +12,7 @@ import type { Comment } from '../types/comment';
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) return value.toDate();
   if (value instanceof Date) return value;
+  console.warn('useComments: unsupported comment timestamp value, falling back to epoch', value);
   return new Date(0);
 };
 
