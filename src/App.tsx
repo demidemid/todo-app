@@ -90,7 +90,7 @@ function App() {
               {authActionError}
             </p>
           )}
-          {user ? <TodoList userId={user.uid} /> : <Login user={user} />}
+          {user ? <TodoList userId={user.uid} userEmail={user.email ?? undefined} /> : <Login user={user} />}
         </div>
       </main>
     </div>

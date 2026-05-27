@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { TodoModal } from './TodoModal';
+import { CardMenu } from './CardMenu';
 import { useTodos } from '../hooks/useTodos';
 import type { Todo, TodoStatus } from '../types/todo';
 
 interface TodoListProps {
   userId: string;
+  userEmail?: string;
 }
 
 interface DragState {
@@ -23,7 +26,7 @@ const COLUMNS: Array<{ status: TodoStatus; title: string }> = [
 
 const sortByWeight = (items: Todo[]) => [...items].sort((a, b) => a.weight - b.weight);
 
-export const TodoList = ({ userId }: TodoListProps) => {
+export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -33,6 +36,9 @@ export const TodoList = ({ userId }: TodoListProps) => {
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
+  const [modalTodo, setModalTodo] = useState<Todo | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const groupedTodos: Record<TodoStatus, Todo[]> = {
     todo: sortByWeight(todos.filter((todo) => todo.status === 'todo')),
@@ -312,8 +318,11 @@ export const TodoList = ({ userId }: TodoListProps) => {
                         setDragState(null);
                         setDropTarget(null);
                       }}
-                      className={`rounded-lg border border-white/10 bg-slate-900/70 p-3 ${
-                        editingTodoId === todo.id ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+                      onClick={() => {
+                        if (editingTodoId !== todo.id) setModalTodo(todo);
+                      }}
+                      className={`rounded-lg border border-white/10 bg-slate-900/70 p-3 select-none transition-shadow duration-150 hover:shadow-lg ${
+                        editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
                       }`}
                     >
                       {editingTodoId === todo.id ? (
@@ -366,23 +375,42 @@ export const TodoList = ({ userId }: TodoListProps) => {
                               <p className="mt-1 text-xs text-slate-300">{todo.description}</p>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="relative flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => startEdit(todo)}
-                              data-testid={`edit-start-${todo.id}`}
-                              className="rounded-md border border-cyan-300/40 bg-cyan-300/10 px-2 py-1 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/20"
+                              aria-label="Open menu"
+                              data-testid={`card-menu-trigger-${todo.id}`}
+                              className="rounded-full p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                              onClick={e => {
+                                e.stopPropagation();
+                                setMenuOpenId(menuOpenId === todo.id ? null : todo.id);
+                              }}
+                              ref={el => {
+                                menuButtonRefs.current[todo.id] = el;
+                                if (el && menuOpenId === todo.id) el.focus();
+                              }}
                             >
-                              Edit
+                              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" aria-hidden="true">
+                                <circle cx="10" cy="4" r="1.5" fill="currentColor"/>
+                                <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+                                <circle cx="10" cy="16" r="1.5" fill="currentColor"/>
+                              </svg>
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteTodo(todo.id)}
-                              data-testid={`delete-${todo.id}`}
-                              className="rounded-md border border-rose-300/40 bg-rose-400/10 px-2 py-1 text-xs font-medium text-rose-200 transition hover:bg-rose-400/20"
-                            >
-                              Delete
-                            </button>
+                            {menuOpenId === todo.id && (
+                              <CardMenu
+                                anchorRef={menuButtonRefs}
+                                anchorId={todo.id}
+                                onEdit={() => {
+                                  setMenuOpenId(null);
+                                  startEdit(todo);
+                                }}
+                                onDelete={() => {
+                                  setMenuOpenId(null);
+                                  handleDeleteTodo(todo.id);
+                                }}
+                                onClose={() => setMenuOpenId(null)}
+                              />
+                            )}
                           </div>
                         </div>
                       )}
@@ -419,6 +447,17 @@ export const TodoList = ({ userId }: TodoListProps) => {
 
       {todos.length === 0 && (
         <p className="py-8 text-center text-sm text-slate-400">No cards yet. Add your first task.</p>
+      )}
+
+      {modalTodo && (
+        <TodoModal
+          todo={modalTodo}
+          userId={userId}
+          userEmail={userEmail}
+          onClose={() => setModalTodo(null)}
+          updateTodo={updateTodo}
+          deleteTodo={deleteTodo}
+        />
       )}
     </div>
   );
