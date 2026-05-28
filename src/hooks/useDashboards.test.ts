@@ -66,7 +66,7 @@ const makeDashboardDoc = (
   id: string,
   name: string,
   createdAt: Date,
-  columns: Array<{ id: string; name: string; order: number }>
+  columns: DashboardColumn[]
 ): SnapshotDoc =>
   makeSnapshotDoc(id, {
     entityType: 'dashboard',
@@ -401,8 +401,8 @@ describe('useDashboards', () => {
     await expect(result.current.updateDashboard('board-1', 'Board', [])).rejects.toThrow('At least one column is required');
     await expect(
       result.current.updateDashboard('board-1', 'Board', [
-        { id: 'todo', name: 'Same', order: 0 },
-        { id: 'doing', name: ' same ', order: 1 },
+        { id: 'todo', name: 'Same', order: 0, isDone: false },
+        { id: 'doing', name: ' same ', order: 1, isDone: false },
       ])
     ).rejects.toThrow('Column names must be unique within a dashboard');
 
@@ -456,8 +456,8 @@ describe('useDashboards', () => {
     mockGetDocs
       .mockResolvedValueOnce({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0, isDone: false }]),
         ],
       })
       .mockResolvedValueOnce({
@@ -499,7 +499,7 @@ describe('useDashboards', () => {
     });
 
     mockGetDocs.mockResolvedValueOnce({
-      docs: [makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }])],
+      docs: [makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }])],
     });
 
     await expect(result.current.deleteDashboard('board-1')).rejects.toThrow('At least one dashboard is required');
@@ -511,8 +511,8 @@ describe('useDashboards', () => {
     mockGetDocs
       .mockResolvedValueOnce({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0, isDone: false }]),
         ],
       })
       .mockResolvedValueOnce({ docs: [] });

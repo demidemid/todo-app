@@ -281,6 +281,15 @@ export const useDashboards = (userId: string | null) => {
     );
     const todosSnapshot = await getDocs(todosQuery);
 
+    type TodoColumnRepair = {
+      id: string;
+      data: {
+        columnId: string;
+        status: string;
+        updatedAt: Timestamp;
+      };
+    };
+
     const todoUpdates = todosSnapshot.docs
       .map((item) => {
         const data = item.data();
@@ -297,7 +306,7 @@ export const useDashboards = (userId: string | null) => {
           },
         };
       })
-      .filter((value): value is { id: string; data: Record<string, unknown> } => value !== null);
+      .filter((value): value is TodoColumnRepair => value !== null);
 
     if (todoUpdates.length <= 499) {
       const batch = writeBatch(db);
