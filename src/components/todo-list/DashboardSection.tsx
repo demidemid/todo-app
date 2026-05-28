@@ -19,6 +19,7 @@ interface DropTarget {
 interface DashboardSectionProps {
   dashboard: Dashboard;
   isExpanded: boolean;
+  isDragging?: boolean;
   dashboardsLength: number;
   columns: DashboardColumn[];
   groupedTodos: Record<string, Todo[]>;
@@ -30,6 +31,10 @@ interface DashboardSectionProps {
   dragState: DragState | null;
   dropTarget: DropTarget | null;
   onToggle: (dashboardId: string) => void;
+  onDashboardDragStart?: () => void;
+  onDashboardDragEnd?: () => void;
+  onDashboardDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDashboardDrop?: (event: React.DragEvent<HTMLElement>) => void;
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
@@ -51,6 +56,7 @@ interface DashboardSectionProps {
 export const DashboardSection = ({
   dashboard,
   isExpanded,
+  isDragging = false,
   dashboardsLength,
   columns,
   groupedTodos,
@@ -62,6 +68,10 @@ export const DashboardSection = ({
   dragState,
   dropTarget,
   onToggle,
+  onDashboardDragStart,
+  onDashboardDragEnd,
+  onDashboardDragOver,
+  onDashboardDrop,
   onOpenEditDashboard,
   onDeleteDashboard,
   onOpenCreateCard,
@@ -82,11 +92,37 @@ export const DashboardSection = ({
   return (
     <section
       key={dashboard.id}
-      className="rounded-xl border border-white/10 bg-slate-900/50"
+      className={`rounded-xl border border-white/10 bg-slate-900/50 transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       data-testid={`dashboard-${dashboard.id}`}
+      onDragOver={onDashboardDragOver}
+      onDrop={onDashboardDrop}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
+          <IconButton
+            variant="neutral"
+            size="sm"
+            label="Drag dashboard"
+            data-testid={`dashboard-drag-handle-${dashboard.id}`}
+            className="cursor-grab active:cursor-grabbing"
+            draggable
+            onDragStart={(event) => {
+              event.stopPropagation();
+              if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', dashboard.id);
+              }
+              onDashboardDragStart?.();
+            }}
+            onDragEnd={() => {
+              onDashboardDragEnd?.();
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </IconButton>
+
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 
           <IconButton

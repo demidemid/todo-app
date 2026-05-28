@@ -10,6 +10,7 @@ const mockAddComment = vi.fn();
 const mockAddDashboard = vi.fn();
 const mockUpdateDashboard = vi.fn();
 const mockDeleteDashboard = vi.fn();
+const mockReorderDashboards = vi.fn();
 const mockSetActiveDashboardId = vi.fn();
 
 const mockUseTodos = vi.fn();
@@ -79,6 +80,7 @@ describe('TodoList', () => {
       addDashboard: mockAddDashboard,
       updateDashboard: mockUpdateDashboard,
       deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
     });
   });
 
@@ -300,6 +302,7 @@ describe('TodoList', () => {
       addDashboard: mockAddDashboard,
       updateDashboard: mockUpdateDashboard,
       deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
     });
 
     render(<TodoList userId="user-1" />);
@@ -326,6 +329,60 @@ describe('TodoList', () => {
 
     expect(updater('board-1')).toBeNull();
     expect(updater(null)).toBe('board-1');
+  });
+
+  it('reorders dashboards via drag-and-drop', () => {
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'Board 1',
+          order: 0,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'board-2',
+          userId: 'user-1',
+          name: 'Board 2',
+          order: 1,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'Board 1',
+        order: 0,
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    const dragHandle = screen.getByTestId('dashboard-drag-handle-board-1');
+
+    fireEvent.dragStart(dragHandle);
+
+    const targetZone = screen.getByTestId('dashboard-drop-zone-2');
+    fireEvent.dragOver(targetZone);
+    fireEvent.drop(targetZone);
+
+    expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
   });
 
   it('cancels inline edit by Escape', async () => {

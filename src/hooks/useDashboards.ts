@@ -267,6 +267,52 @@ export const useDashboards = (userId: string | null) => {
     return ref.id;
   };
 
+  const reorderDashboards = async (orderedDashboardIds: string[]) => {
+    if (!userId) throw new Error('User must be authenticated');
+    if (orderedDashboardIds.length === 0) return;
+
+    const nextOrderById = new Map(orderedDashboardIds.map((dashboardId, index) => [dashboardId, index]));
+    const previousDashboards = dashboards;
+    const nextDashboards = dashboards
+      .map((dashboard) => {
+        const nextOrder = nextOrderById.get(dashboard.id);
+        if (nextOrder == null) return dashboard;
+        return {
+          ...dashboard,
+          order: nextOrder,
+        };
+      })
+      .sort(compareDashboardsByOrder);
+
+    const changes = nextDashboards
+      .map((dashboard) => ({
+        id: dashboard.id,
+        nextOrder: dashboard.order,
+      }))
+      .filter((entry) => previousDashboards.find((dashboard) => dashboard.id === entry.id)?.order !== entry.nextOrder);
+
+    if (changes.length === 0) return;
+
+    setDashboards(nextDashboards);
+
+    const batch = writeBatch(db);
+    const timestamp = Timestamp.now();
+
+    changes.forEach((entry) => {
+      batch.update(doc(db, 'todos', entry.id), {
+        order: entry.nextOrder,
+        updatedAt: timestamp,
+      });
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      setDashboards(previousDashboards);
+      throw error;
+    }
+  };
+
   const updateDashboard = async (dashboardId: string, name: string, columns: DashboardColumn[]) => {
     if (!userId) throw new Error('User must be authenticated');
 
@@ -442,6 +488,7 @@ export const useDashboards = (userId: string | null) => {
       addDashboard,
       updateDashboard,
       deleteDashboard,
+      reorderDashboards,
     };
   }
 
@@ -460,5 +507,6 @@ export const useDashboards = (userId: string | null) => {
     addDashboard,
     updateDashboard,
     deleteDashboard,
+    reorderDashboards,
   };
 };
