@@ -176,7 +176,6 @@ export const useTodos = (userId: string | null) => {
                 boardId,
                 columnId,
                 weight,
-                completed: status === 'done',
                 createdAt,
                 updatedAt: parseTimestamp(data.updatedAt),
               }];
@@ -227,7 +226,6 @@ export const useTodos = (userId: string | null) => {
       boardId,
       columnId,
       weight: Date.now(),
-      completed: columnId === 'done',
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });

@@ -112,7 +112,6 @@ describe('useTodos', () => {
             boardId: 'board-1',
             columnId: 'in_progress',
             weight: 1200,
-            completed: false,
             createdAt: new Date('2026-01-01T00:00:00Z'),
             updatedAt: new Date('2026-01-01T01:00:00Z'),
           }),
@@ -120,7 +119,6 @@ describe('useTodos', () => {
             entityType: 'todo',
             userId: 'user-1',
             title: 'Legacy item',
-            completed: true,
             createdAt: new Date('2026-01-02T00:00:00Z'),
             updatedAt: new Date('2026-01-02T01:00:00Z'),
           }),
@@ -139,7 +137,6 @@ describe('useTodos', () => {
       columnId: 'in_progress',
       boardId: 'board-1',
       weight: 1200,
-      completed: false,
     });
 
     expect(warnSpy).toHaveBeenCalled();
@@ -220,8 +217,9 @@ describe('useTodos', () => {
       expect(id).toBe('todo-created');
     });
 
-    expect(mockAddDoc).toHaveBeenCalledWith(
-      { path: 'todos' },
+    expect(mockAddDoc).toHaveBeenCalledTimes(1);
+    const [, payload] = mockAddDoc.mock.calls[0];
+    expect(payload).toEqual(
       expect.objectContaining({
         entityType: 'todo',
         userId: 'user-1',
@@ -230,12 +228,11 @@ describe('useTodos', () => {
         boardId: 'board-1',
         columnId: 'todo',
         status: 'todo',
-        completed: false,
       })
     );
   });
 
-  it('addTodo marks completed when column is done', async () => {
+  it('addTodo keeps status and column aligned for done column', async () => {
     const { result } = renderHook(() => useTodos('user-1'));
 
     await act(async () => {
@@ -248,13 +245,13 @@ describe('useTodos', () => {
       );
     });
 
-    expect(mockAddDoc).toHaveBeenCalledWith(
-      { path: 'todos' },
+    expect(mockAddDoc).toHaveBeenCalledTimes(1);
+    const [, payload] = mockAddDoc.mock.calls[0];
+    expect(payload).toEqual(
       expect.objectContaining({
         boardId: 'board-1',
         columnId: 'done',
         status: 'done',
-        completed: true,
       })
     );
   });

@@ -23,9 +23,9 @@ const parseTimestamp = (value: unknown): Date => {
 };
 
 const defaultColumns = (): DashboardColumn[] => [
-  { id: 'todo', name: 'To do', order: 0 },
-  { id: 'in_progress', name: 'In progress', order: 1 },
-  { id: 'done', name: 'Done', order: 2 },
+  { id: 'todo', name: 'To do', order: 0, isDone: false },
+  { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
+  { id: 'done', name: 'Done', order: 2, isDone: true },
 ];
 
 const ensureUniqueColumnNames = (names: string[]) => {
@@ -69,6 +69,7 @@ export const useDashboards = (userId: string | null) => {
                   id: typeof col?.id === 'string' ? col.id : `col-${index}`,
                   name: typeof col?.name === 'string' ? col.name : `Column ${index + 1}`,
                   order: typeof col?.order === 'number' ? col.order : index,
+                  isDone: typeof col?.isDone === 'boolean' ? col.isDone : col?.id === 'done',
                 }))
                 .sort((a, b) => a.order - b.order)
             : defaultColumns();
@@ -140,7 +141,6 @@ export const useDashboards = (userId: string | null) => {
                     boardId: nextBoardId,
                     columnId: nextColumnId,
                     status: nextColumnId,
-                    completed: nextColumnId === 'done',
                     updatedAt: Timestamp.now(),
                   });
                 })
@@ -203,6 +203,7 @@ export const useDashboards = (userId: string | null) => {
           : `col-${Date.now()}-${index}`,
       name: columnName,
       order: index,
+      isDone: index === normalizedColumns.length - 1,
     }));
 
     const ref = await addDoc(collection(db, 'todos'), {
@@ -234,6 +235,7 @@ export const useDashboards = (userId: string | null) => {
               : `col-${Date.now()}-${index}`,
         name: column.name.trim(),
         order: index,
+        isDone: Boolean(column.isDone),
       }))
       .filter((column) => column.name.length > 0);
 
@@ -260,7 +262,6 @@ export const useDashboards = (userId: string | null) => {
         return updateDoc(doc(db, 'todos', item.id), {
           columnId: fallbackColumnId,
           status: fallbackColumnId,
-          completed: fallbackColumnId === 'done',
           updatedAt: Timestamp.now(),
         });
       })
@@ -300,7 +301,6 @@ export const useDashboards = (userId: string | null) => {
           boardId: fallbackDashboard.id,
           columnId: fallbackColumnId,
           status: fallbackColumnId,
-          completed: fallbackColumnId === 'done',
           updatedAt: Timestamp.now(),
         })
       );

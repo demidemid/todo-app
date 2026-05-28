@@ -8,7 +8,6 @@ export interface Todo {
   boardId: string;
   columnId: string;
   weight: number;
-  completed: boolean;
   createdAt: Date;
   updatedAt: Date;
   userId: string;

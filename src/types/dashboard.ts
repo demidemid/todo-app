@@ -2,6 +2,7 @@ export interface DashboardColumn {
   id: string;
   name: string;
   order: number;
+  isDone: boolean;
 }
 
 export interface Dashboard {

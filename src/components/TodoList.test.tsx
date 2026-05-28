@@ -52,9 +52,9 @@ describe('TodoList', () => {
           userId: 'user-1',
           name: 'My Dashboard',
           columns: [
-            { id: 'todo', name: 'To do', order: 0 },
-            { id: 'in_progress', name: 'In progress', order: 1 },
-            { id: 'done', name: 'Done', order: 2 },
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+            { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
+            { id: 'done', name: 'Done', order: 2, isDone: true },
           ],
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -65,9 +65,9 @@ describe('TodoList', () => {
         userId: 'user-1',
         name: 'My Dashboard',
         columns: [
-          { id: 'todo', name: 'To do', order: 0 },
-          { id: 'in_progress', name: 'In progress', order: 1 },
-          { id: 'done', name: 'Done', order: 2 },
+          { id: 'todo', name: 'To do', order: 0, isDone: false },
+          { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
+          { id: 'done', name: 'Done', order: 2, isDone: true },
         ],
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -96,7 +96,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -150,7 +149,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -237,9 +235,9 @@ describe('TodoList', () => {
 
     await waitFor(() => {
       expect(mockUpdateDashboard).toHaveBeenCalledWith('board-1', 'Product Board', [
-        { id: 'todo', name: 'To do', order: 0 },
-        { id: 'in_progress', name: 'In progress', order: 1 },
-        { id: 'done', name: 'Done', order: 2 },
+        { id: 'todo', name: 'To do', order: 0, isDone: false },
+        { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
+        { id: 'done', name: 'Done', order: 2, isDone: true },
       ]);
     });
   });
@@ -274,7 +272,7 @@ describe('TodoList', () => {
           id: 'board-1',
           userId: 'user-1',
           name: 'My Dashboard',
-          columns: [{ id: 'todo', name: 'To do', order: 0 }],
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -291,7 +289,7 @@ describe('TodoList', () => {
         id: 'board-1',
         userId: 'user-1',
         name: 'My Dashboard',
-        columns: [{ id: 'todo', name: 'To do', order: 0 }],
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
       },
@@ -344,7 +342,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -386,7 +383,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -429,7 +425,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -464,7 +459,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -477,7 +471,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 2000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -490,7 +483,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'done',
           weight: 1000,
-          completed: true,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -516,7 +508,6 @@ describe('TodoList', () => {
         status: 'done',
         columnId: 'done',
         boardId: 'board-1',
-        completed: true,
         weight: 2000,
       }));
     });
@@ -539,7 +530,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 1000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -552,7 +542,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 2000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -565,7 +554,6 @@ describe('TodoList', () => {
           boardId: 'board-1',
           columnId: 'todo',
           weight: 3000,
-          completed: false,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         },
@@ -591,7 +579,6 @@ describe('TodoList', () => {
         status: 'todo',
         columnId: 'todo',
         boardId: 'board-1',
-        completed: false,
         weight: 1000,
       }));
     });
@@ -600,14 +587,12 @@ describe('TodoList', () => {
       status: 'todo',
       columnId: 'todo',
       boardId: 'board-1',
-      completed: false,
       weight: 2000,
     }));
     expect(mockUpdateTodo).toHaveBeenCalledWith('todo-b', expect.objectContaining({
       status: 'todo',
       columnId: 'todo',
       boardId: 'board-1',
-      completed: false,
       weight: 3000,
     }));
     expect(mockUpdateTodo).toHaveBeenCalledTimes(3);

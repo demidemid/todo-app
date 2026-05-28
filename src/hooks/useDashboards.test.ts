@@ -138,10 +138,10 @@ describe('useDashboards', () => {
       snapshotNext?.({
         docs: [
           makeDashboardDoc('board-newer', 'Newer', new Date('2026-01-03T00:00:00Z'), [
-            { id: 'todo', name: 'To do', order: 0 },
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
           ]),
           makeDashboardDoc('board-older', 'Older', new Date('2026-01-01T00:00:00Z'), [
-            { id: 'todo', name: 'To do', order: 0 },
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
           ]),
         ],
       });
@@ -160,8 +160,8 @@ describe('useDashboards', () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
     const docs = [
-      makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-      makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+      makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+      makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
     ];
 
     act(() => {
@@ -194,8 +194,8 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -211,8 +211,8 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1 edited', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2 edited', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1 edited', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2 edited', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -228,8 +228,8 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -245,7 +245,7 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -263,7 +263,7 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -285,7 +285,7 @@ describe('useDashboards', () => {
             entityType: 'dashboard',
             userId: 'user-2',
             name: 'User 2 board',
-            columns: [{ id: 'todo', name: 'To do', order: 0 }],
+            columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
             createdAt: new Date('2026-01-05T00:00:00Z'),
             updatedAt: new Date('2026-01-05T00:00:00Z'),
           }),
@@ -382,8 +382,8 @@ describe('useDashboards', () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
     const columns: DashboardColumn[] = [
-      { id: 'todo', name: 'To do', order: 0 },
-      { id: 'doing', name: 'Doing', order: 1 },
+      { id: 'todo', name: 'To do', order: 0, isDone: false },
+      { id: 'doing', name: 'Doing', order: 1, isDone: false },
     ];
 
     await expect(result.current.updateDashboard('board-1', ' ', columns)).rejects.toThrow('Dashboard name is required');
@@ -410,7 +410,6 @@ describe('useDashboards', () => {
       expect.objectContaining({
         columnId: 'todo',
         status: 'todo',
-        completed: false,
       })
     );
     expect(mockUpdateDoc).toHaveBeenCalledWith(
@@ -418,8 +417,8 @@ describe('useDashboards', () => {
       expect.objectContaining({
         name: 'Board Updated',
         columns: [
-          { id: 'todo', name: 'To do', order: 0 },
-          { id: 'doing', name: 'Doing', order: 1 },
+          { id: 'todo', name: 'To do', order: 0, isDone: false },
+          { id: 'doing', name: 'Doing', order: 1, isDone: false },
         ],
       })
     );
@@ -431,8 +430,8 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0, isDone: false }]),
         ],
       });
     });
@@ -469,7 +468,7 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -494,7 +493,7 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });
@@ -506,7 +505,7 @@ describe('useDashboards', () => {
     act(() => {
       snapshotNext?.({
         docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
         ],
       });
     });

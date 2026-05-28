@@ -162,7 +162,6 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
       status: targetColumnId,
       columnId: targetColumnId,
       boardId: activeDashboard.id,
-      completed: targetColumnId === 'done',
     };
 
     const nextTargetTodos = [...targetTodos];
@@ -181,7 +180,6 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             status: targetColumnId,
             columnId: targetColumnId,
             boardId: activeDashboard.id,
-            completed: targetColumnId === 'done',
             weight: nextWeight,
           })
         );
@@ -299,6 +297,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         id: column.id,
         name: column.name,
         order: column.order,
+        isDone: column.isDone,
       }))
     );
     setEditingColumnDraft('');
@@ -318,6 +317,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             : `col-${Date.now()}-${prev.length}`,
         name: normalized,
         order: prev.length,
+        isDone: false,
       },
     ]);
     setEditingColumnDraft('');
