@@ -12,7 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Todo, TodoInput, TodoStatus } from '../types/todo';
+import type { Todo, TodoInput } from '../types/todo';
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -32,8 +32,8 @@ const parseTimestamp = (value: unknown): Date => {
   return new Date(0);
 };
 
-const parseStatus = (status: unknown, completed?: unknown): TodoStatus => {
-  if (status === 'todo' || status === 'in_progress' || status === 'done') {
+const parseStatus = (status: unknown, completed?: unknown): string => {
+  if (typeof status === 'string' && status.length > 0) {
     return status;
   }
 
@@ -149,22 +149,37 @@ export const useTodos = (userId: string | null) => {
           window.clearTimeout(snapshotTimeout);
 
           try {
-            const nextTodos = snapshot.docs.map((item) => {
+            const nextTodos = snapshot.docs
+              .filter((item) => item.data().entityType !== 'dashboard')
+              .flatMap((item) => {
               const data = item.data();
               const createdAt = parseTimestamp(data.createdAt);
-              const status = parseStatus(data.status);
+              const status = parseStatus(data.status, data.completed);
               const weight = parseWeight(data.weight);
+              const boardId = typeof data.boardId === 'string' && data.boardId.length > 0 ? data.boardId : null;
+              const columnId =
+                typeof data.columnId === 'string' && data.columnId.length > 0
+                  ? data.columnId
+                  : typeof data.status === 'string' && data.status.length > 0
+                    ? data.status
+                    : status;
 
-              return {
+              if (!boardId) {
+                console.warn('Skipping todo without boardId; waiting for legacy migration.', { id: item.id });
+                return [];
+              }
+
+              return [{
                 ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
                 id: item.id,
                 status,
+                boardId,
+                columnId,
                 weight,
-                completed: status === 'done',
                 createdAt,
                 updatedAt: parseTimestamp(data.updatedAt),
-              };
-            });
+              }];
+              });
 
             setTodos(nextTodos);
           } catch (parseError) {
@@ -194,15 +209,23 @@ export const useTodos = (userId: string | null) => {
     };
   }, [userId]);
 
-  const addTodo = async (todo: Pick<TodoInput, 'title' | 'description'>) => {
+  const addTodo = async (
+    todo: Pick<TodoInput, 'title' | 'description'>,
+    options: { boardId: string; columnId?: string }
+  ) => {
     if (!userId) throw new Error('User must be authenticated');
 
+    const columnId = options.columnId ?? 'todo';
+    const boardId = options.boardId;
+
     const docRef = await addDoc(collection(db, 'todos'), {
+      entityType: 'todo',
       ...todo,
       userId,
-      status: 'todo',
+      status: columnId,
+      boardId,
+      columnId,
       weight: Date.now(),
-      completed: false,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });

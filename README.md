@@ -72,18 +72,13 @@ VITE_FIREBASE_APP_ID=your_app_id
 
 ### 5. Set up Firestore rules
 
-Add these security rules to your Firestore:
+This app stores both todos and dashboards in the same `todos` collection and distinguishes them by `entityType`.
+Use the rules in [firestore.rules](firestore.rules) and deploy them to Firebase.
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /todos/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-    }
-  }
-}
+Quick deployment command:
+
+```bash
+firebase deploy --only firestore:rules
 ```
 
 ## Running the App
@@ -140,13 +135,20 @@ src/
 
 ## Firestore Schema
 
+Collection `todos` stores two document shapes via discriminator field `entityType`.
+
 ```javascript
-// todos collection
+// todos/{docId} where entityType == 'todo'
 {
-  userId: string,          // User UID (Firebase Auth)
-  title: string,           // Todo title
-  description?: string,    // Optional description
-  comments?: [             // Optional comments stored inside todo doc
+  entityType: 'todo',
+  userId: string,
+  title: string,
+  description?: string,
+  status: string,
+  boardId: string,
+  columnId: string,
+  weight: number,
+  comments?: [
     {
       id: string,
       todoId: string,
@@ -156,13 +158,29 @@ src/
       createdAt: Timestamp
     }
   ],
-  completed: boolean,      // Completion status
-  createdAt: Timestamp,    // Creation date
-  updatedAt: Timestamp     // Last update date
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+
+// todos/{docId} where entityType == 'dashboard'
+{
+  entityType: 'dashboard',
+  userId: string,
+  name: string,
+  columns: [
+    {
+      id: string,
+      name: string,
+      order: number,
+      isDone: boolean
+    }
+  ],
+  createdAt: Timestamp,
+  updatedAt: Timestamp
 }
 ```
 
-Comments are stored in the todo document itself (field comments) so they follow the same access rules as todos.
+Rules in [firestore.rules](firestore.rules) validate payload shape per `entityType`, enforce ownership, and prevent changing a document from one entity type to another.
 
 ## Offline Functionality
 
@@ -174,7 +192,7 @@ This app uses Firestore's built-in offline persistence:
 ## Security
 
 - Firebase Authentication protects user accounts
-- Firestore rules ensure users can only access their own todos
+- Firestore rules validate both todo and dashboard schemas and ensure users can only access their own documents
 - All data is encrypted in transit and at rest
 
 ## Deployment
@@ -197,6 +215,11 @@ Note: these `VITE_FIREBASE_*` values are bundled into the client build and are v
 4. Push to `main` (or run the workflow manually in Actions).
 5. Deployment workflow: `.github/workflows/deploy-pages.yml`.
 6. Your site URL will be available in the workflow output (typically `https://<user>.github.io/<repo>/`).
+
+### CI Coverage Comment in Pull Requests
+
+The CI workflow (`.github/workflows/ci.yml`) runs `yarn test:coverage` for pull requests and posts a sticky comment with coverage metrics (`lines`, `statements`, `functions`, `branches`).
+The comment is updated on each new push to the same pull request.
 
 ### Deploy to Firebase Hosting
 
