@@ -383,9 +383,9 @@ describe('TodoList', () => {
 
     fireEvent.dragStart(dragHandle);
 
-    const targetZone = screen.getByTestId('dashboard-drop-zone-2');
-    fireEvent.dragOver(targetZone);
-    fireEvent.drop(targetZone);
+    const targetDashboard = screen.getByTestId('dashboard-board-2');
+    fireEvent.dragOver(targetDashboard);
+    fireEvent.drop(targetDashboard);
 
     expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
   });

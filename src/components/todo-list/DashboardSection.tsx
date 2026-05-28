@@ -17,9 +17,11 @@ interface DropTarget {
 }
 
 interface DashboardSectionProps {
+  sectionRef?: (element: HTMLElement | null) => void;
   dashboard: Dashboard;
   isExpanded: boolean;
   isDragging?: boolean;
+  isDropTarget?: boolean;
   dashboardsLength: number;
   columns: DashboardColumn[];
   groupedTodos: Record<string, Todo[]>;
@@ -54,9 +56,11 @@ interface DashboardSectionProps {
 }
 
 export const DashboardSection = ({
+  sectionRef,
   dashboard,
   isExpanded,
   isDragging = false,
+  isDropTarget = false,
   dashboardsLength,
   columns,
   groupedTodos,
@@ -91,8 +95,13 @@ export const DashboardSection = ({
 }: DashboardSectionProps) => {
   return (
     <section
+      ref={sectionRef}
       key={dashboard.id}
-      className={`rounded-xl border border-white/10 bg-slate-900/50 transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      className={`rounded-xl border bg-slate-900/50 transition-all ${
+        isDropTarget
+          ? 'border-cyan-200/80 ring-1 ring-cyan-300/70 shadow-[0_0_0_1px_rgba(165,243,252,0.25)]'
+          : 'border-white/10'
+      } ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       data-testid={`dashboard-${dashboard.id}`}
       onDragOver={onDashboardDragOver}
       onDrop={onDashboardDrop}

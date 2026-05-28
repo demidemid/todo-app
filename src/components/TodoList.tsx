@@ -1,5 +1,5 @@
 import { TodoModal } from './TodoModal';
-import { Fragment } from 'react';
+import { useRef, useState } from 'react';
 import { DashboardSection } from './todo-list/DashboardSection';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal } from './todo-list/TodoListModals';
 import { useTodos } from '../hooks/useTodos';
@@ -14,6 +14,8 @@ interface TodoListProps {
 }
 
 export const TodoList = ({ userId, userEmail }: TodoListProps) => {
+  const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
   const {
     dashboards,
@@ -126,112 +128,135 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
 
       <div
         className="space-y-3"
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!controller.dashboardDragId) return;
+
+          const sections = dashboards
+            .map((dashboard, index) => ({
+              id: dashboard.id,
+              index,
+              element: dashboardSectionRefs.current[dashboard.id],
+            }))
+            .filter((item): item is { id: string; index: number; element: HTMLElement } => item.element != null);
+
+          if (sections.length === 0) return;
+
+          const pointerY = event.clientY;
+
+          const exactMatch = sections.find((item) => {
+            const rect = item.element.getBoundingClientRect();
+            return rect.height > 0 && pointerY >= rect.top && pointerY <= rect.bottom;
+          });
+
+          if (exactMatch) {
+            const sourceIndex = dashboards.findIndex((dashboard) => dashboard.id === controller.dashboardDragId);
+            const nextIndex = sourceIndex < exactMatch.index ? exactMatch.index + 1 : exactMatch.index;
+            controller.setDashboardDropIndex(nextIndex);
+            setDashboardHoverId(exactMatch.id);
+            return;
+          }
+
+          const firstRect = sections[0].element.getBoundingClientRect();
+          if (pointerY < firstRect.top) {
+            controller.setDashboardDropIndex(0);
+            setDashboardHoverId(sections[0].id);
+            return;
+          }
+
+          const lastRect = sections[sections.length - 1].element.getBoundingClientRect();
+          if (pointerY > lastRect.bottom) {
+            controller.setDashboardDropIndex(dashboards.length);
+            setDashboardHoverId(sections[sections.length - 1].id);
+            return;
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (!controller.dashboardDragId) return;
+
+          const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
+          const targetIndex = controller.dashboardDropIndex ?? dashboards.length;
+          void controller.handleDashboardDrop(targetIndex, draggedDashboardId);
+          setDashboardHoverId(null);
+        }}
         onDragEndCapture={() => {
           window.setTimeout(() => {
             controller.setDashboardDragId(null);
             controller.setDashboardDropIndex(null);
+            setDashboardHoverId(null);
           }, 0);
         }}
       >
         {dashboards.map((dashboard, index) => (
-          <Fragment key={dashboard.id}>
-            {controller.dashboardDragId && (
-              <div
-                data-testid={`dashboard-drop-zone-${index}`}
-                className={`h-2 rounded border border-dashed transition-all duration-150 ${
-                  controller.dashboardDropIndex === index
-                    ? 'border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
-                    : 'border-transparent bg-transparent'
-                }`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  if (!controller.dashboardDragId) return;
-                  controller.setDashboardDropIndex(index);
-                }}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-                  void controller.handleDashboardDrop(index, draggedDashboardId);
-                }}
-              />
-            )}
-
-            <DashboardSection
-              dashboard={dashboard}
-              isExpanded={activeDashboardId === dashboard.id}
-              isDragging={controller.dashboardDragId === dashboard.id}
-              dashboardsLength={dashboards.length}
-              columns={columns}
-              groupedTodos={groupedTodos}
-              editingTodoId={controller.editingTodoId}
-              editingTitle={controller.editingTitle}
-              editingDescription={controller.editingDescription}
-              menuOpenId={controller.menuOpenId}
-              menuButtonRefs={controller.menuButtonRefs}
-              dragState={controller.dragState}
-              dropTarget={controller.dropTarget}
-              onToggle={(dashboardId) => {
-                setActiveDashboardId((prev) => (prev === dashboardId ? null : dashboardId));
-              }}
-              onDashboardDragStart={() => {
-                controller.setDashboardDragId(dashboard.id);
-                controller.setDashboardDropIndex(index);
-              }}
-              onDashboardDragOver={(event) => {
-                event.preventDefault();
-                if (!controller.dashboardDragId) return;
-                controller.setDashboardDropIndex(index);
-              }}
-              onDashboardDrop={(event) => {
-                event.preventDefault();
-                const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-                void controller.handleDashboardDrop(index, draggedDashboardId);
-              }}
-              onOpenEditDashboard={controller.openEditDashboard}
-              onDeleteDashboard={(dashboardId, dashboardName) => void controller.handleDeleteDashboard(dashboardId, dashboardName)}
-              onOpenCreateCard={(dashboardId, columnId) => {
-                setActiveDashboardId(dashboardId);
-                controller.setCreateCardDashboardId(dashboardId);
-                controller.setCreateCardColumnId(columnId);
-                controller.setIsCreateModalOpen(true);
-              }}
-              onMoveTodo={controller.handleMoveTodo}
-              onSetDragState={controller.setDragState}
-              onSetDropTarget={controller.setDropTarget}
-              onOpenTodoModal={controller.setModalTodo}
-              onCancelEdit={controller.cancelEdit}
-              onSaveEdit={(todoId) => void controller.handleSaveEdit(todoId)}
-              onEditTitleChange={controller.setEditingTitle}
-              onEditDescriptionChange={controller.setEditingDescription}
-              onEditKeyDown={controller.handleEditKeyDown}
-              onToggleMenu={(todoId) => controller.setMenuOpenId(controller.menuOpenId === todoId ? null : todoId)}
-              onCloseMenu={() => controller.setMenuOpenId(null)}
-              onMenuEdit={(todo) => controller.startEdit(todo)}
-              onMenuDelete={(todoId) => void controller.handleDeleteTodo(todoId)}
-            />
-          </Fragment>
-        ))}
-
-        {controller.dashboardDragId && (
-          <div
-            data-testid={`dashboard-drop-zone-${dashboards.length}`}
-            className={`h-2 rounded border border-dashed transition-all duration-150 ${
-              controller.dashboardDropIndex === dashboards.length
-                ? 'border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
-                : 'border-transparent bg-transparent'
-            }`}
-            onDragOver={(event) => {
+          <DashboardSection
+            key={dashboard.id}
+            sectionRef={(element) => {
+              dashboardSectionRefs.current[dashboard.id] = element;
+            }}
+            dashboard={dashboard}
+            isExpanded={activeDashboardId === dashboard.id}
+            isDragging={controller.dashboardDragId === dashboard.id}
+            isDropTarget={dashboardHoverId === dashboard.id && controller.dashboardDragId !== dashboard.id}
+            dashboardsLength={dashboards.length}
+            columns={columns}
+            groupedTodos={groupedTodos}
+            editingTodoId={controller.editingTodoId}
+            editingTitle={controller.editingTitle}
+            editingDescription={controller.editingDescription}
+            menuOpenId={controller.menuOpenId}
+            menuButtonRefs={controller.menuButtonRefs}
+            dragState={controller.dragState}
+            dropTarget={controller.dropTarget}
+            onToggle={(dashboardId) => {
+              setActiveDashboardId((prev) => (prev === dashboardId ? null : dashboardId));
+            }}
+            onDashboardDragStart={() => {
+              controller.setDashboardDragId(dashboard.id);
+              controller.setDashboardDropIndex(index);
+              setDashboardHoverId(dashboard.id);
+            }}
+            onDashboardDragOver={(event) => {
               event.preventDefault();
               if (!controller.dashboardDragId) return;
-              controller.setDashboardDropIndex(dashboards.length);
+
+              const sourceIndex = dashboards.findIndex((item) => item.id === controller.dashboardDragId);
+              const nextIndex = sourceIndex < index ? index + 1 : index;
+              controller.setDashboardDropIndex(nextIndex);
+              setDashboardHoverId(dashboard.id);
             }}
-            onDrop={(event) => {
+            onDashboardDrop={(event) => {
               event.preventDefault();
+              event.stopPropagation();
               const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-              void controller.handleDashboardDrop(dashboards.length, draggedDashboardId);
+
+              const sourceIndex = dashboards.findIndex((item) => item.id === (draggedDashboardId ?? controller.dashboardDragId));
+              const targetIndex = sourceIndex < index ? index + 1 : index;
+              void controller.handleDashboardDrop(targetIndex, draggedDashboardId);
             }}
+            onOpenEditDashboard={controller.openEditDashboard}
+            onDeleteDashboard={(dashboardId, dashboardName) => void controller.handleDeleteDashboard(dashboardId, dashboardName)}
+            onOpenCreateCard={(dashboardId, columnId) => {
+              setActiveDashboardId(dashboardId);
+              controller.setCreateCardDashboardId(dashboardId);
+              controller.setCreateCardColumnId(columnId);
+              controller.setIsCreateModalOpen(true);
+            }}
+            onMoveTodo={controller.handleMoveTodo}
+            onSetDragState={controller.setDragState}
+            onSetDropTarget={controller.setDropTarget}
+            onOpenTodoModal={controller.setModalTodo}
+            onCancelEdit={controller.cancelEdit}
+            onSaveEdit={(todoId) => void controller.handleSaveEdit(todoId)}
+            onEditTitleChange={controller.setEditingTitle}
+            onEditDescriptionChange={controller.setEditingDescription}
+            onEditKeyDown={controller.handleEditKeyDown}
+            onToggleMenu={(todoId) => controller.setMenuOpenId(controller.menuOpenId === todoId ? null : todoId)}
+            onCloseMenu={() => controller.setMenuOpenId(null)}
+            onMenuEdit={(todo) => controller.startEdit(todo)}
+            onMenuDelete={(todoId) => void controller.handleDeleteTodo(todoId)}
           />
-        )}
+        ))}
       </div>
 
       {controller.modalTodo && (
