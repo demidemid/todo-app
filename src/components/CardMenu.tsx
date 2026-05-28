@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { Button } from './ui/Button';
 
 
 interface CardMenuProps {
@@ -34,8 +35,11 @@ export const CardMenu: React.FC<CardMenuProps> = ({ onEdit, onDelete, onClose, a
       className="absolute right-2 top-8 z-50 w-32 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
       data-testid="card-menu"
     >
-      <button
-        className="block w-full px-4 py-2 text-left text-sm text-slate-100 hover:bg-cyan-400/10"
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="block w-full rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
         onClick={() => {
           onEdit();
           onClose();
@@ -43,9 +47,12 @@ export const CardMenu: React.FC<CardMenuProps> = ({ onEdit, onDelete, onClose, a
         data-testid="card-menu-edit"
       >
         Edit
-      </button>
-      <button
-        className="block w-full px-4 py-2 text-left text-sm text-rose-200 hover:bg-rose-400/10"
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="block w-full rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-4 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
         onClick={() => {
           onDelete();
           onClose();
@@ -53,7 +60,7 @@ export const CardMenu: React.FC<CardMenuProps> = ({ onEdit, onDelete, onClose, a
         data-testid="card-menu-delete"
       >
         Delete
-      </button>
+      </Button>
     </div>
   );
 };
