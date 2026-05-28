@@ -31,6 +31,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   },
   ref
 ) {
+  const { title: providedTitle, ...restProps } = props;
   const classes = [
     'inline-flex items-center justify-center rounded-md border border-transparent transition focus:outline-none focus:ring-2 focus:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-40',
     variantClassNames[variant],
@@ -41,7 +42,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
     .join(' ');
 
   return (
-    <button ref={ref} type={type} className={classes} aria-label={label} {...props}>
+    <button ref={ref} type={type} className={classes} aria-label={label} title={providedTitle ?? label} {...restProps}>
       {children}
     </button>
   );
