@@ -59,6 +59,11 @@ const commitInBatches = async (
   }
 };
 
+const compareDashboardsByOrder = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: Pick<Dashboard, 'order' | 'createdAt'>) => {
+  if (a.order !== b.order) return a.order - b.order;
+  return a.createdAt.getTime() - b.createdAt.getTime();
+};
+
 export const useDashboards = (userId: string | null) => {
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export const useDashboards = (userId: string | null) => {
             id: item.id,
             userId: typeof data.userId === 'string' ? data.userId : userId,
             name: typeof data.name === 'string' ? data.name : 'Dashboard',
+            order: typeof data.order === 'number' ? data.order : Number.NaN,
             columns,
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
@@ -108,6 +114,7 @@ export const useDashboards = (userId: string | null) => {
               entityType: 'dashboard',
               userId,
               name: 'My Dashboard',
+              order: 0,
               columns: defaultColumns(),
               createdAt: Timestamp.now(),
               updatedAt: Timestamp.now(),
@@ -124,48 +131,70 @@ export const useDashboards = (userId: string | null) => {
           return;
         }
 
-        items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const sortedByCreatedAt = [...items].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const normalizedItems = sortedByCreatedAt.map((dashboard, index) => ({
+          ...dashboard,
+          order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+        }));
+
+        normalizedItems.sort(compareDashboardsByOrder);
         let migrationErrorMessage: string | null = null;
 
         if (!hasMigratedLegacyTodosRef.current) {
           hasMigratedLegacyTodosRef.current = true;
 
           try {
-            const defaultBoard = items[0];
+            const defaultBoard = normalizedItems[0];
             const defaultColumnId = defaultBoard.columns[0]?.id;
+            const orderBackfillMap = new Map(normalizedItems.map((dashboard, index) => [dashboard.id, index]));
 
-            if (defaultColumnId) {
-              const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
-              const todosSnapshot = await getDocs(todosQuery);
+            const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+            const todosSnapshot = await getDocs(todosQuery);
 
-              const migrationPromises = todosSnapshot.docs
-                .filter((item) => item.data().entityType !== 'dashboard')
-                .map((item) => {
-                  const data = item.data();
-                  const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
-                  const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
+            const dashboardOrderBackfills = snapshot.docs
+              .filter((item) => {
+                const data = item.data();
+                return data.entityType === 'dashboard' && typeof data.order !== 'number';
+              })
+              .map((item) => {
+                const nextOrder = orderBackfillMap.get(item.id);
+                if (nextOrder == null) return null;
 
-                  if (hasBoardId && hasColumnId) return null;
+                return updateDoc(doc(db, 'todos', item.id), {
+                  order: nextOrder,
+                  updatedAt: Timestamp.now(),
+                });
+              })
+              .filter((value): value is Promise<void> => value !== null);
 
-                  const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
-                  const nextColumnId =
-                    hasColumnId
-                      ? data.columnId
-                      : typeof data.status === 'string' && data.status.length > 0
-                        ? data.status
-                        : defaultColumnId;
+            const migrationPromises = todosSnapshot.docs
+              .filter((item) => item.data().entityType !== 'dashboard')
+              .map((item) => {
+                const data = item.data();
+                const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
+                const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
 
-                  return updateDoc(doc(db, 'todos', item.id), {
-                    boardId: nextBoardId,
-                    columnId: nextColumnId,
-                    status: nextColumnId,
-                    updatedAt: Timestamp.now(),
-                  });
-                })
-                .filter((value): value is Promise<void> => value !== null);
+                if (hasBoardId && hasColumnId) return null;
+                if (!defaultColumnId) return null;
 
-              await Promise.all(migrationPromises);
-            }
+                const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
+                const nextColumnId =
+                  hasColumnId
+                    ? data.columnId
+                    : typeof data.status === 'string' && data.status.length > 0
+                      ? data.status
+                      : defaultColumnId;
+
+                return updateDoc(doc(db, 'todos', item.id), {
+                  boardId: nextBoardId,
+                  columnId: nextColumnId,
+                  status: nextColumnId,
+                  updatedAt: Timestamp.now(),
+                });
+              })
+              .filter((value): value is Promise<void> => value !== null);
+
+            await Promise.all([...dashboardOrderBackfills, ...migrationPromises]);
           } catch (migrationError) {
             hasMigratedLegacyTodosRef.current = false;
             migrationErrorMessage =
@@ -173,12 +202,12 @@ export const useDashboards = (userId: string | null) => {
           }
         }
 
-        setDashboards(items);
+        setDashboards(normalizedItems);
         setError(migrationErrorMessage);
         setLoadedUserId(userId);
 
         setActiveDashboardId((prev) => {
-          if (prev && items.some((board) => board.id === prev)) {
+          if (prev && normalizedItems.some((board) => board.id === prev)) {
             hasResolvedInitialSelectionRef.current = true;
             return prev;
           }
@@ -189,7 +218,7 @@ export const useDashboards = (userId: string | null) => {
           }
 
           hasResolvedInitialSelectionRef.current = true;
-          return items[0].id;
+          return normalizedItems[0].id;
         });
       },
       (snapshotError) => {
@@ -228,6 +257,7 @@ export const useDashboards = (userId: string | null) => {
       entityType: 'dashboard',
       userId,
       name: normalizedName,
+      order: dashboards.reduce((maxOrder, dashboard) => Math.max(maxOrder, dashboard.order), -1) + 1,
       columns,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
@@ -265,8 +295,10 @@ export const useDashboards = (userId: string | null) => {
 
     const columnIds = new Set(normalizedColumns.map((column) => column.id));
     const fallbackColumnId = normalizedColumns[0].id;
+    const currentDashboardOrder = dashboards.find((dashboard) => dashboard.id === dashboardId)?.order ?? 0;
     const dashboardUpdateData = {
       name: normalizedName,
+      order: currentDashboardOrder,
       columns: normalizedColumns,
       updatedAt: Timestamp.now(),
     };
@@ -350,12 +382,17 @@ export const useDashboards = (userId: string | null) => {
 
         return {
           id: item.id,
+          order: typeof data.order === 'number' ? data.order : Number.NaN,
           createdAt: parseTimestamp(data.createdAt),
           columns,
         };
       })
       .filter((dashboard) => dashboard.id !== dashboardId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .map((dashboard, index) => ({
+        ...dashboard,
+        order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+      }))
+      .sort(compareDashboardsByOrder);
 
     if (remainingDashboards.length === 0) {
       throw new Error('At least one dashboard is required');
