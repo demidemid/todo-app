@@ -26,7 +26,7 @@ interface DashboardSectionProps {
   editingTitle: string;
   editingDescription: string;
   menuOpenId: string | null;
-  menuButtonRefs: React.RefObject<Record<string, HTMLButtonElement | null>>;
+  menuButtonRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
   dragState: DragState | null;
   dropTarget: DropTarget | null;
   onToggle: (dashboardId: string) => void;
