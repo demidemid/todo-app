@@ -10,6 +10,7 @@ const mockDoc = vi.fn();
 const mockGetDocs = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
+const mockSetDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockAnd = vi.fn();
 const mockWhere = vi.fn();
@@ -37,6 +38,7 @@ vi.mock('firebase/firestore', () => ({
   getDocs: (...args: unknown[]) => mockGetDocs(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
+  setDoc: (...args: unknown[]) => mockSetDoc(...args),
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   and: (...args: unknown[]) => mockAnd(...args),
   where: (...args: unknown[]) => mockWhere(...args),
@@ -111,6 +113,7 @@ describe('useDashboards', () => {
     });
     mockAddDoc.mockResolvedValue({ id: 'new-board-id' });
     mockGetDocs.mockResolvedValue({ docs: [] });
+    mockSetDoc.mockResolvedValue(undefined);
     mockUpdateDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
   });
@@ -302,15 +305,16 @@ describe('useDashboards', () => {
       snapshotNext?.({ docs: [] });
     });
 
-    expect(mockAddDoc).toHaveBeenCalledTimes(1);
-    expect(mockAddDoc).toHaveBeenCalledWith(
-      { path: 'todos' },
+    expect(mockSetDoc).toHaveBeenCalledTimes(1);
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      { path: 'todos/default-dashboard-user-1' },
       expect.objectContaining({
         entityType: 'dashboard',
         userId: 'user-1',
         name: 'My Dashboard',
       })
     );
+    expect(mockAddDoc).not.toHaveBeenCalled();
   });
 
   it('surfaces snapshot error and clears dashboards', async () => {

@@ -6,6 +6,7 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  setDoc,
   query,
   Timestamp,
   updateDoc,
@@ -81,7 +82,7 @@ export const useDashboards = (userId: string | null) => {
         });
 
         if (items.length === 0) {
-          await addDoc(collection(db, 'todos'), {
+          await setDoc(doc(db, 'todos', `default-dashboard-${userId}`), {
             entityType: 'dashboard',
             userId,
             name: 'My Dashboard',
