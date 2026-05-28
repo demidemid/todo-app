@@ -7,9 +7,14 @@ const mockAddTodo = vi.fn();
 const mockUpdateTodo = vi.fn();
 const mockDeleteTodo = vi.fn();
 const mockAddComment = vi.fn();
+const mockAddDashboard = vi.fn();
+const mockUpdateDashboard = vi.fn();
+const mockDeleteDashboard = vi.fn();
+const mockSetActiveDashboardId = vi.fn();
 
 const mockUseTodos = vi.fn();
 const mockUseComments = vi.fn();
+const mockUseDashboards = vi.fn();
 
 vi.mock('../hooks/useTodos', () => ({
   useTodos: (userId: string) => mockUseTodos(userId),
@@ -17,6 +22,10 @@ vi.mock('../hooks/useTodos', () => ({
 
 vi.mock('../hooks/useComments', () => ({
   useComments: (todoId: string | null) => mockUseComments(todoId),
+}));
+
+vi.mock('../hooks/useDashboards', () => ({
+  useDashboards: (userId: string | null) => mockUseDashboards(userId),
 }));
 
 describe('TodoList', () => {
@@ -35,6 +44,41 @@ describe('TodoList', () => {
       loading: false,
       error: null,
       addComment: mockAddComment,
+    });
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'My Dashboard',
+          columns: [
+            { id: 'todo', name: 'To do', order: 0 },
+            { id: 'in_progress', name: 'In progress', order: 1 },
+            { id: 'done', name: 'Done', order: 2 },
+          ],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'My Dashboard',
+        columns: [
+          { id: 'todo', name: 'To do', order: 0 },
+          { id: 'in_progress', name: 'In progress', order: 1 },
+          { id: 'done', name: 'Done', order: 2 },
+        ],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
     });
   });
 
@@ -134,7 +178,7 @@ describe('TodoList', () => {
 
     render(<TodoList userId="user-1" />);
 
-    await user.click(screen.getByTestId('new-card-button'));
+    await user.click(screen.getByTestId('new-card-button-board-1-todo'));
     expect(screen.getByTestId('create-card-modal')).toBeInTheDocument();
 
     await user.type(screen.getByTestId('create-card-title'), 'Ship release');
@@ -145,8 +189,141 @@ describe('TodoList', () => {
       expect(mockAddTodo).toHaveBeenCalledWith({
         title: 'Ship release',
         description: 'Prepare changelog',
+      }, {
+        boardId: 'board-1',
+        columnId: 'todo',
       });
     });
+  });
+
+  it('creates card in the column where plus button was clicked', async () => {
+    const user = userEvent.setup();
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('new-card-button-board-1-in_progress'));
+    expect(screen.getByTestId('create-card-modal')).toBeInTheDocument();
+
+    await user.type(screen.getByTestId('create-card-title'), 'Move in progress');
+    await user.click(screen.getByTestId('create-card-submit'));
+
+    await waitFor(() => {
+      expect(mockAddTodo).toHaveBeenCalledWith({
+        title: 'Move in progress',
+        description: '',
+      }, {
+        boardId: 'board-1',
+        columnId: 'in_progress',
+      });
+    });
+  });
+
+  it('opens edit dashboard modal and saves dashboard changes', async () => {
+    const user = userEvent.setup();
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+    expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
+
+    const nameInput = screen.getByDisplayValue('My Dashboard');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Product Board');
+    await user.click(screen.getByRole('button', { name: 'Save dashboard' }));
+
+    await waitFor(() => {
+      expect(mockUpdateDashboard).toHaveBeenCalledWith('board-1', 'Product Board', [
+        { id: 'todo', name: 'To do', order: 0 },
+        { id: 'in_progress', name: 'In progress', order: 1 },
+        { id: 'done', name: 'Done', order: 2 },
+      ]);
+    });
+  });
+
+  it('shows validation error and blocks save for duplicate dashboard column names', async () => {
+    const user = userEvent.setup();
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+
+    const firstColumn = screen.getByTestId('edit-dashboard-column-todo');
+    const secondColumn = screen.getByTestId('edit-dashboard-column-in_progress');
+    await user.clear(firstColumn);
+    await user.type(firstColumn, 'Same');
+    await user.clear(secondColumn);
+    await user.type(secondColumn, 'Same');
+
+    await user.click(screen.getByRole('button', { name: 'Save dashboard' }));
+
+    expect(screen.getAllByText('Column names must be unique within a dashboard').length).toBeGreaterThan(0);
+    expect(mockUpdateDashboard).not.toHaveBeenCalled();
+  });
+
+  it('deletes dashboard after confirmation', async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'My Dashboard',
+          columns: [{ id: 'todo', name: 'To do', order: 0 }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'board-2',
+          userId: 'user-1',
+          name: 'QA Dashboard',
+          columns: [{ id: 'qa_todo', name: 'To do', order: 0 }],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'My Dashboard',
+        columns: [{ id: 'todo', name: 'To do', order: 0 }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('delete-dashboard-button-board-1'));
+
+    await waitFor(() => {
+      expect(mockDeleteDashboard).toHaveBeenCalledWith('board-1');
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it('toggles accordion by calling setActiveDashboardId updater', async () => {
+    const user = userEvent.setup();
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('dashboard-toggle-board-1'));
+
+    expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
+    const updater = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
+    expect(typeof updater).toBe('function');
+
+    expect(updater('board-1')).toBeNull();
+    expect(updater(null)).toBe('board-1');
   });
 
   it('cancels inline edit by Escape', async () => {
@@ -319,11 +496,13 @@ describe('TodoList', () => {
     fireEvent.drop(doneColumnEndDrop);
 
     await waitFor(() => {
-      expect(mockUpdateTodo).toHaveBeenCalledWith('todo-a', {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('todo-a', expect.objectContaining({
         status: 'done',
+        columnId: 'done',
+        boardId: 'board-1',
         completed: true,
         weight: 2000,
-      });
+      }));
     });
 
     expect(mockUpdateTodo).toHaveBeenCalledWith('todo-b', {
@@ -386,23 +565,29 @@ describe('TodoList', () => {
     fireEvent.drop(targetDropSlot);
 
     await waitFor(() => {
-      expect(mockUpdateTodo).toHaveBeenCalledWith('todo-c', {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('todo-c', expect.objectContaining({
         status: 'todo',
+        columnId: 'todo',
+        boardId: 'board-1',
         completed: false,
         weight: 1000,
-      });
+      }));
     });
 
-    expect(mockUpdateTodo).toHaveBeenCalledWith('todo-a', {
+    expect(mockUpdateTodo).toHaveBeenCalledWith('todo-a', expect.objectContaining({
       status: 'todo',
+      columnId: 'todo',
+      boardId: 'board-1',
       completed: false,
       weight: 2000,
-    });
-    expect(mockUpdateTodo).toHaveBeenCalledWith('todo-b', {
+    }));
+    expect(mockUpdateTodo).toHaveBeenCalledWith('todo-b', expect.objectContaining({
       status: 'todo',
+      columnId: 'todo',
+      boardId: 'board-1',
       completed: false,
       weight: 3000,
-    });
+    }));
     expect(mockUpdateTodo).toHaveBeenCalledTimes(3);
   });
 });

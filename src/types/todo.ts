@@ -1,10 +1,12 @@
-export type TodoStatus = 'todo' | 'in_progress' | 'done';
+export type TodoStatus = string;
 
 export interface Todo {
   id: string;
   title: string;
   description?: string;
   status: TodoStatus;
+  boardId?: string;
+  columnId?: string;
   weight: number;
   completed: boolean;
   createdAt: Date;

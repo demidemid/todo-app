@@ -141,7 +141,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
                 <p className="mb-4 text-slate-200 whitespace-pre-line">{todo.description}</p>
               )}
               <div className="flex flex-col gap-2 text-xs text-slate-400 mb-4">
-                <span>Status: <b className="text-slate-200">{todo.status.replace('_', ' ')}</b></span>
+                <span>Status: <b className="text-slate-200">{(todo.columnId ?? todo.status).replaceAll('_', ' ')}</b></span>
                 <span>Created: {todo.createdAt instanceof Date ? todo.createdAt.toLocaleString() : String(todo.createdAt)}</span>
                 <span>Updated: {todo.updatedAt instanceof Date ? todo.updatedAt.toLocaleString() : String(todo.updatedAt)}</span>
               </div>
