@@ -6,7 +6,6 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
-import { richTextHtmlToPlainText } from '../todo-modal/richText';
 import { MessageCircle } from 'lucide-react';
 
 interface DragState {
@@ -152,37 +151,39 @@ export const DashboardSection = ({
 
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 
-          <IconButton
-            variant="neutral"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenEditDashboard(dashboard.id);
-            }}
-            data-testid={`edit-dashboard-button-${dashboard.id}`}
-            label={`Edit dashboard ${dashboard.name}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </IconButton>
+          <div className="ml-1 flex items-center">
+            <IconButton
+              variant="neutral"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenEditDashboard(dashboard.id);
+              }}
+              data-testid={`edit-dashboard-button-${dashboard.id}`}
+              label={`Edit dashboard ${dashboard.name}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </IconButton>
 
-          <IconButton
-            variant="danger"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDeleteDashboard(dashboard.id, dashboard.name);
-            }}
-            data-testid={`delete-dashboard-button-${dashboard.id}`}
-            label={`Delete dashboard ${dashboard.name}`}
-            disabled={dashboardsLength <= 1}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-            </svg>
-          </IconButton>
+            <IconButton
+              variant="danger"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteDashboard(dashboard.id, dashboard.name);
+              }}
+              data-testid={`delete-dashboard-button-${dashboard.id}`}
+              label={`Delete dashboard ${dashboard.name}`}
+              disabled={dashboardsLength <= 1}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+            </IconButton>
+          </div>
         </div>
 
         <IconButton

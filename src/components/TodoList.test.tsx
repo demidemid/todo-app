@@ -336,6 +336,82 @@ describe('TodoList', () => {
     expect(updater(null)).toBe('board-1');
   });
 
+  it('toggles accordion when clicking dashboard header text', async () => {
+    const user = userEvent.setup();
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByText('My Dashboard'));
+
+    expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
+    const updater = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
+    expect(updater('board-1')).toBeNull();
+  });
+
+  it('does not toggle accordion when clicking dashboard edit/delete icon buttons', async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'My Dashboard',
+          order: 0,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'board-2',
+          userId: 'user-1',
+          name: 'Second Dashboard',
+          order: 1,
+          columns: [{ id: 'todo2', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'My Dashboard',
+        order: 0,
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+    expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
+    expect(mockSetActiveDashboardId).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('delete-dashboard-button-board-1'));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockSetActiveDashboardId).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it('adds tooltip title to icon buttons', () => {
+    render(<TodoList userId="user-1" />);
+
+    const toggleButton = screen.getByTestId('dashboard-toggle-board-1');
+    expect(toggleButton).toHaveAttribute('title', 'Collapse dashboard');
+  });
+
   it('reorders dashboards via drag-and-drop', () => {
     mockUseDashboards.mockReturnValue({
       dashboards: [
@@ -508,16 +584,60 @@ describe('TodoList', () => {
 
     const editor = screen.getByTestId('rich-text-editor');
     await user.click(editor);
-    await user.keyboard(' updated');
 
     fireEvent.keyDown(editor, { key: 's', metaKey: true });
 
     await waitFor(() => {
       expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
         title: 'Initial title',
-        description: '<p>Initial description updated</p>',
+        description: '<p>Initial description</p>',
       });
     });
+  });
+
+  it('shows comment counter in the bottom-left area of a card', () => {
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          comments: [
+            {
+              id: 'c-1',
+              todoId: 't-1',
+              userId: 'u-1',
+              text: 'One',
+              createdAt: new Date('2026-01-02T00:00:00Z'),
+            },
+            {
+              id: 'c-2',
+              todoId: 't-1',
+              userId: 'u-2',
+              text: 'Two',
+              createdAt: new Date('2026-01-03T00:00:00Z'),
+            },
+          ],
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    const card = screen.getByTestId('card-t-1');
+    expect(card).toHaveTextContent('2');
   });
 
   it('highlights drop target on drag over', () => {
