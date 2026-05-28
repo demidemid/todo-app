@@ -2,6 +2,7 @@ import type React from 'react';
 import type { DashboardColumn } from '../../types/dashboard';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 
 interface CreateDashboardModalProps {
   open: boolean;
@@ -156,13 +157,13 @@ export const CreateCardModal = ({
         />
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Description</label>
-        <textarea
+        <Textarea
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
           data-testid="create-card-description"
           placeholder="Optional details"
           rows={4}
-          className="mb-5 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-5 resize-none"
         />
 
         <div className="flex justify-end gap-2">

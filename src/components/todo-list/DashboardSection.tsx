@@ -5,6 +5,7 @@ import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
+import { Textarea } from '../ui/Textarea';
 
 interface DragState {
   todoId: string;
@@ -227,13 +228,13 @@ export const DashboardSection = ({
                               />
 
                               <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">Description</label>
-                              <textarea
+                              <Textarea
                                 value={editingDescription}
                                 onChange={(event) => onEditDescriptionChange(event.target.value)}
                                 onKeyDown={(event) => onEditKeyDown(event, todo.id)}
                                 data-testid={`edit-description-${todo.id}`}
                                 rows={3}
-                                className="mb-3 w-full resize-none rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+                                className="mb-3 resize-none rounded-md px-2 py-1.5 text-xs"
                               />
 
                               <div className="flex justify-end gap-2">

@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import type { Comment } from '../../types/comment';
 import { Button } from '../ui/Button';
+import { Textarea } from '../ui/Textarea';
 
 interface TodoModalCommentsPanelProps {
   comments: Comment[];
@@ -27,12 +28,12 @@ export const TodoModalCommentsPanel = ({
     <div className="w-full shrink-0 border-l border-white/10 pl-0 mt-8 md:mt-0 md:w-80 md:pl-6">
       <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>
       <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-2">
-        <textarea
+        <Textarea
           value={commentText}
           onChange={(event) => onCommentTextChange(event.target.value)}
           placeholder="Add a comment..."
           rows={4}
-          className="flex-1 resize-none rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="flex-1 resize-none"
           disabled={commentSubmitting}
           maxLength={500}
         />

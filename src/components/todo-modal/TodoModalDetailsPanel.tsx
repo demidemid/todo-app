@@ -1,6 +1,7 @@
 import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 
 interface TodoModalDetailsPanelProps {
   todo: Todo;
@@ -46,11 +47,11 @@ export const TodoModalDetailsPanel = ({
             disabled={saving}
           />
           <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Description</label>
-          <textarea
+          <Textarea
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
             rows={4}
-            className="mb-5 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+            className="mb-5 resize-none"
             disabled={saving}
           />
           {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
