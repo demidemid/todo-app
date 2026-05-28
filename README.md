@@ -216,6 +216,11 @@ Note: these `VITE_FIREBASE_*` values are bundled into the client build and are v
 5. Deployment workflow: `.github/workflows/deploy-pages.yml`.
 6. Your site URL will be available in the workflow output (typically `https://<user>.github.io/<repo>/`).
 
+### CI Coverage Comment in Pull Requests
+
+The CI workflow (`.github/workflows/ci.yml`) runs `yarn test:coverage` for pull requests and posts a sticky comment with coverage metrics (`lines`, `statements`, `functions`, `branches`).
+The comment is updated on each new push to the same pull request.
+
 ### Deploy to Firebase Hosting
 
 1. Install Firebase CLI:
