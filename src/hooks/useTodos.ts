@@ -151,28 +151,35 @@ export const useTodos = (userId: string | null) => {
           try {
             const nextTodos = snapshot.docs
               .filter((item) => item.data().entityType !== 'dashboard')
-              .map((item) => {
+              .flatMap((item) => {
               const data = item.data();
               const createdAt = parseTimestamp(data.createdAt);
-              const status = parseStatus(data.status);
+              const status = parseStatus(data.status, data.completed);
               const weight = parseWeight(data.weight);
+              const boardId = typeof data.boardId === 'string' && data.boardId.length > 0 ? data.boardId : null;
+              const columnId =
+                typeof data.columnId === 'string' && data.columnId.length > 0
+                  ? data.columnId
+                  : typeof data.status === 'string' && data.status.length > 0
+                    ? data.status
+                    : status;
 
-              return {
+              if (!boardId) {
+                console.warn('Skipping todo without boardId; waiting for legacy migration.', { id: item.id });
+                return [];
+              }
+
+              return [{
                 ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
                 id: item.id,
                 status,
-                boardId: typeof data.boardId === 'string' ? data.boardId : undefined,
-                columnId:
-                  typeof data.columnId === 'string'
-                    ? data.columnId
-                    : typeof data.status === 'string'
-                      ? data.status
-                      : status,
+                boardId,
+                columnId,
                 weight,
                 completed: status === 'done',
                 createdAt,
                 updatedAt: parseTimestamp(data.updatedAt),
-              };
+              }];
               });
 
             setTodos(nextTodos);
@@ -205,12 +212,12 @@ export const useTodos = (userId: string | null) => {
 
   const addTodo = async (
     todo: Pick<TodoInput, 'title' | 'description'>,
-    options?: { boardId?: string; columnId?: string }
+    options: { boardId: string; columnId?: string }
   ) => {
     if (!userId) throw new Error('User must be authenticated');
 
-    const columnId = options?.columnId ?? 'todo';
-    const boardId = options?.boardId;
+    const columnId = options.columnId ?? 'todo';
+    const boardId = options.boardId;
 
     const docRef = await addDoc(collection(db, 'todos'), {
       entityType: 'todo',

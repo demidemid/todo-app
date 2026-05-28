@@ -5,8 +5,8 @@ export interface Todo {
   title: string;
   description?: string;
   status: TodoStatus;
-  boardId?: string;
-  columnId?: string;
+  boardId: string;
+  columnId: string;
   weight: number;
   completed: boolean;
   createdAt: Date;

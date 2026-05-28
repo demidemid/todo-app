@@ -47,10 +47,12 @@ export const useDashboards = (userId: string | null) => {
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const hasResolvedInitialSelectionRef = useRef(false);
+  const hasMigratedLegacyTodosRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
     hasResolvedInitialSelectionRef.current = false;
+    hasMigratedLegacyTodosRef.current = false;
 
     const q = query(
       collection(db, 'todos'),
@@ -94,6 +96,48 @@ export const useDashboards = (userId: string | null) => {
         }
 
         items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+        if (!hasMigratedLegacyTodosRef.current) {
+          hasMigratedLegacyTodosRef.current = true;
+
+          const defaultBoard = items[0];
+          const defaultColumnId = defaultBoard.columns[0]?.id;
+
+          if (defaultColumnId) {
+            const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+            const todosSnapshot = await getDocs(todosQuery);
+
+            const migrationPromises = todosSnapshot.docs
+              .filter((item) => item.data().entityType !== 'dashboard')
+              .map((item) => {
+                const data = item.data();
+                const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
+                const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
+
+                if (hasBoardId && hasColumnId) return null;
+
+                const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
+                const nextColumnId =
+                  hasColumnId
+                    ? data.columnId
+                    : typeof data.status === 'string' && data.status.length > 0
+                      ? data.status
+                      : defaultColumnId;
+
+                return updateDoc(doc(db, 'todos', item.id), {
+                  boardId: nextBoardId,
+                  columnId: nextColumnId,
+                  status: nextColumnId,
+                  completed: nextColumnId === 'done',
+                  updatedAt: Timestamp.now(),
+                });
+              })
+              .filter((value): value is Promise<void> => value !== null);
+
+            await Promise.all(migrationPromises);
+          }
+        }
+
         setDashboards(items);
         setError(null);
         setLoadedUserId(userId);

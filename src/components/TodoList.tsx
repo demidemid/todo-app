@@ -78,20 +78,12 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const columns = useMemo(() => activeDashboard?.columns ?? [], [activeDashboard]);
-  const isLegacyMode = useMemo(
-    () => activeDashboardId != null && dashboards.length > 0 && dashboards[0].id === activeDashboardId,
-    [activeDashboardId, dashboards]
-  );
 
   const todosForActiveBoard = useMemo(() => {
     if (!activeDashboard) return [];
 
-    return todos.filter((todo) => {
-      if (todo.boardId === activeDashboard.id) return true;
-      if (todo.boardId) return false;
-      return isLegacyMode;
-    });
-  }, [activeDashboard, isLegacyMode, todos]);
+    return todos.filter((todo) => todo.boardId === activeDashboard.id);
+  }, [activeDashboard, todos]);
 
   const groupedTodos = useMemo(() => {
     const grouped: Record<string, Todo[]> = {};
@@ -101,7 +93,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     });
 
     todosForActiveBoard.forEach((todo) => {
-      const columnId = todo.columnId ?? todo.status;
+      const columnId = todo.columnId;
       if (!grouped[columnId]) {
         grouped[columnId] = [];
       }
@@ -156,7 +148,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     if (!draggedTodo) return;
     if (!activeDashboard) return;
 
-    const sourceColumnId = draggedTodo.columnId ?? draggedTodo.status;
+    const sourceColumnId = draggedTodo.columnId;
     const sourceTodos = (groupedTodos[sourceColumnId] ?? []).filter((todo) => todo.id !== todoId);
     const targetTodos =
       sourceColumnId === targetColumnId
@@ -181,7 +173,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     nextTargetTodos.forEach((todo, index) => {
       const nextWeight = (index + 1) * 1000;
       const shouldUpdate =
-        todo.id === movedTodo.id || todo.weight !== nextWeight || (todo.columnId ?? todo.status) !== targetColumnId;
+        todo.id === movedTodo.id || todo.weight !== nextWeight || todo.columnId !== targetColumnId;
 
       if (shouldUpdate) {
         updates.push(
