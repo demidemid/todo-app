@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTimestamp(value) {
+      return value is timestamp;
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    function isDashboardColumn(column) {
+      return column is map
+        && column.keys().hasOnly(['id', 'name', 'order', 'isDone'])
+        && isNonEmptyString(column.id)
+        && isNonEmptyString(column.name)
+        && column.order is int
+        && column.isDone is bool;
+    }
+
+    function isComment(comment, docId) {
+      return comment is map
+        && comment.keys().hasOnly(['id', 'todoId', 'userId', 'userEmail', 'text', 'createdAt'])
+        && isNonEmptyString(comment.id)
+        && comment.todoId == docId
+        && isNonEmptyString(comment.userId)
+        && (!('userEmail' in comment) || comment.userEmail is string)
+        && isNonEmptyString(comment.text)
+        && isTimestamp(comment.createdAt);
+    }
+
+    function isTodoPayload(data, docId) {
+      return data.keys().hasAll([
+          'entityType',
+          'userId',
+          'title',
+          'status',
+          'boardId',
+          'columnId',
+          'weight',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'entityType',
+          'userId',
+          'title',
+          'description',
+          'status',
+          'boardId',
+          'columnId',
+          'weight',
+          'comments',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.entityType == 'todo'
+        && isNonEmptyString(data.userId)
+        && isNonEmptyString(data.title)
+        && (!('description' in data) || data.description is string)
+        && isNonEmptyString(data.status)
+        && isNonEmptyString(data.boardId)
+        && isNonEmptyString(data.columnId)
+        && data.weight is number
+        && (!('comments' in data) || (data.comments is list && data.comments.all(comment, isComment(comment, docId))))
+        && isTimestamp(data.createdAt)
+        && isTimestamp(data.updatedAt);
+    }
+
+    function isDashboardPayload(data) {
+      return data.keys().hasAll(['entityType', 'userId', 'name', 'columns', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['entityType', 'userId', 'name', 'columns', 'createdAt', 'updatedAt'])
+        && data.entityType == 'dashboard'
+        && isNonEmptyString(data.userId)
+        && isNonEmptyString(data.name)
+        && data.columns is list
+        && data.columns.size() > 0
+        && data.columns.all(column, isDashboardColumn(column))
+        && isTimestamp(data.createdAt)
+        && isTimestamp(data.updatedAt);
+    }
+
+    function isValidPayload(data, docId) {
+      return data.entityType == 'todo'
+        ? isTodoPayload(data, docId)
+        : data.entityType == 'dashboard' && isDashboardPayload(data);
+    }
+
+    function isOwnerFromResource() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /todos/{docId} {
+      allow read: if isOwnerFromResource();
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && isValidPayload(request.resource.data, docId);
+
+      allow update: if isOwnerFromResource()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.entityType == resource.data.entityType
+        && isValidPayload(request.resource.data, docId);
+
+      allow delete: if isOwnerFromResource();
+    }
+  }
+}
