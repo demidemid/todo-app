@@ -52,6 +52,7 @@ describe('TodoList', () => {
           id: 'board-1',
           userId: 'user-1',
           name: 'My Dashboard',
+          order: 0,
           columns: [
             { id: 'todo', name: 'To do', order: 0, isDone: false },
             { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
@@ -65,6 +66,7 @@ describe('TodoList', () => {
         id: 'board-1',
         userId: 'user-1',
         name: 'My Dashboard',
+        order: 0,
         columns: [
           { id: 'todo', name: 'To do', order: 0, isDone: false },
           { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
@@ -274,6 +276,7 @@ describe('TodoList', () => {
           id: 'board-1',
           userId: 'user-1',
           name: 'My Dashboard',
+          order: 0,
           columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -282,6 +285,7 @@ describe('TodoList', () => {
           id: 'board-2',
           userId: 'user-1',
           name: 'QA Dashboard',
+          order: 1,
           columns: [{ id: 'qa_todo', name: 'To do', order: 0 }],
           createdAt: new Date('2026-01-02T00:00:00Z'),
           updatedAt: new Date('2026-01-02T00:00:00Z'),
@@ -291,6 +295,7 @@ describe('TodoList', () => {
         id: 'board-1',
         userId: 'user-1',
         name: 'My Dashboard',
+        order: 0,
         columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -378,9 +383,9 @@ describe('TodoList', () => {
 
     fireEvent.dragStart(dragHandle);
 
-    const targetZone = screen.getByTestId('dashboard-drop-zone-2');
-    fireEvent.dragOver(targetZone);
-    fireEvent.drop(targetZone);
+    const targetDashboard = screen.getByTestId('dashboard-board-2');
+    fireEvent.dragOver(targetDashboard);
+    fireEvent.drop(targetDashboard);
 
     expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
   });
