@@ -84,62 +84,79 @@ export const useDashboards = (userId: string | null) => {
         });
 
         if (items.length === 0) {
-          await setDoc(doc(db, 'todos', `default-dashboard-${userId}`), {
-            entityType: 'dashboard',
-            userId,
-            name: 'My Dashboard',
-            columns: defaultColumns(),
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now(),
-          });
+          try {
+            await setDoc(doc(db, 'todos', `default-dashboard-${userId}`), {
+              entityType: 'dashboard',
+              userId,
+              name: 'My Dashboard',
+              columns: defaultColumns(),
+              createdAt: Timestamp.now(),
+              updatedAt: Timestamp.now(),
+            });
+
+            // Stop showing loader while waiting for the next snapshot with created dashboard.
+            setError(null);
+            setLoadedUserId(userId);
+          } catch (bootstrapError) {
+            setError(bootstrapError instanceof Error ? bootstrapError.message : 'Failed to create default dashboard');
+            setDashboards([]);
+            setLoadedUserId(userId);
+          }
           return;
         }
 
         items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        let migrationErrorMessage: string | null = null;
 
         if (!hasMigratedLegacyTodosRef.current) {
           hasMigratedLegacyTodosRef.current = true;
 
-          const defaultBoard = items[0];
-          const defaultColumnId = defaultBoard.columns[0]?.id;
+          try {
+            const defaultBoard = items[0];
+            const defaultColumnId = defaultBoard.columns[0]?.id;
 
-          if (defaultColumnId) {
-            const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
-            const todosSnapshot = await getDocs(todosQuery);
+            if (defaultColumnId) {
+              const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+              const todosSnapshot = await getDocs(todosQuery);
 
-            const migrationPromises = todosSnapshot.docs
-              .filter((item) => item.data().entityType !== 'dashboard')
-              .map((item) => {
-                const data = item.data();
-                const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
-                const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
+              const migrationPromises = todosSnapshot.docs
+                .filter((item) => item.data().entityType !== 'dashboard')
+                .map((item) => {
+                  const data = item.data();
+                  const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
+                  const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
 
-                if (hasBoardId && hasColumnId) return null;
+                  if (hasBoardId && hasColumnId) return null;
 
-                const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
-                const nextColumnId =
-                  hasColumnId
-                    ? data.columnId
-                    : typeof data.status === 'string' && data.status.length > 0
-                      ? data.status
-                      : defaultColumnId;
+                  const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
+                  const nextColumnId =
+                    hasColumnId
+                      ? data.columnId
+                      : typeof data.status === 'string' && data.status.length > 0
+                        ? data.status
+                        : defaultColumnId;
 
-                return updateDoc(doc(db, 'todos', item.id), {
-                  boardId: nextBoardId,
-                  columnId: nextColumnId,
-                  status: nextColumnId,
-                  completed: nextColumnId === 'done',
-                  updatedAt: Timestamp.now(),
-                });
-              })
-              .filter((value): value is Promise<void> => value !== null);
+                  return updateDoc(doc(db, 'todos', item.id), {
+                    boardId: nextBoardId,
+                    columnId: nextColumnId,
+                    status: nextColumnId,
+                    completed: nextColumnId === 'done',
+                    updatedAt: Timestamp.now(),
+                  });
+                })
+                .filter((value): value is Promise<void> => value !== null);
 
-            await Promise.all(migrationPromises);
+              await Promise.all(migrationPromises);
+            }
+          } catch (migrationError) {
+            hasMigratedLegacyTodosRef.current = false;
+            migrationErrorMessage =
+              migrationError instanceof Error ? migrationError.message : 'Failed to migrate legacy todos';
           }
         }
 
         setDashboards(items);
-        setError(null);
+        setError(migrationErrorMessage);
         setLoadedUserId(userId);
 
         setActiveDashboardId((prev) => {

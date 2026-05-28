@@ -299,7 +299,7 @@ describe('useDashboards', () => {
   });
 
   it('creates default dashboard when snapshot is empty', async () => {
-    renderHook(() => useDashboards('user-1'));
+    const { result } = renderHook(() => useDashboards('user-1'));
 
     await act(async () => {
       snapshotNext?.({ docs: [] });
@@ -315,6 +315,26 @@ describe('useDashboards', () => {
       })
     );
     expect(mockAddDoc).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  it('surfaces error when default dashboard bootstrap fails', async () => {
+    mockSetDoc.mockRejectedValueOnce(new Error('permission denied'));
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    await act(async () => {
+      snapshotNext?.({ docs: [] });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.error).toBe('permission denied');
+      expect(result.current.dashboards).toEqual([]);
+    });
   });
 
   it('surfaces snapshot error and clears dashboards', async () => {
@@ -459,5 +479,42 @@ describe('useDashboards', () => {
     });
 
     await expect(result.current.deleteDashboard('board-1')).rejects.toThrow('At least one dashboard is required');
+  });
+
+  it('retries legacy migration after failure and clears error on success', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs.mockResolvedValue({
+      docs: [makeTodoDoc('legacy-1', { status: 'todo' })],
+    });
+    mockUpdateDoc
+      .mockRejectedValueOnce(new Error('migration failed'))
+      .mockResolvedValueOnce(undefined);
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('migration failed');
+    });
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
   });
 });
