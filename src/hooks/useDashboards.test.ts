@@ -298,6 +298,7 @@ describe('useDashboards', () => {
             entityType: 'dashboard',
             userId: 'user-2',
             name: 'User 2 board',
+            order: 0,
             columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
             createdAt: new Date('2026-01-05T00:00:00Z'),
             updatedAt: new Date('2026-01-05T00:00:00Z'),
@@ -467,6 +468,7 @@ describe('useDashboards', () => {
       { path: 'todos/board-1' },
       expect.objectContaining({
         name: 'Board Updated',
+        order: 0,
         columns: [
           { id: 'todo', name: 'To do', order: 0, isDone: false },
           { id: 'doing', name: 'Doing', order: 1, isDone: false },
@@ -606,5 +608,35 @@ describe('useDashboards', () => {
     });
 
     expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it('backfills missing dashboard order for legacy dashboard docs', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs.mockResolvedValue({ docs: [] });
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeSnapshotDoc('legacy-board', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Legacy board',
+            columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:00:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(1);
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      { path: 'todos/legacy-board' },
+      expect.objectContaining({ order: 0 })
+    );
   });
 });

@@ -59,7 +59,7 @@ const commitInBatches = async (
   }
 };
 
-const compareDashboards = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: Pick<Dashboard, 'order' | 'createdAt'>) => {
+const compareDashboardsByOrder = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: Pick<Dashboard, 'order' | 'createdAt'>) => {
   if (a.order !== b.order) return a.order - b.order;
   return a.createdAt.getTime() - b.createdAt.getTime();
 };
@@ -137,7 +137,7 @@ export const useDashboards = (userId: string | null) => {
           order: Number.isFinite(dashboard.order) ? dashboard.order : index,
         }));
 
-        normalizedItems.sort(compareDashboards);
+        normalizedItems.sort(compareDashboardsByOrder);
         let migrationErrorMessage: string | null = null;
 
         if (!hasMigratedLegacyTodosRef.current) {
@@ -146,39 +146,55 @@ export const useDashboards = (userId: string | null) => {
           try {
             const defaultBoard = normalizedItems[0];
             const defaultColumnId = defaultBoard.columns[0]?.id;
+            const orderBackfillMap = new Map(normalizedItems.map((dashboard, index) => [dashboard.id, index]));
 
-            if (defaultColumnId) {
-              const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
-              const todosSnapshot = await getDocs(todosQuery);
+            const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+            const todosSnapshot = await getDocs(todosQuery);
 
-              const migrationPromises = todosSnapshot.docs
-                .filter((item) => item.data().entityType !== 'dashboard')
-                .map((item) => {
-                  const data = item.data();
-                  const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
-                  const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
+            const dashboardOrderBackfills = snapshot.docs
+              .filter((item) => {
+                const data = item.data();
+                return data.entityType === 'dashboard' && typeof data.order !== 'number';
+              })
+              .map((item) => {
+                const nextOrder = orderBackfillMap.get(item.id);
+                if (nextOrder == null) return null;
 
-                  if (hasBoardId && hasColumnId) return null;
+                return updateDoc(doc(db, 'todos', item.id), {
+                  order: nextOrder,
+                  updatedAt: Timestamp.now(),
+                });
+              })
+              .filter((value): value is Promise<void> => value !== null);
 
-                  const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
-                  const nextColumnId =
-                    hasColumnId
-                      ? data.columnId
-                      : typeof data.status === 'string' && data.status.length > 0
-                        ? data.status
-                        : defaultColumnId;
+            const migrationPromises = todosSnapshot.docs
+              .filter((item) => item.data().entityType !== 'dashboard')
+              .map((item) => {
+                const data = item.data();
+                const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
+                const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
 
-                  return updateDoc(doc(db, 'todos', item.id), {
-                    boardId: nextBoardId,
-                    columnId: nextColumnId,
-                    status: nextColumnId,
-                    updatedAt: Timestamp.now(),
-                  });
-                })
-                .filter((value): value is Promise<void> => value !== null);
+                if (hasBoardId && hasColumnId) return null;
+                if (!defaultColumnId) return null;
 
-              await Promise.all(migrationPromises);
-            }
+                const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
+                const nextColumnId =
+                  hasColumnId
+                    ? data.columnId
+                    : typeof data.status === 'string' && data.status.length > 0
+                      ? data.status
+                      : defaultColumnId;
+
+                return updateDoc(doc(db, 'todos', item.id), {
+                  boardId: nextBoardId,
+                  columnId: nextColumnId,
+                  status: nextColumnId,
+                  updatedAt: Timestamp.now(),
+                });
+              })
+              .filter((value): value is Promise<void> => value !== null);
+
+            await Promise.all([...dashboardOrderBackfills, ...migrationPromises]);
           } catch (migrationError) {
             hasMigratedLegacyTodosRef.current = false;
             migrationErrorMessage =
@@ -266,7 +282,7 @@ export const useDashboards = (userId: string | null) => {
           order: nextOrder,
         };
       })
-      .sort(compareDashboards);
+      .sort(compareDashboardsByOrder);
 
     const changes = nextDashboards
       .map((dashboard) => ({
@@ -325,8 +341,10 @@ export const useDashboards = (userId: string | null) => {
 
     const columnIds = new Set(normalizedColumns.map((column) => column.id));
     const fallbackColumnId = normalizedColumns[0].id;
+    const currentDashboardOrder = dashboards.find((dashboard) => dashboard.id === dashboardId)?.order ?? 0;
     const dashboardUpdateData = {
       name: normalizedName,
+      order: currentDashboardOrder,
       columns: normalizedColumns,
       updatedAt: Timestamp.now(),
     };
@@ -420,7 +438,7 @@ export const useDashboards = (userId: string | null) => {
         ...dashboard,
         order: Number.isFinite(dashboard.order) ? dashboard.order : index,
       }))
-      .sort(compareDashboards);
+      .sort(compareDashboardsByOrder);
 
     if (remainingDashboards.length === 0) {
       throw new Error('At least one dashboard is required');
