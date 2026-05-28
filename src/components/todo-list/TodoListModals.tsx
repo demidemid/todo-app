@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { DashboardColumn } from '../../types/dashboard';
+import { Button } from '../ui/Button';
 
 interface CreateDashboardModalProps {
   open: boolean;
@@ -85,13 +86,9 @@ export const CreateDashboardModal = ({
             placeholder="Backlog"
             className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
           />
-          <button
-            type="button"
-            onClick={onAddColumn}
-            className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onAddColumn}>
             Add
-          </button>
+          </Button>
         </div>
 
         <div className="mb-4 rounded-lg border border-white/10 bg-slate-950/40 p-3">
@@ -111,19 +108,12 @@ export const CreateDashboardModal = ({
         {formError && <p className="mb-3 text-sm text-rose-300">{formError}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-          >
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300"
-          >
+          </Button>
+          <Button type="submit">
             Create dashboard
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -176,21 +166,12 @@ export const CreateCardModal = ({
         />
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            data-testid="create-card-cancel"
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-          >
+          <Button type="button" variant="ghost" onClick={onClose} data-testid="create-card-cancel">
             Cancel
-          </button>
-          <button
-            type="submit"
-            data-testid="create-card-submit"
-            className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300"
-          >
+          </Button>
+          <Button type="submit" data-testid="create-card-submit">
             Add card
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -246,13 +227,9 @@ export const EditDashboardModal = ({
                 className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
                 data-testid={`edit-dashboard-column-${column.id}`}
               />
-              <button
-                type="button"
-                onClick={() => onRemoveColumn(column.id)}
-                className="rounded-lg border border-rose-300/40 bg-rose-400/10 px-3 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-400/20"
-              >
+              <Button type="button" variant="danger" size="sm" onClick={() => onRemoveColumn(column.id)}>
                 Remove
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -265,31 +242,20 @@ export const EditDashboardModal = ({
             placeholder="Add column"
             className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
           />
-          <button
-            type="button"
-            onClick={onAddColumn}
-            className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/10"
-          >
+          <Button type="button" variant="ghost" onClick={onAddColumn}>
             Add
-          </button>
+          </Button>
         </div>
 
         {actionError && <p className="mb-3 text-sm text-rose-300">{actionError}</p>}
 
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-          >
+          <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300"
-          >
+          </Button>
+          <Button type="submit">
             Save dashboard
-          </button>
+          </Button>
         </div>
       </form>
     </div>

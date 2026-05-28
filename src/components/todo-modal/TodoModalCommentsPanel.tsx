@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import type { Comment } from '../../types/comment';
+import { Button } from '../ui/Button';
 
 interface TodoModalCommentsPanelProps {
   comments: Comment[];
@@ -36,13 +37,9 @@ export const TodoModalCommentsPanel = ({
           maxLength={500}
         />
         <div className="flex justify-end">
-          <button
-            type="submit"
-            className="rounded-lg bg-cyan-400 px-3 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:opacity-60"
-            disabled={commentSubmitting || !commentText.trim()}
-          >
+          <Button type="submit" size="sm" disabled={commentSubmitting || !commentText.trim()}>
             Send
-          </button>
+          </Button>
         </div>
       </form>
       {commentError && <div className="mb-2 text-sm text-rose-300">{commentError}</div>}

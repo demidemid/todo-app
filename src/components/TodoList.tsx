@@ -5,6 +5,7 @@ import { useTodos } from '../hooks/useTodos';
 import { useDashboards } from '../hooks/useDashboards';
 import { useTodoListController } from './todo-list/useTodoListController';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
+import { Button } from './ui/Button';
 
 interface TodoListProps {
   userId: string;
@@ -57,14 +58,14 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => controller.setIsCreateDashboardModalOpen(true)}
             data-testid="new-dashboard-button"
-            className="rounded-lg border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/20"
           >
             New dashboard
-          </button>
+          </Button>
         </div>
       </div>
 

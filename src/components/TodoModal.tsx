@@ -4,6 +4,7 @@ import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
+import { IconButton } from './ui/IconButton';
 
 interface TodoModalProps {
   todo: Todo;
@@ -58,13 +59,15 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative flex flex-col md:flex-row gap-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          className="absolute right-4 top-4 text-slate-400 hover:text-slate-100 text-xl"
+        <IconButton
+          variant="neutral"
+          size="lg"
+          className="absolute right-4 top-4 rounded-full"
           onClick={onClose}
-          aria-label="Close"
+          label="Close"
         >
           &times;
-        </button>
+        </IconButton>
         <TodoModalDetailsPanel
           todo={todo}
           isEditing={isEditing}

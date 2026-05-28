@@ -8,6 +8,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import { Button } from './ui/Button';
 
 interface LoginProps {
   user: User | null;
@@ -104,29 +105,19 @@ export const Login = ({ user }: LoginProps) => {
         <p className="text-sm text-emerald-100">
           Logged in as <strong>{user.email}</strong>
         </p>
-        <button
-          onClick={handleLogout}
-          className="mt-3 rounded-lg border border-rose-300/40 bg-rose-300/10 px-3 py-2 text-sm font-medium text-rose-100 transition hover:bg-rose-300/20"
-        >
+        <Button type="button" variant="danger" size="sm" className="mt-3" onClick={handleLogout}>
           Logout
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-2xl border border-white/10 bg-slate-800/70 p-5 shadow-xl"
-      >
-        <h2 className="mb-4 text-xl font-semibold text-white">
-          {isSignUp ? 'Create account' : 'Sign in'}
-        </h2>
+      <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-slate-800/70 p-5 shadow-xl">
+        <h2 className="mb-4 text-xl font-semibold text-white">{isSignUp ? 'Create account' : 'Sign in'}</h2>
 
-        <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">
-          Email
-        </label>
+        <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Email</label>
         <input
           type="email"
           value={email}
@@ -136,9 +127,7 @@ export const Login = ({ user }: LoginProps) => {
           className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
         />
 
-        <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">
-          Password
-        </label>
+        <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Password</label>
         <input
           type="password"
           value={password}
@@ -160,30 +149,23 @@ export const Login = ({ user }: LoginProps) => {
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-cyan-400 px-4 py-2 font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Please wait...' : isSignUp ? 'Create account' : 'Sign in'}
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={() => setIsSignUp((prev) => !prev)}
-          className="mt-3 w-full rounded-lg border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/20"
-        >
+        <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => setIsSignUp((prev) => !prev)}>
           {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
-        </button>
+        </Button>
 
         {!isSignUp && (
-          <button
+          <Button
             type="button"
+            variant="link"
+            className="mt-4 block w-full text-center text-xs font-medium"
             onClick={handleResetPassword}
-            className="mt-4 block w-full text-center text-xs font-medium text-cyan-200 underline decoration-cyan-200/70 underline-offset-4 transition hover:text-cyan-100"
           >
             Forgot password?
-          </button>
+          </Button>
         )}
       </form>
     </div>

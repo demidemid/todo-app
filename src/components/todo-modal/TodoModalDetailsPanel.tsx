@@ -1,4 +1,5 @@
 import type { Todo } from '../../types/todo';
+import { Button } from '../ui/Button';
 
 interface TodoModalDetailsPanelProps {
   todo: Todo;
@@ -53,22 +54,12 @@ export const TodoModalDetailsPanel = ({
           />
           {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-              disabled={saving}
-            >
+            <Button type="button" variant="ghost" onClick={onCancelEdit} disabled={saving}>
               Cancel
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-300 disabled:opacity-60"
-              disabled={saving}
-            >
+            </Button>
+            <Button type="button" onClick={onSave} disabled={saving}>
               Save
-            </button>
+            </Button>
           </div>
         </>
       ) : (
@@ -88,21 +79,12 @@ export const TodoModalDetailsPanel = ({
           </div>
           {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onStartEdit}
-              className="rounded-lg border border-cyan-300/40 bg-cyan-300/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/20"
-            >
+            <Button type="button" variant="secondary" onClick={onStartEdit}>
               Edit
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded-lg border border-rose-300/40 bg-rose-400/10 px-4 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-400/20"
-              disabled={saving}
-            >
+            </Button>
+            <Button type="button" variant="danger" onClick={onDelete} disabled={saving}>
               Delete
-            </button>
+            </Button>
           </div>
         </>
       )}

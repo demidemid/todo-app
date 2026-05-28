@@ -2,6 +2,8 @@ import type React from 'react';
 import { CardMenu } from '../CardMenu';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
+import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
 
 interface DragState {
   todoId: string;
@@ -85,47 +87,44 @@ export const DashboardSection = ({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 
-          <button
-            type="button"
+          <IconButton
+            variant="neutral"
             onClick={() => onOpenEditDashboard(dashboard.id)}
             data-testid={`edit-dashboard-button-${dashboard.id}`}
-            className="shrink-0 rounded-md border border-white/10 bg-white/[0.03] p-1.5 text-slate-300 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-            aria-label={`Edit dashboard ${dashboard.name}`}
+            label={`Edit dashboard ${dashboard.name}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
               <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-          </button>
+          </IconButton>
 
-          <button
-            type="button"
+          <IconButton
+            variant="danger"
             onClick={() => onDeleteDashboard(dashboard.id, dashboard.name)}
             data-testid={`delete-dashboard-button-${dashboard.id}`}
-            className="shrink-0 rounded-md border border-rose-300/15 bg-rose-400/[0.03] p-1.5 text-rose-200/80 transition hover:border-rose-300/35 hover:bg-rose-400/[0.12] hover:text-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
+            label={`Delete dashboard ${dashboard.name}`}
             disabled={dashboardsLength <= 1}
-            aria-label={`Delete dashboard ${dashboard.name}`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
             </svg>
-          </button>
+          </IconButton>
         </div>
 
-        <button
-          type="button"
+        <IconButton
+          variant="neutral"
           onClick={() => onToggle(dashboard.id)}
-          className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
           data-testid={`dashboard-toggle-${dashboard.id}`}
-          aria-label={isExpanded ? 'Collapse dashboard' : 'Expand dashboard'}
+          label={isExpanded ? 'Collapse dashboard' : 'Expand dashboard'}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             {!isExpanded && <path d="M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />}
           </svg>
-        </button>
+        </IconButton>
       </div>
 
       {isExpanded && (
@@ -155,18 +154,18 @@ export const DashboardSection = ({
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">{column.name}</h3>
-                      <button
-                        type="button"
+                      <IconButton
+                        variant="primary"
                         onClick={() => onOpenCreateCard(dashboard.id, column.id)}
                         data-testid={`new-card-button-${dashboard.id}-${column.id}`}
-                        className="rounded-md border border-cyan-300/15 bg-cyan-300/[0.03] px-2 py-0.5 text-sm font-semibold leading-none text-cyan-200/85 transition hover:border-cyan-300/35 hover:bg-cyan-300/[0.12] hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                        aria-label={`Add card to ${column.name}`}
+                        label={`Add card to ${column.name}`}
+                        size="sm"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                           <path d="M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                           <path d="M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                         </svg>
-                      </button>
+                      </IconButton>
                     </div>
                     <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-xs text-slate-300">
                       {columnTodos.length}
@@ -237,22 +236,23 @@ export const DashboardSection = ({
                               />
 
                               <div className="flex justify-end gap-2">
-                                <button
+                                <Button
                                   type="button"
                                   onClick={onCancelEdit}
                                   data-testid={`edit-cancel-${todo.id}`}
-                                  className="rounded-md border border-white/20 bg-white/5 px-2 py-1 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+                                  variant="ghost"
+                                  size="sm"
                                 >
                                   Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button
                                   type="button"
                                   onClick={() => onSaveEdit(todo.id)}
                                   data-testid={`edit-save-${todo.id}`}
-                                  className="rounded-md bg-cyan-400 px-2 py-1 text-xs font-semibold text-slate-900 transition hover:bg-cyan-300"
+                                  size="sm"
                                 >
                                   Save
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           ) : (
@@ -262,11 +262,11 @@ export const DashboardSection = ({
                                 {todo.description && <p className="mt-1 text-xs text-slate-300">{todo.description}</p>}
                               </div>
                               <div className="relative flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  aria-label="Open menu"
+                                <IconButton
+                                  variant="neutral"
+                                  size="sm"
+                                  label="Open menu"
                                   data-testid={`card-menu-trigger-${todo.id}`}
-                                  className="rounded-full p-1 text-slate-400 hover:bg-slate-700 hover:text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     onToggleMenu(todo.id);
@@ -281,7 +281,7 @@ export const DashboardSection = ({
                                     <circle cx="10" cy="10" r="1.5" fill="currentColor" />
                                     <circle cx="10" cy="16" r="1.5" fill="currentColor" />
                                   </svg>
-                                </button>
+                                </IconButton>
                                 {menuOpenId === todo.id && (
                                   <CardMenu
                                     anchorRef={menuButtonRefs}

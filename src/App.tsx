@@ -3,6 +3,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { auth } from './firebase'
 import { Login } from './components/Login'
 import { TodoList } from './components/TodoList'
+import { IconButton } from './components/ui/IconButton'
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -61,19 +62,20 @@ function App() {
               <p className="max-w-44 truncate text-sm text-slate-200 md:max-w-64" title={user.email ?? 'Signed user'}>
                 {user.email ?? 'Signed user'}
               </p>
-              <button
-                type="button"
+              <IconButton
+                variant="danger"
+                size="lg"
                 onClick={handleLogout}
                 disabled={logoutLoading}
-                aria-label="Log out"
+                label="Log out"
                 title="Log out"
-                className="inline-flex size-9 items-center justify-center rounded-full border border-rose-300/40 bg-rose-400/10 text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="size-9 rounded-full"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="size-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M18 15l3-3m0 0-3-3m3 3H9" />
                 </svg>
-              </button>
+              </IconButton>
             </div>
           ) : (
             <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-200">
