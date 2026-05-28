@@ -12,8 +12,6 @@ interface DropTarget {
 }
 
 interface UseTodoListControllerArgs {
-  userId: string;
-  userEmail?: string;
   todos: Todo[];
   dashboards: Dashboard[];
   activeDashboard: Dashboard | null;

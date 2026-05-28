@@ -27,8 +27,6 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   } = useDashboards(userId);
   const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
   const controller = useTodoListController({
-    userId,
-    userEmail,
     todos,
     dashboards,
     activeDashboard,
