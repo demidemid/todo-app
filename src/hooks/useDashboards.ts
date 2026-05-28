@@ -431,6 +431,51 @@ export const useDashboards = (userId: string | null) => {
     setActiveDashboardId(fallbackDashboard.id);
   };
 
+  const reorderDashboards = async (orderedDashboardIds: string[]) => {
+    if (!userId) throw new Error('User must be authenticated');
+    if (orderedDashboardIds.length === 0) return;
+
+    const nextOrderById = new Map(orderedDashboardIds.map((dashboardId, index) => [dashboardId, index]));
+    const previousDashboards = dashboards;
+
+    const nextDashboards = dashboards
+      .map((dashboard) => {
+        const nextOrder = nextOrderById.get(dashboard.id);
+        if (nextOrder == null) return dashboard;
+
+        return {
+          ...dashboard,
+          order: nextOrder,
+        };
+      })
+      .sort(compareDashboardsByOrder);
+
+    const changes = nextDashboards
+      .map((dashboard) => ({ id: dashboard.id, order: dashboard.order }))
+      .filter((entry) => previousDashboards.find((dashboard) => dashboard.id === entry.id)?.order !== entry.order);
+
+    if (changes.length === 0) return;
+
+    setDashboards(nextDashboards);
+
+    const batch = writeBatch(db);
+    const timestamp = Timestamp.now();
+
+    changes.forEach((entry) => {
+      batch.update(doc(db, 'todos', entry.id), {
+        order: entry.order,
+        updatedAt: timestamp,
+      });
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      setDashboards(previousDashboards);
+      throw error;
+    }
+  };
+
   if (!userId) {
     return {
       dashboards: [],
@@ -442,6 +487,7 @@ export const useDashboards = (userId: string | null) => {
       addDashboard,
       updateDashboard,
       deleteDashboard,
+      reorderDashboards,
     };
   }
 
@@ -460,5 +506,6 @@ export const useDashboards = (userId: string | null) => {
     addDashboard,
     updateDashboard,
     deleteDashboard,
+    reorderDashboards,
   };
 };

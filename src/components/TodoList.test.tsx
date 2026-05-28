@@ -10,6 +10,7 @@ const mockAddComment = vi.fn();
 const mockAddDashboard = vi.fn();
 const mockUpdateDashboard = vi.fn();
 const mockDeleteDashboard = vi.fn();
+const mockReorderDashboards = vi.fn();
 const mockSetActiveDashboardId = vi.fn();
 
 const mockUseTodos = vi.fn();
@@ -51,6 +52,7 @@ describe('TodoList', () => {
           id: 'board-1',
           userId: 'user-1',
           name: 'My Dashboard',
+          order: 0,
           columns: [
             { id: 'todo', name: 'To do', order: 0, isDone: false },
             { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
@@ -64,6 +66,7 @@ describe('TodoList', () => {
         id: 'board-1',
         userId: 'user-1',
         name: 'My Dashboard',
+        order: 0,
         columns: [
           { id: 'todo', name: 'To do', order: 0, isDone: false },
           { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
@@ -79,6 +82,7 @@ describe('TodoList', () => {
       addDashboard: mockAddDashboard,
       updateDashboard: mockUpdateDashboard,
       deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
     });
   });
 
@@ -272,6 +276,7 @@ describe('TodoList', () => {
           id: 'board-1',
           userId: 'user-1',
           name: 'My Dashboard',
+          order: 0,
           columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -280,6 +285,7 @@ describe('TodoList', () => {
           id: 'board-2',
           userId: 'user-1',
           name: 'QA Dashboard',
+          order: 1,
           columns: [{ id: 'qa_todo', name: 'To do', order: 0 }],
           createdAt: new Date('2026-01-02T00:00:00Z'),
           updatedAt: new Date('2026-01-02T00:00:00Z'),
@@ -289,6 +295,7 @@ describe('TodoList', () => {
         id: 'board-1',
         userId: 'user-1',
         name: 'My Dashboard',
+        order: 0,
         columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
@@ -300,6 +307,7 @@ describe('TodoList', () => {
       addDashboard: mockAddDashboard,
       updateDashboard: mockUpdateDashboard,
       deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
     });
 
     render(<TodoList userId="user-1" />);
