@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   addDoc,
+  and,
   collection,
   deleteDoc,
   doc,
   getDocs,
   onSnapshot,
-  setDoc,
   query,
+  setDoc,
   Timestamp,
   updateDoc,
-  and,
+  writeBatch,
   where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -38,6 +39,23 @@ const ensureUniqueColumnNames = (names: string[]) => {
       throw new Error('Column names must be unique within a dashboard');
     }
     seen.add(normalized);
+  }
+};
+
+const commitInBatches = async (
+  updates: Array<{ id: string; data: Record<string, unknown> }>
+) => {
+  const BATCH_LIMIT = 450;
+
+  for (let index = 0; index < updates.length; index += BATCH_LIMIT) {
+    const chunk = updates.slice(index, index + BATCH_LIMIT);
+    const batch = writeBatch(db);
+
+    chunk.forEach((entry) => {
+      batch.update(doc(db, 'todos', entry.id), entry.data);
+    });
+
+    await batch.commit();
   }
 };
 
@@ -247,39 +265,89 @@ export const useDashboards = (userId: string | null) => {
 
     const columnIds = new Set(normalizedColumns.map((column) => column.id));
     const fallbackColumnId = normalizedColumns[0].id;
+    const dashboardUpdateData = {
+      name: normalizedName,
+      columns: normalizedColumns,
+      updatedAt: Timestamp.now(),
+    };
 
-    const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+    const todosQuery = query(
+      collection(db, 'todos'),
+      and(
+        where('userId', '==', userId),
+        where('entityType', '==', 'todo'),
+        where('boardId', '==', dashboardId)
+      )
+    );
     const todosSnapshot = await getDocs(todosQuery);
 
-    const fixColumnPromises = todosSnapshot.docs
-      .filter((item) => item.data().entityType !== 'dashboard' && item.data().boardId === dashboardId)
+    const todoUpdates = todosSnapshot.docs
       .map((item) => {
         const data = item.data();
         const columnId = typeof data.columnId === 'string' ? data.columnId : typeof data.status === 'string' ? data.status : '';
 
         if (columnIds.has(columnId)) return null;
 
-        return updateDoc(doc(db, 'todos', item.id), {
-          columnId: fallbackColumnId,
-          status: fallbackColumnId,
-          updatedAt: Timestamp.now(),
-        });
+        return {
+          id: item.id,
+          data: {
+            columnId: fallbackColumnId,
+            status: fallbackColumnId,
+            updatedAt: Timestamp.now(),
+          },
+        };
       })
-      .filter((value): value is Promise<void> => value !== null);
+      .filter((value): value is { id: string; data: Record<string, unknown> } => value !== null);
 
-    await Promise.all(fixColumnPromises);
+    if (todoUpdates.length <= 499) {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'todos', dashboardId), dashboardUpdateData);
 
-    await updateDoc(doc(db, 'todos', dashboardId), {
-      name: normalizedName,
-      columns: normalizedColumns,
-      updatedAt: Timestamp.now(),
-    });
+      todoUpdates.forEach((entry) => {
+        batch.update(doc(db, 'todos', entry.id), entry.data);
+      });
+
+      await batch.commit();
+      return;
+    }
+
+    // If updates exceed one batch, prefer schema-first to avoid todos pointing to a non-existent column schema.
+    await updateDoc(doc(db, 'todos', dashboardId), dashboardUpdateData);
+    await commitInBatches(todoUpdates);
   };
 
   const deleteDashboard = async (dashboardId: string) => {
     if (!userId) throw new Error('User must be authenticated');
 
-    const remainingDashboards = dashboards.filter((dashboard) => dashboard.id !== dashboardId);
+    const dashboardsQuery = query(
+      collection(db, 'todos'),
+      and(where('userId', '==', userId), where('entityType', '==', 'dashboard'))
+    );
+    const dashboardsSnapshot = await getDocs(dashboardsQuery);
+
+    const remainingDashboards = dashboardsSnapshot.docs
+      .map((item) => {
+        const data = item.data();
+        const columns = Array.isArray(data.columns)
+          ? data.columns
+              .map((col, index) => ({
+                id: typeof col?.id === 'string' ? col.id : `col-${index}`,
+                name: typeof col?.name === 'string' ? col.name : `Column ${index + 1}`,
+                order: typeof col?.order === 'number' ? col.order : index,
+                isDone: typeof col?.isDone === 'boolean' ? col.isDone : col?.id === 'done',
+              }))
+              .sort((a, b) => a.order - b.order)
+          : defaultColumns();
+
+        return {
+          id: item.id,
+          createdAt: parseTimestamp(data.createdAt),
+          columns,
+        };
+      })
+      .filter((dashboard) => dashboard.id !== dashboardId)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
     if (remainingDashboards.length === 0) {
       throw new Error('At least one dashboard is required');
     }
@@ -291,21 +359,28 @@ export const useDashboards = (userId: string | null) => {
       throw new Error('Fallback dashboard must have at least one column');
     }
 
-    const todosQuery = query(collection(db, 'todos'), where('userId', '==', userId));
+    const todosQuery = query(
+      collection(db, 'todos'),
+      and(
+        where('userId', '==', userId),
+        where('entityType', '==', 'todo'),
+        where('boardId', '==', dashboardId)
+      )
+    );
     const todosSnapshot = await getDocs(todosQuery);
 
-    const reassignPromises = todosSnapshot.docs
-      .filter((item) => item.data().entityType !== 'dashboard' && item.data().boardId === dashboardId)
-      .map((item) =>
-        updateDoc(doc(db, 'todos', item.id), {
+    const todoReassignments = todosSnapshot.docs
+      .map((item) => ({
+        id: item.id,
+        data: {
           boardId: fallbackDashboard.id,
           columnId: fallbackColumnId,
           status: fallbackColumnId,
           updatedAt: Timestamp.now(),
-        })
-      );
+        },
+      }));
 
-    await Promise.all(reassignPromises);
+    await commitInBatches(todoReassignments);
     await deleteDoc(doc(db, 'todos', dashboardId));
     setActiveDashboardId(fallbackDashboard.id);
   };

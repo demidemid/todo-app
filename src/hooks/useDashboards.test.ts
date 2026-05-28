@@ -12,6 +12,9 @@ const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
 const mockSetDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
+const mockWriteBatch = vi.fn();
+const mockBatchUpdate = vi.fn();
+const mockBatchCommit = vi.fn();
 const mockAnd = vi.fn();
 const mockWhere = vi.fn();
 
@@ -40,6 +43,7 @@ vi.mock('firebase/firestore', () => ({
   query: (...args: unknown[]) => mockQuery(...args),
   setDoc: (...args: unknown[]) => mockSetDoc(...args),
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
+  writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
   and: (...args: unknown[]) => mockAnd(...args),
   where: (...args: unknown[]) => mockWhere(...args),
 }));
@@ -116,6 +120,13 @@ describe('useDashboards', () => {
     mockSetDoc.mockResolvedValue(undefined);
     mockUpdateDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
+    mockBatchUpdate.mockReset();
+    mockBatchCommit.mockReset();
+    mockBatchCommit.mockResolvedValue(undefined);
+    mockWriteBatch.mockReturnValue({
+      update: mockBatchUpdate,
+      commit: mockBatchCommit,
+    });
   });
 
   it('returns empty state for unauthenticated user', () => {
@@ -405,14 +416,7 @@ describe('useDashboards', () => {
 
     await result.current.updateDashboard('board-1', 'Board Updated', columns);
 
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
-      { path: 'todos/todo-bad' },
-      expect.objectContaining({
-        columnId: 'todo',
-        status: 'todo',
-      })
-    );
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
       { path: 'todos/board-1' },
       expect.objectContaining({
         name: 'Board Updated',
@@ -422,6 +426,15 @@ describe('useDashboards', () => {
         ],
       })
     );
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/todo-bad' },
+      expect.objectContaining({
+        columnId: 'todo',
+        status: 'todo',
+      })
+    );
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
   });
 
   it('deleteDashboard validates and reassigns todos before deleting dashboard', async () => {
@@ -440,18 +453,25 @@ describe('useDashboards', () => {
       expect(result.current.dashboards).toHaveLength(2);
     });
 
-    mockGetDocs.mockResolvedValueOnce({
-      docs: [
-        makeTodoDoc('todo-1', { boardId: 'board-1', columnId: 'todo', status: 'todo' }),
-        makeTodoDoc('todo-2', { boardId: 'board-2', columnId: 'qa', status: 'qa' }),
-      ],
-    });
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0 }]),
+        ],
+      })
+      .mockResolvedValueOnce({
+        docs: [
+          makeTodoDoc('todo-1', { boardId: 'board-1', columnId: 'todo', status: 'todo' }),
+          makeTodoDoc('todo-2', { boardId: 'board-2', columnId: 'qa', status: 'qa' }),
+        ],
+      });
 
     await act(async () => {
       await result.current.deleteDashboard('board-1');
     });
 
-    expect(mockUpdateDoc).toHaveBeenCalledWith(
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
       { path: 'todos/todo-1' },
       expect.objectContaining({
         boardId: 'board-2',
@@ -459,6 +479,7 @@ describe('useDashboards', () => {
         status: 'qa',
       })
     );
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
     expect(mockDeleteDoc).toHaveBeenCalledWith({ path: 'todos/board-1' });
   });
 
@@ -477,7 +498,30 @@ describe('useDashboards', () => {
       expect(result.current.dashboards).toHaveLength(1);
     });
 
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }])],
+    });
+
     await expect(result.current.deleteDashboard('board-1')).rejects.toThrow('At least one dashboard is required');
+  });
+
+  it('deleteDashboard uses firestore dashboards when local state is stale', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0 }]),
+          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'qa', name: 'QA', order: 0 }]),
+        ],
+      })
+      .mockResolvedValueOnce({ docs: [] });
+
+    await act(async () => {
+      await result.current.deleteDashboard('board-1');
+    });
+
+    expect(mockDeleteDoc).toHaveBeenCalledWith({ path: 'todos/board-1' });
   });
 
   it('retries legacy migration after failure and clears error on success', async () => {

@@ -211,11 +211,11 @@ export const useTodos = (userId: string | null) => {
 
   const addTodo = async (
     todo: Pick<TodoInput, 'title' | 'description'>,
-    options: { boardId: string; columnId: string }
+    options: { boardId: string; columnId?: string }
   ) => {
     if (!userId) throw new Error('User must be authenticated');
 
-    const columnId = options.columnId;
+    const columnId = options.columnId ?? 'todo';
     const boardId = options.boardId;
 
     const docRef = await addDoc(collection(db, 'todos'), {
