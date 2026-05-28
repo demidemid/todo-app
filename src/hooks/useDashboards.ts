@@ -59,6 +59,11 @@ const commitInBatches = async (
   }
 };
 
+const compareDashboards = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: Pick<Dashboard, 'order' | 'createdAt'>) => {
+  if (a.order !== b.order) return a.order - b.order;
+  return a.createdAt.getTime() - b.createdAt.getTime();
+};
+
 export const useDashboards = (userId: string | null) => {
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +101,7 @@ export const useDashboards = (userId: string | null) => {
             id: item.id,
             userId: typeof data.userId === 'string' ? data.userId : userId,
             name: typeof data.name === 'string' ? data.name : 'Dashboard',
+            order: typeof data.order === 'number' ? data.order : Number.NaN,
             columns,
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
@@ -108,6 +114,7 @@ export const useDashboards = (userId: string | null) => {
               entityType: 'dashboard',
               userId,
               name: 'My Dashboard',
+              order: 0,
               columns: defaultColumns(),
               createdAt: Timestamp.now(),
               updatedAt: Timestamp.now(),
@@ -124,14 +131,20 @@ export const useDashboards = (userId: string | null) => {
           return;
         }
 
-        items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const sortedByCreatedAt = [...items].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        const normalizedItems = sortedByCreatedAt.map((dashboard, index) => ({
+          ...dashboard,
+          order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+        }));
+
+        normalizedItems.sort(compareDashboards);
         let migrationErrorMessage: string | null = null;
 
         if (!hasMigratedLegacyTodosRef.current) {
           hasMigratedLegacyTodosRef.current = true;
 
           try {
-            const defaultBoard = items[0];
+            const defaultBoard = normalizedItems[0];
             const defaultColumnId = defaultBoard.columns[0]?.id;
 
             if (defaultColumnId) {
@@ -173,12 +186,12 @@ export const useDashboards = (userId: string | null) => {
           }
         }
 
-        setDashboards(items);
+        setDashboards(normalizedItems);
         setError(migrationErrorMessage);
         setLoadedUserId(userId);
 
         setActiveDashboardId((prev) => {
-          if (prev && items.some((board) => board.id === prev)) {
+          if (prev && normalizedItems.some((board) => board.id === prev)) {
             hasResolvedInitialSelectionRef.current = true;
             return prev;
           }
@@ -189,7 +202,7 @@ export const useDashboards = (userId: string | null) => {
           }
 
           hasResolvedInitialSelectionRef.current = true;
-          return items[0].id;
+          return normalizedItems[0].id;
         });
       },
       (snapshotError) => {
@@ -228,6 +241,7 @@ export const useDashboards = (userId: string | null) => {
       entityType: 'dashboard',
       userId,
       name: normalizedName,
+      order: dashboards.reduce((maxOrder, dashboard) => Math.max(maxOrder, dashboard.order), -1) + 1,
       columns,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
@@ -235,6 +249,52 @@ export const useDashboards = (userId: string | null) => {
 
     setActiveDashboardId(ref.id);
     return ref.id;
+  };
+
+  const reorderDashboards = async (orderedDashboardIds: string[]) => {
+    if (!userId) throw new Error('User must be authenticated');
+    if (orderedDashboardIds.length === 0) return;
+
+    const nextOrderById = new Map(orderedDashboardIds.map((dashboardId, index) => [dashboardId, index]));
+    const previousDashboards = dashboards;
+    const nextDashboards = dashboards
+      .map((dashboard) => {
+        const nextOrder = nextOrderById.get(dashboard.id);
+        if (nextOrder == null) return dashboard;
+        return {
+          ...dashboard,
+          order: nextOrder,
+        };
+      })
+      .sort(compareDashboards);
+
+    const changes = nextDashboards
+      .map((dashboard) => ({
+        id: dashboard.id,
+        nextOrder: dashboard.order,
+      }))
+      .filter((entry) => previousDashboards.find((dashboard) => dashboard.id === entry.id)?.order !== entry.nextOrder);
+
+    if (changes.length === 0) return;
+
+    setDashboards(nextDashboards);
+
+    const batch = writeBatch(db);
+    const timestamp = Timestamp.now();
+
+    changes.forEach((entry) => {
+      batch.update(doc(db, 'todos', entry.id), {
+        order: entry.nextOrder,
+        updatedAt: timestamp,
+      });
+    });
+
+    try {
+      await batch.commit();
+    } catch (error) {
+      setDashboards(previousDashboards);
+      throw error;
+    }
   };
 
   const updateDashboard = async (dashboardId: string, name: string, columns: DashboardColumn[]) => {
@@ -350,12 +410,17 @@ export const useDashboards = (userId: string | null) => {
 
         return {
           id: item.id,
+          order: typeof data.order === 'number' ? data.order : Number.NaN,
           createdAt: parseTimestamp(data.createdAt),
           columns,
         };
       })
       .filter((dashboard) => dashboard.id !== dashboardId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .map((dashboard, index) => ({
+        ...dashboard,
+        order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+      }))
+      .sort(compareDashboards);
 
     if (remainingDashboards.length === 0) {
       throw new Error('At least one dashboard is required');
@@ -405,6 +470,7 @@ export const useDashboards = (userId: string | null) => {
       addDashboard,
       updateDashboard,
       deleteDashboard,
+      reorderDashboards,
     };
   }
 
@@ -423,5 +489,6 @@ export const useDashboards = (userId: string | null) => {
     addDashboard,
     updateDashboard,
     deleteDashboard,
+    reorderDashboards,
   };
 };

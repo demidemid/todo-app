@@ -72,11 +72,12 @@ service cloud.firestore {
     }
 
     function isDashboardPayload(data) {
-      return data.keys().hasAll(['entityType', 'userId', 'name', 'columns', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['entityType', 'userId', 'name', 'columns', 'createdAt', 'updatedAt'])
+      return data.keys().hasAll(['entityType', 'userId', 'name', 'order', 'columns', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['entityType', 'userId', 'name', 'order', 'columns', 'createdAt', 'updatedAt'])
         && data.entityType == 'dashboard'
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.name)
+        && data.order is int
         && data.columns is list
         && data.columns.size() > 0
         && data.columns.all(column, isDashboardColumn(column))

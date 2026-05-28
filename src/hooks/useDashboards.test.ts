@@ -66,12 +66,14 @@ const makeDashboardDoc = (
   id: string,
   name: string,
   createdAt: Date,
-  columns: DashboardColumn[]
+  columns: DashboardColumn[],
+  order = 0
 ): SnapshotDoc =>
   makeSnapshotDoc(id, {
     entityType: 'dashboard',
     userId: 'user-1',
     name,
+    order,
     columns,
     createdAt,
     updatedAt: createdAt,
@@ -323,6 +325,7 @@ describe('useDashboards', () => {
         entityType: 'dashboard',
         userId: 'user-1',
         name: 'My Dashboard',
+        order: 0,
       })
     );
     expect(mockAddDoc).not.toHaveBeenCalled();
@@ -381,12 +384,56 @@ describe('useDashboards', () => {
         entityType: 'dashboard',
         userId: 'user-1',
         name: 'Product',
+        order: expect.any(Number),
         columns: [
           expect.objectContaining({ name: 'Backlog', order: 0 }),
           expect.objectContaining({ name: 'Doing', order: 1 }),
         ],
       })
     );
+  });
+
+  it('reorderDashboards persists dashboard order updates in a batch', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc(
+            'board-1',
+            'Board 1',
+            new Date('2026-01-01T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            0
+          ),
+          makeDashboardDoc(
+            'board-2',
+            'Board 2',
+            new Date('2026-01-02T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            1
+          ),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(2);
+    });
+
+    await act(async () => {
+      await result.current.reorderDashboards(['board-2', 'board-1']);
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/board-1' },
+      expect.objectContaining({ order: 1 })
+    );
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/board-2' },
+      expect.objectContaining({ order: 0 })
+    );
+    expect(mockBatchCommit).toHaveBeenCalledTimes(1);
   });
 
   it('updateDashboard validates input and repairs out-of-range todo columns', async () => {

@@ -23,6 +23,7 @@ interface UseTodoListControllerArgs {
   addDashboard: (name: string, columnNames: string[]) => Promise<string>;
   updateDashboard: (dashboardId: string, name: string, columns: DashboardColumn[]) => Promise<void>;
   deleteDashboard: (dashboardId: string) => Promise<void>;
+  reorderDashboards: (orderedDashboardIds: string[]) => Promise<void>;
 }
 
 const hasDuplicateColumnNames = (columnNames: string[]) => {
@@ -54,6 +55,7 @@ export const useTodoListController = ({
   addDashboard,
   updateDashboard,
   deleteDashboard,
+  reorderDashboards,
 }: UseTodoListControllerArgs) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -78,6 +80,8 @@ export const useTodoListController = ({
   const [editingDescription, setEditingDescription] = useState('');
   const [modalTodo, setModalTodo] = useState<Todo | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [dashboardDragId, setDashboardDragId] = useState<string | null>(null);
+  const [dashboardDropIndex, setDashboardDropIndex] = useState<number | null>(null);
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const handleAddTodo = async (event: React.FormEvent) => {
@@ -343,6 +347,36 @@ export const useTodoListController = ({
     }
   };
 
+  const handleDashboardDrop = async (targetIndex: number, draggedDashboardId?: string) => {
+    const activeDragId = draggedDashboardId ?? dashboardDragId;
+    if (!activeDragId) return;
+
+    const sourceIndex = dashboards.findIndex((dashboard) => dashboard.id === activeDragId);
+    if (sourceIndex < 0) {
+      setDashboardDragId(null);
+      setDashboardDropIndex(null);
+      return;
+    }
+
+    const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, dashboards.length));
+    const nextDashboards = [...dashboards];
+    const [movedDashboard] = nextDashboards.splice(sourceIndex, 1);
+
+    const insertIndex = sourceIndex < normalizedTargetIndex ? normalizedTargetIndex - 1 : normalizedTargetIndex;
+    nextDashboards.splice(insertIndex, 0, movedDashboard);
+
+    setDashboardDragId(null);
+    setDashboardDropIndex(null);
+
+    if (insertIndex === sourceIndex) return;
+
+    try {
+      await reorderDashboards(nextDashboards.map((dashboard) => dashboard.id));
+    } catch (error) {
+      setDashboardActionError(error instanceof Error ? error.message : 'Failed to reorder dashboards');
+    }
+  };
+
   return {
     title,
     setTitle,
@@ -385,6 +419,10 @@ export const useTodoListController = ({
     setModalTodo,
     menuOpenId,
     setMenuOpenId,
+    dashboardDragId,
+    setDashboardDragId,
+    dashboardDropIndex,
+    setDashboardDropIndex,
     menuButtonRefs,
     handleAddTodo,
     handleMoveTodo,
@@ -399,5 +437,6 @@ export const useTodoListController = ({
     addColumnToEditDraft,
     handleSaveDashboardEdit,
     handleDeleteDashboard,
+    handleDashboardDrop,
   };
 };

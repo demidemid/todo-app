@@ -9,6 +9,7 @@ export interface Dashboard {
   id: string;
   userId: string;
   name: string;
+  order: number;
   columns: DashboardColumn[];
   createdAt: Date;
   updatedAt: Date;
