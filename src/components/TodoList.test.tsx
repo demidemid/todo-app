@@ -470,7 +470,52 @@ describe('TodoList', () => {
     await waitFor(() => {
       expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
         title: 'Updated title',
-        description: 'Initial description',
+        description: '<p>Initial description</p>',
+      });
+    });
+  });
+
+  it('saves card description with Cmd/Ctrl+S in the modal', async () => {
+    const user = userEvent.setup();
+
+    mockUpdateTodo.mockResolvedValue(undefined);
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-t-1'));
+    await user.click(screen.getByRole('button', { name: 'Edit description' }));
+
+    const editor = screen.getByTestId('rich-text-editor');
+    await user.click(editor);
+    await user.keyboard(' updated');
+
+    fireEvent.keyDown(editor, { key: 's', metaKey: true });
+
+    await waitFor(() => {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
+        title: 'Initial title',
+        description: '<p>Initial description updated</p>',
       });
     });
   });

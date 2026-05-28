@@ -1,3 +1,5 @@
+import type { Comment } from './comment';
+
 export type TodoStatus = string;
 
 export interface Todo {
@@ -11,6 +13,7 @@ export interface Todo {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
+  comments?: Comment[];
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>;

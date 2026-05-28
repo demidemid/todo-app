@@ -1,7 +1,39 @@
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import type { Comment } from '../../types/comment';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
+
+const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
+
+function linkifyText(text: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  URL_REGEX.lastIndex = 0;
+  while ((match = URL_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const url = match[0];
+    parts.push(
+      <a
+        key={match.index}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-400 underline hover:text-blue-300 break-all"
+      >
+        {url}
+      </a>,
+    );
+    lastIndex = match.index + url.length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+}
 
 interface TodoModalCommentsPanelProps {
   comments: Comment[];
@@ -25,7 +57,7 @@ export const TodoModalCommentsPanel = ({
   onSubmit,
 }: TodoModalCommentsPanelProps) => {
   return (
-    <div className="w-full shrink-0 border-l border-white/10 pl-0 mt-8 md:mt-0 md:w-80 md:pl-6">
+    <div className="mt-8 min-h-0 w-full shrink-0 overflow-y-auto border-l border-white/10 pl-0 pr-1 md:mt-0 md:w-80 md:pl-6">
       <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>
       <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-2">
         <Textarea
@@ -55,7 +87,7 @@ export const TodoModalCommentsPanel = ({
           {comments.map((comment) => (
             <li key={comment.id} className="rounded-lg bg-slate-800/60 px-3 py-2">
               <div className="mb-1 text-xs text-slate-300">{comment.userEmail ?? comment.userId}</div>
-              <div className="text-sm whitespace-pre-line text-slate-100">{comment.text}</div>
+              <div className="text-sm whitespace-pre-wrap text-slate-100">{linkifyText(comment.text)}</div>
               <div className="mt-1 text-[11px] text-slate-400">
                 {comment.createdAt instanceof Date ? comment.createdAt.toLocaleString() : String(comment.createdAt)}
               </div>
