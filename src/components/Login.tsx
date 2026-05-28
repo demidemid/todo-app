@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface LoginProps {
   user: User | null;
@@ -118,23 +119,23 @@ export const Login = ({ user }: LoginProps) => {
         <h2 className="mb-4 text-xl font-semibold text-white">{isSignUp ? 'Create account' : 'Sign in'}</h2>
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Email</label>
-        <input
+        <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="name@example.com"
           required
-          className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-4 bg-slate-900"
         />
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Password</label>
-        <input
+        <Input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           required
-          className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-4 bg-slate-900"
         />
 
         {error && (

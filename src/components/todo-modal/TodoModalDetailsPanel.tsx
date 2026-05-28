@@ -1,5 +1,6 @@
 import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 interface TodoModalDetailsPanelProps {
   todo: Todo;
@@ -36,11 +37,11 @@ export const TodoModalDetailsPanel = ({
         <>
           <h2 className="mb-4 text-xl font-bold text-white">Edit card</h2>
           <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Title</label>
-          <input
+          <Input
             type="text"
             value={title}
             onChange={(event) => onTitleChange(event.target.value)}
-            className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+            className="mb-4"
             autoFocus
             disabled={saving}
           />

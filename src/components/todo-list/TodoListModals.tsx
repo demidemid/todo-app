@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { DashboardColumn } from '../../types/dashboard';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 
 interface CreateDashboardModalProps {
   open: boolean;
@@ -68,23 +69,22 @@ export const CreateDashboardModal = ({
         <h3 className="mb-4 text-lg font-semibold text-white">Create new dashboard</h3>
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Dashboard name</label>
-        <input
+        <Input
           type="text"
           value={dashboardName}
           onChange={(event) => onDashboardNameChange(event.target.value)}
           placeholder="Product roadmap"
-          className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-4"
           autoFocus
         />
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Columns</label>
         <div className="mb-3 flex gap-2">
-          <input
+          <Input
             type="text"
             value={columnDraft}
             onChange={(event) => onColumnDraftChange(event.target.value)}
             placeholder="Backlog"
-            className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
           />
           <Button type="button" variant="ghost" size="sm" onClick={onAddColumn}>
             Add
@@ -145,13 +145,13 @@ export const CreateCardModal = ({
         <h3 className="mb-4 text-lg font-semibold text-white">Create new card</h3>
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Title</label>
-        <input
+        <Input
           type="text"
           value={title}
           onChange={(event) => onTitleChange(event.target.value)}
           data-testid="create-card-title"
           placeholder="Task title"
-          className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-4"
           autoFocus
         />
 
@@ -208,11 +208,11 @@ export const EditDashboardModal = ({
         <h3 className="mb-4 text-lg font-semibold text-white">Edit dashboard</h3>
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Dashboard name</label>
-        <input
+        <Input
           type="text"
           value={dashboardName}
           onChange={(event) => onDashboardNameChange(event.target.value)}
-          className="mb-4 w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+          className="mb-4"
           autoFocus
         />
 
@@ -220,11 +220,10 @@ export const EditDashboardModal = ({
         <div className="mb-3 space-y-2">
           {columns.map((column) => (
             <div key={column.id} className="flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={column.name}
                 onChange={(event) => onColumnNameChange(column.id, event.target.value)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
                 data-testid={`edit-dashboard-column-${column.id}`}
               />
               <Button type="button" variant="danger" size="sm" onClick={() => onRemoveColumn(column.id)}>
@@ -235,12 +234,11 @@ export const EditDashboardModal = ({
         </div>
 
         <div className="mb-4 flex gap-2">
-          <input
+          <Input
             type="text"
             value={columnDraft}
             onChange={(event) => onColumnDraftChange(event.target.value)}
             placeholder="Add column"
-            className="w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2 text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
           />
           <Button type="button" variant="ghost" onClick={onAddColumn}>
             Add

@@ -3,6 +3,7 @@ import { CardMenu } from '../CardMenu';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 
 interface DragState {
@@ -215,13 +216,13 @@ export const DashboardSection = ({
                           {editingTodoId === todo.id ? (
                             <div>
                               <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">Title</label>
-                              <input
+                              <Input
                                 type="text"
                                 value={editingTitle}
                                 onChange={(event) => onEditTitleChange(event.target.value)}
                                 onKeyDown={(event) => onEditKeyDown(event, todo.id)}
                                 data-testid={`edit-title-${todo.id}`}
-                                className="mb-3 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+                                className="mb-3 rounded-md px-2 py-1.5 text-sm"
                                 autoFocus
                               />
 
