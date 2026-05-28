@@ -358,10 +358,11 @@ export const useTodoListController = ({
       return;
     }
 
-    const boundedTarget = Math.max(0, Math.min(targetIndex, dashboards.length));
+    const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, dashboards.length));
     const nextDashboards = [...dashboards];
     const [movedDashboard] = nextDashboards.splice(sourceIndex, 1);
-    const insertIndex = sourceIndex < boundedTarget ? boundedTarget - 1 : boundedTarget;
+
+    const insertIndex = sourceIndex < normalizedTargetIndex ? normalizedTargetIndex - 1 : normalizedTargetIndex;
     nextDashboards.splice(insertIndex, 0, movedDashboard);
 
     setDashboardDragId(null);
@@ -369,7 +370,6 @@ export const useTodoListController = ({
 
     if (insertIndex === sourceIndex) return;
 
-    setDashboardActionError('');
     try {
       await reorderDashboards(nextDashboards.map((dashboard) => dashboard.id));
     } catch (error) {

@@ -33,6 +33,8 @@ interface DashboardSectionProps {
   onToggle: (dashboardId: string) => void;
   onDashboardDragStart?: () => void;
   onDashboardDragEnd?: () => void;
+  onDashboardDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDashboardDrop?: (event: React.DragEvent<HTMLElement>) => void;
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
@@ -68,6 +70,8 @@ export const DashboardSection = ({
   onToggle,
   onDashboardDragStart,
   onDashboardDragEnd,
+  onDashboardDragOver,
+  onDashboardDrop,
   onOpenEditDashboard,
   onDeleteDashboard,
   onOpenCreateCard,
@@ -90,14 +94,17 @@ export const DashboardSection = ({
       key={dashboard.id}
       className={`rounded-xl border border-white/10 bg-slate-900/50 transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       data-testid={`dashboard-${dashboard.id}`}
+      onDragOver={onDashboardDragOver}
+      onDrop={onDashboardDrop}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span
-            className="inline-flex shrink-0 cursor-grab items-center justify-center rounded-md p-1.5 text-slate-400"
-            aria-hidden="true"
-            title="Drag dashboard"
+          <IconButton
+            variant="neutral"
+            size="sm"
+            label="Drag dashboard"
             data-testid={`dashboard-drag-handle-${dashboard.id}`}
+            className="cursor-grab active:cursor-grabbing"
             draggable
             onDragStart={(event) => {
               event.stopPropagation();
@@ -111,16 +118,10 @@ export const DashboardSection = ({
               onDashboardDragEnd?.();
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-          </span>
+          </IconButton>
 
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 

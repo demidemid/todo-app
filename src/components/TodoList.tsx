@@ -124,7 +124,15 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         onSubmit={controller.handleSaveDashboardEdit}
       />
 
-      <div className="space-y-3">
+      <div
+        className="space-y-3"
+        onDragEndCapture={() => {
+          window.setTimeout(() => {
+            controller.setDashboardDragId(null);
+            controller.setDashboardDropIndex(null);
+          }, 0);
+        }}
+      >
         {dashboards.map((dashboard, index) => (
           <Fragment key={dashboard.id}>
             {controller.dashboardDragId && (
@@ -169,11 +177,15 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
                 controller.setDashboardDragId(dashboard.id);
                 controller.setDashboardDropIndex(index);
               }}
-              onDashboardDragEnd={() => {
-                window.setTimeout(() => {
-                  controller.setDashboardDragId(null);
-                  controller.setDashboardDropIndex(null);
-                }, 0);
+              onDashboardDragOver={(event) => {
+                event.preventDefault();
+                if (!controller.dashboardDragId) return;
+                controller.setDashboardDropIndex(index);
+              }}
+              onDashboardDrop={(event) => {
+                event.preventDefault();
+                const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
+                void controller.handleDashboardDrop(index, draggedDashboardId);
               }}
               onOpenEditDashboard={controller.openEditDashboard}
               onDeleteDashboard={(dashboardId, dashboardName) => void controller.handleDeleteDashboard(dashboardId, dashboardName)}
