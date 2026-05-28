@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   addDoc,
   collection,
@@ -45,9 +45,11 @@ export const useDashboards = (userId: string | null) => {
   const [error, setError] = useState<string | null>(null);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
+  const hasResolvedInitialSelectionRef = useRef(false);
 
   useEffect(() => {
     if (!userId) return;
+    hasResolvedInitialSelectionRef.current = false;
 
     const q = query(
       collection(db, 'todos'),
@@ -96,7 +98,17 @@ export const useDashboards = (userId: string | null) => {
         setLoadedUserId(userId);
 
         setActiveDashboardId((prev) => {
-          if (prev && items.some((board) => board.id === prev)) return prev;
+          if (prev && items.some((board) => board.id === prev)) {
+            hasResolvedInitialSelectionRef.current = true;
+            return prev;
+          }
+
+          // Keep explicit collapsed state across realtime updates.
+          if (prev === null && hasResolvedInitialSelectionRef.current) {
+            return null;
+          }
+
+          hasResolvedInitialSelectionRef.current = true;
           return items[0].id;
         });
       },
