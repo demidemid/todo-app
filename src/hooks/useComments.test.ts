@@ -140,4 +140,62 @@ describe('useComments', () => {
     expect(result.current.comments).toEqual([]);
     expect(result.current.error).toBe('Permission denied');
   });
+
+  it('normalizes malformed comments and falls back to epoch for unsupported timestamps', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    mockOnSnapshot.mockImplementationOnce((_, onNext) => {
+      onNext({
+        exists: () => true,
+        data: () => ({
+          comments: [
+            {
+              createdAt: 'not-a-date',
+            },
+            {
+              id: 'c-good',
+              todoId: 'todo-1',
+              userId: 'user-2',
+              text: 'ready',
+              createdAt: new Date('2026-01-03T10:00:00Z'),
+            },
+          ],
+        }),
+      });
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useComments('todo-1'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.comments[0]).toMatchObject({ id: 'c-good', text: 'ready' });
+    expect(result.current.comments[1]).toMatchObject({
+      id: 'todo-1-0',
+      todoId: 'todo-1',
+      userId: 'unknown',
+      text: '',
+    });
+    expect(result.current.comments[1].createdAt.getTime()).toBe(0);
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('uses fallback error text when snapshot error has no message', async () => {
+    mockOnSnapshot.mockImplementationOnce((_, __, onError) => {
+      onError({});
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useComments('todo-1'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBe('Failed to load comments');
+  });
 });

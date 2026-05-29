@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Dashboard, DashboardColumn } from '../types/dashboard';
+import type { Todo } from '../types/todo';
 import { TodoList } from './TodoList';
 
 const mockAddTodo = vi.fn();
@@ -29,89 +31,99 @@ vi.mock('../hooks/useDashboards', () => ({
   useDashboards: (userId: string | null) => mockUseDashboards(userId),
 }));
 
+const createColumn = (overrides: Partial<DashboardColumn> = {}): DashboardColumn => ({
+  id: 'todo',
+  name: 'To do',
+  order: 0,
+  isDone: false,
+  ...overrides,
+});
+
+const createDashboard = (overrides: Partial<Dashboard> = {}): Dashboard => ({
+  id: 'board-1',
+  userId: 'user-1',
+  name: 'My Dashboard',
+  order: 0,
+  columns: [
+    createColumn(),
+    createColumn({ id: 'in_progress', name: 'In progress', order: 1 }),
+    createColumn({ id: 'done', name: 'Done', order: 2, isDone: true }),
+  ],
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+  ...overrides,
+});
+
+const createTodo = (overrides: Partial<Todo> = {}): Todo => ({
+  id: 't-1',
+  userId: 'user-1',
+  title: 'Initial title',
+  description: 'Initial description',
+  status: 'todo',
+  boardId: 'board-1',
+  columnId: 'todo',
+  weight: 1000,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+  updatedAt: new Date('2026-01-01T00:00:00Z'),
+  ...overrides,
+});
+
+const createTodosState = (todos: Todo[] = []) => ({
+  todos,
+  loading: false,
+  error: null,
+  addTodo: mockAddTodo,
+  updateTodo: mockUpdateTodo,
+  deleteTodo: mockDeleteTodo,
+});
+
+const createDashboardsState = (dashboards: Dashboard[] = [createDashboard()]) => ({
+  dashboards,
+  activeDashboard: dashboards[0] ?? null,
+  activeDashboardId: dashboards[0]?.id ?? null,
+  setActiveDashboardId: mockSetActiveDashboardId,
+  loading: false,
+  error: null,
+  addDashboard: mockAddDashboard,
+  updateDashboard: mockUpdateDashboard,
+  deleteDashboard: mockDeleteDashboard,
+  reorderDashboards: mockReorderDashboards,
+});
+
+const createCommentsState = (overrides: Record<string, unknown> = {}) => ({
+  comments: [],
+  loading: false,
+  error: null,
+  addComment: mockAddComment,
+  ...overrides,
+});
+
+const setTodosState = (todos: Todo[] = []) => {
+  mockUseTodos.mockReturnValue(createTodosState(todos));
+};
+
+const setDashboardsState = (dashboards: Dashboard[] = [createDashboard()]) => {
+  mockUseDashboards.mockReturnValue(createDashboardsState(dashboards));
+};
+
+const setCommentsState = (overrides: Record<string, unknown> = {}) => {
+  mockUseComments.mockReturnValue(createCommentsState(overrides));
+};
+
 describe('TodoList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseTodos.mockReturnValue({
-      todos: [],
-      loading: false,
-      error: null,
-      addTodo: mockAddTodo,
-      updateTodo: mockUpdateTodo,
-      deleteTodo: mockDeleteTodo,
-    });
-    mockUseComments.mockReturnValue({
-      comments: [],
-      loading: false,
-      error: null,
-      addComment: mockAddComment,
-    });
-    mockUseDashboards.mockReturnValue({
-      dashboards: [
-        {
-          id: 'board-1',
-          userId: 'user-1',
-          name: 'My Dashboard',
-          order: 0,
-          columns: [
-            { id: 'todo', name: 'To do', order: 0, isDone: false },
-            { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
-            { id: 'done', name: 'Done', order: 2, isDone: true },
-          ],
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-      ],
-      activeDashboard: {
-        id: 'board-1',
-        userId: 'user-1',
-        name: 'My Dashboard',
-        order: 0,
-        columns: [
-          { id: 'todo', name: 'To do', order: 0, isDone: false },
-          { id: 'in_progress', name: 'In progress', order: 1, isDone: false },
-          { id: 'done', name: 'Done', order: 2, isDone: true },
-        ],
-        createdAt: new Date('2026-01-01T00:00:00Z'),
-        updatedAt: new Date('2026-01-01T00:00:00Z'),
-      },
-      activeDashboardId: 'board-1',
-      setActiveDashboardId: mockSetActiveDashboardId,
-      loading: false,
-      error: null,
-      addDashboard: mockAddDashboard,
-      updateDashboard: mockUpdateDashboard,
-      deleteDashboard: mockDeleteDashboard,
-      reorderDashboards: mockReorderDashboards,
-    });
+    setTodosState();
+    setCommentsState();
+    setDashboardsState();
   });
 
   it('opens card modal and shows comments list', async () => {
     const user = userEvent.setup();
 
-    mockUseTodos.mockReturnValue({
-      todos: [
-        {
-          id: 't-1',
-          userId: 'user-1',
-          title: 'Initial title',
-          description: 'Initial description',
-          status: 'todo',
-          boardId: 'board-1',
-          columnId: 'todo',
-          weight: 1000,
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-      ],
-      loading: false,
-      error: null,
-      addTodo: mockAddTodo,
-      updateTodo: mockUpdateTodo,
-      deleteTodo: mockDeleteTodo,
-    });
+    setTodosState([createTodo()]);
 
-    mockUseComments.mockReturnValue({
+    setCommentsState({
       comments: [
         {
           id: 'c-1',
@@ -122,9 +134,6 @@ describe('TodoList', () => {
           createdAt: new Date('2026-01-02T00:00:00Z'),
         },
       ],
-      loading: false,
-      error: null,
-      addComment: mockAddComment,
     });
 
     render(<TodoList userId="user-1" />);
@@ -142,27 +151,7 @@ describe('TodoList', () => {
     const user = userEvent.setup();
 
     mockAddComment.mockResolvedValue(undefined);
-    mockUseTodos.mockReturnValue({
-      todos: [
-        {
-          id: 't-1',
-          userId: 'user-1',
-          title: 'Initial title',
-          description: 'Initial description',
-          status: 'todo',
-          boardId: 'board-1',
-          columnId: 'todo',
-          weight: 1000,
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-      ],
-      loading: false,
-      error: null,
-      addTodo: mockAddTodo,
-      updateTodo: mockUpdateTodo,
-      deleteTodo: mockDeleteTodo,
-    });
+    setTodosState([createTodo()]);
 
     render(<TodoList userId="user-1" />);
 
@@ -270,45 +259,17 @@ describe('TodoList', () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    mockUseDashboards.mockReturnValue({
-      dashboards: [
-        {
-          id: 'board-1',
-          userId: 'user-1',
-          name: 'My Dashboard',
-          order: 0,
-          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-        {
-          id: 'board-2',
-          userId: 'user-1',
-          name: 'QA Dashboard',
-          order: 1,
-          columns: [{ id: 'qa_todo', name: 'To do', order: 0 }],
-          createdAt: new Date('2026-01-02T00:00:00Z'),
-          updatedAt: new Date('2026-01-02T00:00:00Z'),
-        },
-      ],
-      activeDashboard: {
-        id: 'board-1',
-        userId: 'user-1',
-        name: 'My Dashboard',
-        order: 0,
-        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-        createdAt: new Date('2026-01-01T00:00:00Z'),
-        updatedAt: new Date('2026-01-01T00:00:00Z'),
-      },
-      activeDashboardId: 'board-1',
-      setActiveDashboardId: mockSetActiveDashboardId,
-      loading: false,
-      error: null,
-      addDashboard: mockAddDashboard,
-      updateDashboard: mockUpdateDashboard,
-      deleteDashboard: mockDeleteDashboard,
-      reorderDashboards: mockReorderDashboards,
-    });
+    setDashboardsState([
+      createDashboard({ columns: [createColumn()] }),
+      createDashboard({
+        id: 'board-2',
+        name: 'QA Dashboard',
+        order: 1,
+        columns: [createColumn({ id: 'qa_todo' })],
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
 
     render(<TodoList userId="user-1" />);
 
@@ -352,45 +313,17 @@ describe('TodoList', () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
-    mockUseDashboards.mockReturnValue({
-      dashboards: [
-        {
-          id: 'board-1',
-          userId: 'user-1',
-          name: 'My Dashboard',
-          order: 0,
-          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-        {
-          id: 'board-2',
-          userId: 'user-1',
-          name: 'Second Dashboard',
-          order: 1,
-          columns: [{ id: 'todo2', name: 'To do', order: 0, isDone: false }],
-          createdAt: new Date('2026-01-02T00:00:00Z'),
-          updatedAt: new Date('2026-01-02T00:00:00Z'),
-        },
-      ],
-      activeDashboard: {
-        id: 'board-1',
-        userId: 'user-1',
-        name: 'My Dashboard',
-        order: 0,
-        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-        createdAt: new Date('2026-01-01T00:00:00Z'),
-        updatedAt: new Date('2026-01-01T00:00:00Z'),
-      },
-      activeDashboardId: 'board-1',
-      setActiveDashboardId: mockSetActiveDashboardId,
-      loading: false,
-      error: null,
-      addDashboard: mockAddDashboard,
-      updateDashboard: mockUpdateDashboard,
-      deleteDashboard: mockDeleteDashboard,
-      reorderDashboards: mockReorderDashboards,
-    });
+    setDashboardsState([
+      createDashboard({ columns: [createColumn()] }),
+      createDashboard({
+        id: 'board-2',
+        name: 'Second Dashboard',
+        order: 1,
+        columns: [createColumn({ id: 'todo2' })],
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
 
     render(<TodoList userId="user-1" />);
 
@@ -413,45 +346,17 @@ describe('TodoList', () => {
   });
 
   it('reorders dashboards via drag-and-drop', () => {
-    mockUseDashboards.mockReturnValue({
-      dashboards: [
-        {
-          id: 'board-1',
-          userId: 'user-1',
-          name: 'Board 1',
-          order: 0,
-          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-          createdAt: new Date('2026-01-01T00:00:00Z'),
-          updatedAt: new Date('2026-01-01T00:00:00Z'),
-        },
-        {
-          id: 'board-2',
-          userId: 'user-1',
-          name: 'Board 2',
-          order: 1,
-          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-          createdAt: new Date('2026-01-02T00:00:00Z'),
-          updatedAt: new Date('2026-01-02T00:00:00Z'),
-        },
-      ],
-      activeDashboard: {
-        id: 'board-1',
-        userId: 'user-1',
-        name: 'Board 1',
-        order: 0,
-        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
-        createdAt: new Date('2026-01-01T00:00:00Z'),
-        updatedAt: new Date('2026-01-01T00:00:00Z'),
-      },
-      activeDashboardId: 'board-1',
-      setActiveDashboardId: mockSetActiveDashboardId,
-      loading: false,
-      error: null,
-      addDashboard: mockAddDashboard,
-      updateDashboard: mockUpdateDashboard,
-      deleteDashboard: mockDeleteDashboard,
-      reorderDashboards: mockReorderDashboards,
-    });
+    setDashboardsState([
+      createDashboard({ name: 'Board 1', columns: [createColumn()] }),
+      createDashboard({
+        id: 'board-2',
+        name: 'Board 2',
+        order: 1,
+        columns: [createColumn()],
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
 
     render(<TodoList userId="user-1" />);
 
@@ -1097,4 +1002,5 @@ describe('TodoList', () => {
 
     expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
+
 });
