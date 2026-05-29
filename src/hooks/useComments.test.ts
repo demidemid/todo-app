@@ -95,4 +95,49 @@ describe('useComments', () => {
       }
     );
   });
+
+  it('returns an idle state when todoId is null and addComment rejects', async () => {
+    const { result } = renderHook(() => useComments(null));
+
+    expect(result.current.comments).toEqual([]);
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+
+    await expect(result.current.addComment('u-1', 'hello')).rejects.toThrow('No todoId');
+    expect(mockOnSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('handles a missing todo document by exposing an empty loaded state', async () => {
+    mockOnSnapshot.mockImplementationOnce((_, onNext) => {
+      onNext({
+        exists: () => false,
+      });
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useComments('todo-1'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.comments).toEqual([]);
+    expect(result.current.error).toBeNull();
+  });
+
+  it('surfaces snapshot errors for the active todo', async () => {
+    mockOnSnapshot.mockImplementationOnce((_, __, onError) => {
+      onError({ message: 'Permission denied' });
+      return vi.fn();
+    });
+
+    const { result } = renderHook(() => useComments('todo-1'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.comments).toEqual([]);
+    expect(result.current.error).toBe('Permission denied');
+  });
 });
