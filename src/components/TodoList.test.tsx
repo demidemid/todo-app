@@ -202,8 +202,13 @@ describe('TodoList', () => {
     renderTodoList(['/?dashboard=board-2']);
 
     await waitFor(() => {
-      expect(mockSetActiveDashboardId).toHaveBeenCalledWith('board-2');
+      expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
     });
+
+    const setterArg = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
+    expect(typeof setterArg).toBe('function');
+    expect(setterArg(null)).toBe('board-2');
+    expect(setterArg('board-2')).toBe('board-2');
   });
 
   it('adds a comment from card modal', async () => {
@@ -345,6 +350,9 @@ describe('TodoList', () => {
     const user = userEvent.setup();
 
     renderTodoList(['/?dashboard=board-1']);
+
+    // Ignore the initial sync call from query parameter.
+    mockSetActiveDashboardId.mockClear();
 
     await user.click(screen.getByTestId('dashboard-toggle-board-1'));
 

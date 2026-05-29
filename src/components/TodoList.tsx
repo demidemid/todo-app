@@ -71,9 +71,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
       return;
     }
 
-    if (activeDashboardId !== dashboardParamId) {
-      setActiveDashboardId(dashboardParamId);
-    }
+    setActiveDashboardId((prevDashboardId) => (prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId));
   }, [dashboardParamId, dashboards, setActiveDashboardId, updateSearch]);
 
   const openTodoByLink = (todoId: string, dashboardId: string) => {
