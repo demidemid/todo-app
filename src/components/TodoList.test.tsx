@@ -370,6 +370,32 @@ describe('TodoList', () => {
     expect(screen.getByTestId('share-users-error')).toHaveTextContent(
       'Failed to load users: Missing or insufficient permissions.'
     );
+
+    const saveButton = screen.getByRole('button', { name: 'Save access' });
+    expect(saveButton).toBeDisabled();
+
+    await user.click(saveButton);
+    expect(mockShareDashboard).not.toHaveBeenCalled();
+  });
+
+  it('disables share submit while users are loading', async () => {
+    const user = userEvent.setup();
+
+    setUsersState({
+      users: [],
+      loading: true,
+      error: null,
+    });
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+
+    const saveButton = screen.getByRole('button', { name: 'Save access' });
+    expect(saveButton).toBeDisabled();
+
+    await user.click(saveButton);
+    expect(mockShareDashboard).not.toHaveBeenCalled();
   });
 
   it('shows validation error and blocks save for duplicate dashboard column names', async () => {
@@ -555,6 +581,33 @@ describe('TodoList', () => {
     fireEvent.drop(targetDashboard);
 
     expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
+  });
+
+  it('prevents dragging and reordering shared dashboards', async () => {
+    setDashboardsState([
+      createDashboard({ id: 'board-1', userId: 'user-1', order: 0 }),
+      createDashboard({
+        id: 'board-2',
+        userId: 'user-2',
+        name: 'Shared dashboard',
+        order: 1,
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
+
+    renderTodoList();
+
+    const sharedDragHandle = screen.getByTestId('dashboard-drag-handle-board-2');
+    expect(sharedDragHandle).toBeDisabled();
+
+    fireEvent.drop(screen.getByTestId('dashboard-board-2'), {
+      dataTransfer: {
+        getData: () => 'board-2',
+      },
+    });
+
+    expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
 
   it('cancels inline edit by Escape', async () => {

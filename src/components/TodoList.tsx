@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboards } from '../hooks/useDashboards';
-import { useTodos } from '../hooks/useTodos';
 import { useUsers } from '../hooks/useUsers';
 import type { Dashboard } from '../types/dashboard';
 import { TodoModal } from './TodoModal';
@@ -10,6 +9,7 @@ import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboa
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
 import { IconButton } from './ui/IconButton';
+import { useTodos } from '../hooks/useTodos.ts';
 
 interface TodoListProps {
   userId: string;
@@ -46,6 +46,15 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
 
   const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
+  const manageableDashboardIds = useMemo(
+    () => dashboards.filter((dashboard) => dashboard.userId === userId).map((dashboard) => dashboard.id),
+    [dashboards, userId]
+  );
+  const manageableIndexById = useMemo(
+    () => new Map(manageableDashboardIds.map((id, index) => [id, index])),
+    [manageableDashboardIds]
+  );
+
   const controller = useTodoListController({
     todos,
     dashboards,
@@ -132,6 +141,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const handleSaveShare = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!shareDashboardTarget) return;
+    if (usersLoading || usersError) return;
 
     setShareActionError('');
 
@@ -245,9 +255,10 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         className="space-y-3"
         onDragOver={(event) => {
           event.preventDefault();
-          if (!controller.dashboardDragId) return;
+          if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
 
           const sections = dashboards
+            .filter((dashboard) => dashboard.userId === userId)
             .map((dashboard, index) => ({
               id: dashboard.id,
               index,
@@ -291,8 +302,11 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
           if (!controller.dashboardDragId) return;
 
           const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-          const targetIndex = controller.dashboardDropIndex ?? dashboards.length;
-          void controller.handleDashboardDrop(targetIndex, draggedDashboardId);
+          const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
+          if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
+
+          const targetIndex = controller.dashboardDropIndex ?? manageableDashboardIds.length;
+          void controller.handleDashboardDrop(targetIndex, draggedDashboardId, manageableDashboardIds);
           setDashboardHoverId(null);
         }}
         onDragEndCapture={() => {
@@ -312,7 +326,11 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             dashboard={dashboard}
             isExpanded={activeDashboardId === dashboard.id}
             isDragging={controller.dashboardDragId === dashboard.id}
-            isDropTarget={dashboardHoverId === dashboard.id && controller.dashboardDragId !== dashboard.id}
+            isDropTarget={
+              dashboard.userId === userId &&
+              dashboardHoverId === dashboard.id &&
+              controller.dashboardDragId !== dashboard.id
+            }
             dashboardsLength={dashboards.length}
             columns={columns}
             groupedTodos={groupedTodos}
@@ -338,29 +356,39 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
               });
             }}
             onDashboardDragStart={() => {
+              if (dashboard.userId !== userId) return;
               controller.setDashboardDragId(dashboard.id);
-              controller.setDashboardDropIndex(index);
+              const sourceIndex = manageableIndexById.get(dashboard.id);
+              controller.setDashboardDropIndex(sourceIndex ?? index);
               setDashboardHoverId(dashboard.id);
             }}
             onDashboardDragOver={(event) => {
               event.preventDefault();
-              if (!controller.dashboardDragId) return;
+              if (dashboard.userId !== userId) return;
+              if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
 
-              const sourceIndex = dashboards.findIndex((item) => item.id === controller.dashboardDragId);
-              const nextIndex = sourceIndex < index ? index + 1 : index;
+              const sourceIndex = manageableIndexById.get(controller.dashboardDragId);
+              const targetIndex = manageableIndexById.get(dashboard.id);
+              if (sourceIndex == null || targetIndex == null) return;
+
+              const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
               controller.setDashboardDropIndex(nextIndex);
               setDashboardHoverId(dashboard.id);
             }}
             onDashboardDrop={(event) => {
               event.preventDefault();
               event.stopPropagation();
+              if (dashboard.userId !== userId) return;
               const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
+              const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
+              if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
 
-              const sourceIndex = dashboards.findIndex(
-                (item) => item.id === (draggedDashboardId ?? controller.dashboardDragId)
-              );
-              const targetIndex = sourceIndex < index ? index + 1 : index;
-              void controller.handleDashboardDrop(targetIndex, draggedDashboardId);
+              const sourceIndex = manageableIndexById.get(activeDragId);
+              const targetIndex = manageableIndexById.get(dashboard.id);
+              if (sourceIndex == null || targetIndex == null) return;
+
+              const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
+              void controller.handleDashboardDrop(nextIndex, draggedDashboardId, manageableDashboardIds);
             }}
             onOpenEditDashboard={controller.openEditDashboard}
             onDeleteDashboard={(dashboardId, dashboardName) =>

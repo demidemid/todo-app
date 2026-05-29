@@ -89,6 +89,7 @@ export const useDashboards = (userId: string | null) => {
 
   useEffect(() => {
     if (!userId) return;
+    let isEffectCancelled = false;
     hasResolvedInitialSelectionRef.current = false;
     hasMigratedLegacyTodosRef.current = false;
 
@@ -100,6 +101,8 @@ export const useDashboards = (userId: string | null) => {
 
       try {
         const snapshot = await getDocs(sharedQuery);
+        if (isEffectCancelled) return;
+
         const items: Dashboard[] = snapshot.docs
           .filter((item) => item.data().entityType === 'dashboard')
           .map((item) => {
@@ -139,8 +142,10 @@ export const useDashboards = (userId: string | null) => {
           }))
           .sort(compareDashboardsByOrder);
 
+        if (isEffectCancelled) return;
         setSharedDashboards(normalizedItems);
       } catch {
+        if (isEffectCancelled) return;
         setSharedDashboards([]);
       }
     };
@@ -309,7 +314,9 @@ export const useDashboards = (userId: string | null) => {
     );
 
     return () => {
+      isEffectCancelled = true;
       unsub();
+      setSharedDashboards([]);
     };
   }, [userId]);
 

@@ -294,6 +294,7 @@ export const ShareDashboardModal = ({
   if (!open) return null;
 
   const selectedCount = selectedUserIds.length;
+  const isSaveDisabled = loadingUsers || Boolean(usersError);
 
   return (
     <div
@@ -351,7 +352,7 @@ export const ShareDashboardModal = ({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">
+          <Button type="submit" disabled={isSaveDisabled}>
             Save access
           </Button>
         </div>

@@ -134,9 +134,15 @@ export const DashboardSection = ({
             size="sm"
             label="Drag dashboard"
             data-testid={`dashboard-drag-handle-${dashboard.id}`}
-            className="cursor-grab active:cursor-grabbing"
-            draggable
+            className={canManageDashboard ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
+            draggable={canManageDashboard}
+            disabled={!canManageDashboard}
             onDragStart={(event) => {
+              if (!canManageDashboard) {
+                event.preventDefault();
+                return;
+              }
+
               event.stopPropagation();
               if (event.dataTransfer) {
                 event.dataTransfer.effectAllowed = 'move';
