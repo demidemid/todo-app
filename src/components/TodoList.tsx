@@ -1,5 +1,6 @@
 import { TodoModal } from './TodoModal';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardSection } from './todo-list/DashboardSection';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal } from './todo-list/TodoListModals';
 import { useTodos } from '../hooks/useTodos';
@@ -14,6 +15,7 @@ interface TodoListProps {
 }
 
 export const TodoList = ({ userId, userEmail }: TodoListProps) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
@@ -44,6 +46,46 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     deleteDashboard,
     reorderDashboards,
   });
+
+  const modalTodoId = searchParams.get('card');
+  const dashboardParamId = searchParams.get('dashboard');
+  const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
+
+  const updateSearch = useCallback((updater: (nextParams: URLSearchParams) => void) => {
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      updater(nextParams);
+      return nextParams;
+    });
+  }, [setSearchParams]);
+
+  useEffect(() => {
+    if (dashboards.length === 0 || !dashboardParamId) return;
+
+    const exists = dashboards.some((dashboard) => dashboard.id === dashboardParamId);
+
+    if (!exists) {
+      updateSearch((nextParams) => {
+        nextParams.delete('dashboard');
+      });
+      return;
+    }
+
+    setActiveDashboardId((prevDashboardId) => (prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId));
+  }, [dashboardParamId, dashboards, setActiveDashboardId, updateSearch]);
+
+  const openTodoByLink = (todoId: string, dashboardId: string) => {
+    updateSearch((nextParams) => {
+      nextParams.set('card', todoId);
+      nextParams.set('dashboard', dashboardId);
+    });
+  };
+
+  const closeTodoLink = () => {
+    updateSearch((nextParams) => {
+      nextParams.delete('card');
+    });
+  };
 
   if (loading || dashboardsLoading) {
     return <div className="py-8 text-center text-slate-300">Loading todos...</div>;
@@ -209,9 +251,19 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             menuButtonRefs={controller.menuButtonRefs}
             dragState={controller.dragState}
             dropTarget={controller.dropTarget}
-            onToggle={(dashboardId) => {
-              setActiveDashboardId((prev) => (prev === dashboardId ? null : dashboardId));
-            }}
+              onToggle={(dashboardId) => {
+                const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
+
+                setActiveDashboardId(nextDashboardId);
+                updateSearch((nextParams) => {
+                  if (nextDashboardId) {
+                    nextParams.set('dashboard', nextDashboardId);
+                  } else {
+                    nextParams.delete('dashboard');
+                    nextParams.delete('card');
+                  }
+                });
+              }}
             onDashboardDragStart={() => {
               controller.setDashboardDragId(dashboard.id);
               controller.setDashboardDropIndex(index);
@@ -239,6 +291,9 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             onDeleteDashboard={(dashboardId, dashboardName) => void controller.handleDeleteDashboard(dashboardId, dashboardName)}
             onOpenCreateCard={(dashboardId, columnId) => {
               setActiveDashboardId(dashboardId);
+                updateSearch((nextParams) => {
+                  nextParams.set('dashboard', dashboardId);
+                });
               controller.setCreateCardDashboardId(dashboardId);
               controller.setCreateCardColumnId(columnId);
               controller.setIsCreateModalOpen(true);
@@ -246,7 +301,9 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             onMoveTodo={controller.handleMoveTodo}
             onSetDragState={controller.setDragState}
             onSetDropTarget={controller.setDropTarget}
-            onOpenTodoModal={controller.setModalTodo}
+            onOpenTodoModal={(todo) => {
+                openTodoByLink(todo.id, todo.boardId);
+            }}
             onCancelEdit={controller.cancelEdit}
             onSaveEdit={(todoId) => void controller.handleSaveEdit(todoId)}
             onEditTitleChange={controller.setEditingTitle}
@@ -260,12 +317,12 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         ))}
       </div>
 
-      {controller.modalTodo && (
+      {modalTodo && (
         <TodoModal
-          todo={controller.modalTodo}
+          todo={modalTodo}
           userId={userId}
           userEmail={userEmail}
-          onClose={() => controller.setModalTodo(null)}
+          onClose={closeTodoLink}
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}
         />

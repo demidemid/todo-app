@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Dashboard, DashboardColumn } from '../types/dashboard';
 import type { Todo } from '../types/todo';
@@ -110,6 +112,20 @@ const setCommentsState = (overrides: Record<string, unknown> = {}) => {
   mockUseComments.mockReturnValue(createCommentsState(overrides));
 };
 
+const SearchParamsProbe = () => {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+};
+
+const renderTodoList = (initialEntries: string[] = ['/']) => {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <TodoList userId="user-1" />
+      <SearchParamsProbe />
+    </MemoryRouter>,
+  );
+};
+
 describe('TodoList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -136,7 +152,7 @@ describe('TodoList', () => {
       ],
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-t-1'));
 
@@ -147,13 +163,61 @@ describe('TodoList', () => {
     expect(mockUseComments).toHaveBeenCalledWith('t-1');
   });
 
+  it('opens card modal directly from card query parameter', async () => {
+    setTodosState([createTodo()]);
+
+    renderTodoList(['/?card=t-1']);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    });
+
+    expect(mockUseComments).toHaveBeenCalledWith('t-1');
+  });
+
+  it('syncs active dashboard from dashboard query parameter', async () => {
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        createDashboard(),
+        createDashboard({
+          id: 'board-2',
+          name: 'QA Dashboard',
+          order: 1,
+          columns: [createColumn({ id: 'qa_todo' })],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        }),
+      ],
+      activeDashboard: null,
+      activeDashboardId: null,
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    renderTodoList(['/?dashboard=board-2']);
+
+    await waitFor(() => {
+      expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
+    });
+
+    const setterArg = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
+    expect(typeof setterArg).toBe('function');
+    expect(setterArg(null)).toBe('board-2');
+    expect(setterArg('board-2')).toBe('board-2');
+  });
+
   it('adds a comment from card modal', async () => {
     const user = userEvent.setup();
 
     mockAddComment.mockResolvedValue(undefined);
     setTodosState([createTodo()]);
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-t-1'));
     await user.type(screen.getByPlaceholderText('Add a comment...'), 'Need API key');
@@ -171,7 +235,7 @@ describe('TodoList', () => {
   it('opens centered modal and adds a new card', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('new-card-button-board-1-todo'));
     expect(screen.getByTestId('create-card-modal')).toBeInTheDocument();
@@ -194,7 +258,7 @@ describe('TodoList', () => {
   it('creates card in the column where plus button was clicked', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('new-card-button-board-1-in_progress'));
     expect(screen.getByTestId('create-card-modal')).toBeInTheDocument();
@@ -216,7 +280,7 @@ describe('TodoList', () => {
   it('opens edit dashboard modal and saves dashboard changes', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
     expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
@@ -238,7 +302,7 @@ describe('TodoList', () => {
   it('shows validation error and blocks save for duplicate dashboard column names', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
 
@@ -271,7 +335,7 @@ describe('TodoList', () => {
       }),
     ]);
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('delete-dashboard-button-board-1'));
 
@@ -282,31 +346,80 @@ describe('TodoList', () => {
     confirmSpy.mockRestore();
   });
 
-  it('toggles accordion by calling setActiveDashboardId updater', async () => {
+  it('toggles accordion by calling setActiveDashboardId with null on active dashboard click', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList(['/?dashboard=board-1']);
+
+    // Ignore the initial sync call from query parameter.
+    mockSetActiveDashboardId.mockClear();
 
     await user.click(screen.getByTestId('dashboard-toggle-board-1'));
 
     expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
-    const updater = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
-    expect(typeof updater).toBe('function');
-
-    expect(updater('board-1')).toBeNull();
-    expect(updater(null)).toBe('board-1');
+    expect(mockSetActiveDashboardId).toHaveBeenCalledWith(null);
+    expect(screen.getByTestId('location-search').textContent).not.toContain('dashboard=board-1');
   });
 
   it('toggles accordion when clicking dashboard header text', async () => {
     const user = userEvent.setup();
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByText('My Dashboard'));
 
     expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
-    const updater = mockSetActiveDashboardId.mock.calls[0][0] as (prev: string | null) => string | null;
-    expect(updater('board-1')).toBeNull();
+    expect(mockSetActiveDashboardId).toHaveBeenCalledWith(null);
+  });
+
+  it('does not reopen dashboard after collapsing via header click', async () => {
+    const user = userEvent.setup();
+
+    renderTodoList(['/?dashboard=board-1']);
+
+    // Ignore the initial sync call from query parameter.
+    mockSetActiveDashboardId.mockClear();
+
+    await user.click(screen.getByText('My Dashboard'));
+
+    expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
+    expect(mockSetActiveDashboardId).toHaveBeenCalledWith(null);
+    expect(mockSetActiveDashboardId).not.toHaveBeenCalledWith('board-1');
+    expect(screen.getByTestId('location-search').textContent).not.toContain('dashboard=board-1');
+  });
+
+  it('collapses accordion in DOM when clicking dashboard header with dashboard query param', async () => {
+    const user = userEvent.setup();
+    const stableDashboards = [createDashboard()];
+
+    mockUseDashboards.mockImplementation(() => {
+      const [activeDashboardId, setActiveDashboardId] = useState<string | null>('board-1');
+
+      return {
+        dashboards: stableDashboards,
+        activeDashboard: stableDashboards.find((dashboard) => dashboard.id === activeDashboardId) ?? null,
+        activeDashboardId,
+        setActiveDashboardId,
+        loading: false,
+        error: null,
+        addDashboard: mockAddDashboard,
+        updateDashboard: mockUpdateDashboard,
+        deleteDashboard: mockDeleteDashboard,
+        reorderDashboards: mockReorderDashboards,
+      };
+    });
+
+    renderTodoList(['/?dashboard=board-1']);
+
+    expect(screen.getByTestId('column-todo')).toBeInTheDocument();
+
+    await user.click(screen.getByText('My Dashboard'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('column-todo')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('location-search').textContent).not.toContain('dashboard=board-1');
   });
 
   it('does not toggle accordion when clicking dashboard edit/delete icon buttons', async () => {
@@ -325,7 +438,7 @@ describe('TodoList', () => {
       }),
     ]);
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
     expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
@@ -339,7 +452,7 @@ describe('TodoList', () => {
   });
 
   it('adds tooltip title to icon buttons', () => {
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const toggleButton = screen.getByTestId('dashboard-toggle-board-1');
     expect(toggleButton).toHaveAttribute('title', 'Collapse dashboard');
@@ -358,7 +471,7 @@ describe('TodoList', () => {
       }),
     ]);
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const dragHandle = screen.getByTestId('dashboard-drag-handle-board-1');
 
@@ -396,7 +509,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
     await user.click(screen.getByTestId('card-menu-edit'));
@@ -437,7 +550,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
     await user.click(screen.getByTestId('card-menu-edit'));
@@ -482,7 +595,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-t-1'));
     await user.click(screen.getByRole('button', { name: 'Edit description' }));
@@ -539,7 +652,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const card = screen.getByTestId('card-t-1');
     expect(card).toHaveTextContent('2');
@@ -568,7 +681,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const card = screen.getByTestId('card-t-1');
     const dropEnd = screen.getByTestId('drop-done-end');
@@ -626,7 +739,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const draggedCard = screen.getByTestId('card-todo-a');
     const doneColumnEndDrop = screen.getByTestId('drop-done-end');
@@ -697,7 +810,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const draggedCard = screen.getByTestId('card-todo-c');
     const targetDropSlot = screen.getByTestId('drop-todo-0');
@@ -755,7 +868,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
     await user.click(screen.getByTestId('card-menu-edit'));
@@ -795,7 +908,7 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
     await user.click(screen.getByTestId('card-menu-delete'));
@@ -830,16 +943,21 @@ describe('TodoList', () => {
       deleteTodo: mockDeleteTodo,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     await user.click(screen.getByTestId('card-t-1'));
     expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('location-search').textContent).toContain('card=t-1');
+    expect(screen.getByTestId('location-search').textContent).toContain('dashboard=board-1');
 
     await user.click(screen.getByLabelText('Close'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
     });
+
+    expect(screen.getByTestId('location-search').textContent).toContain('dashboard=board-1');
+    expect(screen.getByTestId('location-search').textContent).not.toContain('card=t-1');
   });
 
   it('clears dashboard drop highlight on drag end capture timeout', () => {
@@ -885,7 +1003,7 @@ describe('TodoList', () => {
       reorderDashboards: mockReorderDashboards,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const dragHandle = screen.getByTestId('dashboard-drag-handle-board-1');
     fireEvent.dragStart(dragHandle);
@@ -944,7 +1062,7 @@ describe('TodoList', () => {
       reorderDashboards: mockReorderDashboards,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const board1 = screen.getByTestId('dashboard-board-1');
     const board2 = screen.getByTestId('dashboard-board-2');
@@ -994,7 +1112,7 @@ describe('TodoList', () => {
       reorderDashboards: mockReorderDashboards,
     });
 
-    render(<TodoList userId="user-1" />);
+    renderTodoList();
 
     const board1 = screen.getByTestId('dashboard-board-1');
     const listContainer = board1.parentElement as HTMLElement;
