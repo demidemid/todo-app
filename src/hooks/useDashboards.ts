@@ -9,7 +9,6 @@ import {
   getDocs,
   onSnapshot,
   query,
-  setDoc,
   Timestamp,
   updateDoc,
   writeBatch,
@@ -186,27 +185,10 @@ export const useDashboards = (userId: string | null) => {
         });
 
         if (items.length === 0) {
-          try {
-            await setDoc(doc(db, 'todos', `default-dashboard-${userId}`), {
-              entityType: 'dashboard',
-              userId,
-              name: 'My Dashboard',
-              order: 0,
-              columns: defaultColumns(),
-              sharedWith: [],
-              sharedWithEmails: [],
-              createdAt: Timestamp.now(),
-              updatedAt: Timestamp.now(),
-            });
-
-            // Stop showing loader while waiting for the next snapshot with created dashboard.
-            setError(null);
-            setLoadedUserId(userId);
-          } catch (bootstrapError) {
-            setError(bootstrapError instanceof Error ? bootstrapError.message : 'Failed to create default dashboard');
-            setDashboards([]);
-            setLoadedUserId(userId);
-          }
+          setDashboards([]);
+          setError(null);
+          setLoadedUserId(userId);
+          setActiveDashboardId(null);
           return;
         }
 

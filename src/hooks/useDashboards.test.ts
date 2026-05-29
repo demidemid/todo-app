@@ -10,7 +10,6 @@ const mockDoc = vi.fn();
 const mockGetDocs = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
-const mockSetDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockWriteBatch = vi.fn();
 const mockBatchUpdate = vi.fn();
@@ -42,7 +41,6 @@ vi.mock('firebase/firestore', () => ({
   getDocs: (...args: unknown[]) => mockGetDocs(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
-  setDoc: (...args: unknown[]) => mockSetDoc(...args),
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
   and: (...args: unknown[]) => mockAnd(...args),
@@ -138,7 +136,6 @@ describe('useDashboards', () => {
     });
     mockAddDoc.mockResolvedValue({ id: 'new-board-id' });
     mockGetDocs.mockResolvedValue({ docs: [] });
-    mockSetDoc.mockResolvedValue(undefined);
     mockUpdateDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
     mockBatchUpdate.mockReset();
@@ -369,43 +366,20 @@ describe('useDashboards', () => {
     });
   });
 
-  it('creates default dashboard when snapshot is empty', async () => {
+  it('keeps dashboards empty when snapshot is empty', async () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
     await act(async () => {
       snapshotNext?.({ docs: [] });
     });
 
-    expect(mockSetDoc).toHaveBeenCalledTimes(1);
-    expect(mockSetDoc).toHaveBeenCalledWith(
-      { path: 'todos/default-dashboard-user-1' },
-      expect.objectContaining({
-        entityType: 'dashboard',
-        userId: 'user-1',
-        name: 'My Dashboard',
-        order: 0,
-      })
-    );
+    expect(result.current.dashboards).toEqual([]);
+    expect(result.current.activeDashboardId).toBeNull();
     expect(mockAddDoc).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
-    });
-  });
-
-  it('surfaces error when default dashboard bootstrap fails', async () => {
-    mockSetDoc.mockRejectedValueOnce(new Error('permission denied'));
-    const { result } = renderHook(() => useDashboards('user-1'));
-
-    await act(async () => {
-      snapshotNext?.({ docs: [] });
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBe('permission denied');
-      expect(result.current.dashboards).toEqual([]);
     });
   });
 
