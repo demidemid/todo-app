@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TodoList } from './TodoList';
@@ -823,5 +823,278 @@ describe('TodoList', () => {
       weight: 3000,
     }));
     expect(mockUpdateTodo).toHaveBeenCalledTimes(3);
+  });
+
+  it('saves inline edit when clicking Save button', async () => {
+    const user = userEvent.setup();
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-menu-trigger-t-1'));
+    await user.click(screen.getByTestId('card-menu-edit'));
+    await user.type(screen.getByTestId('edit-title-t-1'), ' Updated');
+    await user.click(screen.getByTestId('edit-save-t-1'));
+
+    await waitFor(() => {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
+        title: 'Initial title Updated',
+        description: '<p>Initial description</p>',
+      });
+    });
+  });
+
+  it('deletes card from menu action', async () => {
+    const user = userEvent.setup();
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-menu-trigger-t-1'));
+    await user.click(screen.getByTestId('card-menu-delete'));
+
+    await waitFor(() => {
+      expect(mockDeleteTodo).toHaveBeenCalledWith('t-1');
+    });
+  });
+
+  it('closes opened todo modal via close button', async () => {
+    const user = userEvent.setup();
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    await user.click(screen.getByTestId('card-t-1'));
+    expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Close'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('clears dashboard drop highlight on drag end capture timeout', () => {
+    vi.useFakeTimers();
+
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'Board 1',
+          order: 0,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'board-2',
+          userId: 'user-1',
+          name: 'Board 2',
+          order: 1,
+          columns: [{ id: 'todo2', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'Board 1',
+        order: 0,
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    const dragHandle = screen.getByTestId('dashboard-drag-handle-board-1');
+    fireEvent.dragStart(dragHandle);
+
+    const targetDashboard = screen.getByTestId('dashboard-board-2');
+    fireEvent.dragOver(targetDashboard);
+    expect(targetDashboard.className).toContain('ring-cyan-300/70');
+
+    fireEvent.dragEnd(dragHandle);
+    act(() => {
+      vi.runAllTimers();
+    });
+
+    expect(targetDashboard.className).not.toContain('ring-cyan-300/70');
+    vi.useRealTimers();
+  });
+
+  it('supports dropping a dragged dashboard on the list container', async () => {
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'Board 1',
+          order: 0,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+        {
+          id: 'board-2',
+          userId: 'user-1',
+          name: 'Board 2',
+          order: 1,
+          columns: [{ id: 'todo2', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'Board 1',
+        order: 0,
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    const board1 = screen.getByTestId('dashboard-board-1');
+    const board2 = screen.getByTestId('dashboard-board-2');
+
+    const dragHandle = screen.getByTestId('dashboard-drag-handle-board-1');
+    fireEvent.dragStart(dragHandle);
+
+    fireEvent.dragOver(board2);
+
+    const listContainer = board1.parentElement as HTMLElement;
+    fireEvent.drop(listContainer);
+
+    await waitFor(() => {
+      expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
+    });
+  });
+
+  it('ignores container drop when no dashboard drag is active', () => {
+    mockUseDashboards.mockReturnValue({
+      dashboards: [
+        {
+          id: 'board-1',
+          userId: 'user-1',
+          name: 'Board 1',
+          order: 0,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      activeDashboard: {
+        id: 'board-1',
+        userId: 'user-1',
+        name: 'Board 1',
+        order: 0,
+        columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      },
+      activeDashboardId: 'board-1',
+      setActiveDashboardId: mockSetActiveDashboardId,
+      loading: false,
+      error: null,
+      addDashboard: mockAddDashboard,
+      updateDashboard: mockUpdateDashboard,
+      deleteDashboard: mockDeleteDashboard,
+      reorderDashboards: mockReorderDashboards,
+    });
+
+    render(<TodoList userId="user-1" />);
+
+    const board1 = screen.getByTestId('dashboard-board-1');
+    const listContainer = board1.parentElement as HTMLElement;
+    fireEvent.drop(listContainer);
+
+    expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
 });

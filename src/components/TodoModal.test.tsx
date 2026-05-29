@@ -31,7 +31,18 @@ const onClose = vi.fn();
 const updateTodo = vi.fn<(...args: unknown[]) => Promise<void>>();
 const deleteTodo = vi.fn<(...args: unknown[]) => Promise<void>>();
 
-const createControllerState = () => ({
+type ControllerState = {
+  comments: unknown[];
+  commentsLoading: boolean;
+  commentsError: string | null;
+  commentText: string;
+  setCommentText: ReturnType<typeof vi.fn>;
+  commentSubmitting: boolean;
+  commentError: string;
+  handleAddComment: ReturnType<typeof vi.fn>;
+};
+
+const createControllerState = (): ControllerState => ({
   comments: [],
   commentsLoading: false,
   commentsError: null,

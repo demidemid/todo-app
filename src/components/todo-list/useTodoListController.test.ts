@@ -237,4 +237,101 @@ describe('useTodoListController', () => {
     expect(result.current.isEditDashboardModalOpen).toBe(true);
     expect(result.current.editingDashboardId).toBe('board-a');
   });
+
+  it('adds a trimmed column in edit mode and clears draft', () => {
+    const { args } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.openEditDashboard('board-a');
+    });
+
+    act(() => {
+      result.current.setEditingColumnDraft('  QA  ');
+    });
+
+    act(() => {
+      result.current.addColumnToEditDraft();
+    });
+
+    const addedColumn = result.current.editingDashboardColumns.find((column) => column.name === 'QA');
+    expect(addedColumn).toBeTruthy();
+    expect(result.current.editingColumnDraft).toBe('');
+  });
+
+  it('sets fallback action error when dashboard update throws non-Error', async () => {
+    const { args, mocks } = createArgs();
+    mocks.updateDashboard.mockRejectedValue('boom');
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.openEditDashboard('board-a');
+      result.current.setEditingDashboardColumns([{ id: 'only', name: 'Done', order: 0, isDone: true }]);
+    });
+
+    await act(async () => {
+      await result.current.handleSaveDashboardEdit({ preventDefault() {} } as React.FormEvent);
+    });
+
+    expect(result.current.dashboardActionError).toBe('Failed to update dashboard');
+  });
+
+  it('sets fallback action error when deleting dashboard fails with non-Error', async () => {
+    const { args, mocks } = createArgs();
+    mocks.deleteDashboard.mockRejectedValue('nope');
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleDeleteDashboard('board-a', 'Board A');
+    });
+
+    expect(result.current.dashboardActionError).toBe('Failed to delete dashboard');
+    confirmSpy.mockRestore();
+  });
+
+  it('returns early on dashboard drop when there is no active drag id', async () => {
+    const { args, mocks } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleDashboardDrop(1);
+    });
+
+    expect(mocks.reorderDashboards).not.toHaveBeenCalled();
+  });
+
+  it('skips reorder when dashboard is dropped to the same effective index', async () => {
+    const { args, mocks } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setDashboardDragId('board-a');
+      result.current.setDashboardDropIndex(1);
+    });
+
+    await act(async () => {
+      await result.current.handleDashboardDrop(1);
+    });
+
+    expect(mocks.reorderDashboards).not.toHaveBeenCalled();
+    expect(result.current.dashboardDragId).toBeNull();
+    expect(result.current.dashboardDropIndex).toBeNull();
+  });
+
+  it('sets fallback action error when dashboard reorder fails with non-Error', async () => {
+    const { args, mocks } = createArgs();
+    mocks.reorderDashboards.mockRejectedValue('order-failed');
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setDashboardDragId('board-a');
+    });
+
+    await act(async () => {
+      await result.current.handleDashboardDrop(3);
+    });
+
+    expect(result.current.dashboardActionError).toBe('Failed to reorder dashboards');
+  });
 });
