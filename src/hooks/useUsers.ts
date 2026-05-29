@@ -19,19 +19,11 @@ const parseTimestamp = (value: unknown): Date => {
 
 export const useUsers = (currentUserId: string | null) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentUserId) {
-      setUsers([]);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+    if (!currentUserId) return;
 
     const q = query(collection(db, 'users'));
     const unsub = onSnapshot(
@@ -55,17 +47,28 @@ export const useUsers = (currentUserId: string | null) => {
           .map(({ id, email }) => ({ id, email }));
 
         setUsers(parsedUsers);
-        setLoading(false);
+        setError(null);
+        setResolvedUserId(currentUserId);
       },
       (snapshotError) => {
         setError(snapshotError.message || 'Failed to load users');
         setUsers([]);
-        setLoading(false);
+        setResolvedUserId(currentUserId);
       }
     );
 
     return () => unsub();
   }, [currentUserId]);
 
-  return { users, loading, error };
+  if (!currentUserId) {
+    return { users: [], loading: false, error: null };
+  }
+
+  const resolved = resolvedUserId === currentUserId;
+
+  return {
+    users: resolved ? users : [],
+    loading: !resolved,
+    error: resolved ? error : null,
+  };
 };
