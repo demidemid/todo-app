@@ -6,7 +6,7 @@ interface CardMenuProps {
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
-  anchorRef: React.RefObject<Record<string, HTMLButtonElement | null>>;
+  anchorRef: React.RefObject<Record<string, HTMLButtonElement | null> | null>;
   anchorId: string;
 }
 
@@ -15,7 +15,7 @@ export const CardMenu: React.FC<CardMenuProps> = ({ onEdit, onDelete, onClose, a
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      const anchorBtn = anchorRef.current[anchorId];
+      const anchorBtn = anchorRef.current?.[anchorId];
       if (
         menuRef.current &&
         !menuRef.current.contains(e.target as Node) &&

@@ -6,7 +6,7 @@ import { useTodos } from '../hooks/useTodos';
 import { useDashboards } from '../hooks/useDashboards';
 import { useTodoListController } from './todo-list/useTodoListController';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
-import { Button } from './ui/Button';
+import { IconButton } from './ui/IconButton';
 
 interface TodoListProps {
   userId: string;
@@ -59,18 +59,19 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-end gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => controller.setIsCreateDashboardModalOpen(true)}
-            data-testid="new-dashboard-button"
-          >
-            New dashboard
-          </Button>
-        </div>
-      </div>
+      <IconButton
+        type="button"
+        variant="primary"
+        onClick={() => controller.setIsCreateDashboardModalOpen(true)}
+        data-testid="new-dashboard-button"
+        label="New dashboard"
+        className="fixed bottom-6 right-6 z-40 size-12 rounded-full border-cyan-300/45 bg-cyan-300/20 text-cyan-100 shadow-lg shadow-cyan-900/30 hover:bg-cyan-300/30"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 5v14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path d="M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </IconButton>
 
       {controller.dashboardActionError && (
         <div className="mb-4 rounded-xl border border-rose-300/30 bg-rose-400/10 p-3 text-sm text-rose-200">

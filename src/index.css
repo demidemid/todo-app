@@ -10,3 +10,113 @@
     @apply min-h-screen;
   }
 }
+
+@layer components {
+  .rich-text-editor {
+    @apply rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3 text-sm leading-7 text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-1 focus:ring-cyan-300/30;
+  }
+
+  .rich-text-editor p {
+    @apply mb-3 last:mb-0;
+  }
+
+  .rich-text-editor h1 {
+    @apply mb-3 mt-4 text-2xl font-bold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-editor h2 {
+    @apply mb-2 mt-4 text-xl font-bold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-editor h3 {
+    @apply mb-2 mt-3 text-lg font-semibold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-editor ul,
+  .rich-text-editor ol {
+    @apply my-3 pl-6;
+  }
+
+  .rich-text-editor ul {
+    @apply list-disc;
+  }
+
+  .rich-text-editor ol {
+    @apply list-decimal;
+  }
+
+  .rich-text-editor li {
+    @apply mb-1;
+  }
+
+  .rich-text-editor blockquote {
+    @apply my-3 border-l-2 border-cyan-300/40 pl-4 italic text-slate-300;
+  }
+
+  .rich-text-editor pre {
+    @apply my-3 overflow-x-auto rounded-lg bg-slate-900 px-3 py-2 font-mono text-sm text-slate-200;
+  }
+
+  .rich-text-editor code {
+    @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-[0.95em] text-slate-100;
+  }
+
+  .rich-text-editor a,
+  .rich-text-output a {
+    @apply text-cyan-300 underline decoration-cyan-300/60 underline-offset-4;
+  }
+
+  .rich-text-editor [data-format='uppercase'],
+  .rich-text-output [data-format='uppercase'] {
+    @apply uppercase;
+  }
+
+  .rich-text-output {
+    @apply text-sm leading-7 text-slate-200;
+  }
+
+  .rich-text-output p {
+    @apply mb-3 last:mb-0;
+  }
+
+  .rich-text-output h1 {
+    @apply mb-2 mt-3 text-xl font-bold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-output h2 {
+    @apply mb-2 mt-3 text-lg font-bold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-output h3 {
+    @apply mb-1 mt-2 text-base font-semibold leading-tight text-white first:mt-0;
+  }
+
+  .rich-text-output ul,
+  .rich-text-output ol {
+    @apply my-2 pl-5;
+  }
+
+  .rich-text-output ul {
+    @apply list-disc;
+  }
+
+  .rich-text-output ol {
+    @apply list-decimal;
+  }
+
+  .rich-text-output li {
+    @apply mb-1;
+  }
+
+  .rich-text-output blockquote {
+    @apply my-2 border-l-2 border-cyan-300/30 pl-3 italic text-slate-300;
+  }
+
+  .rich-text-output pre {
+    @apply my-2 overflow-x-auto rounded-md bg-slate-900 px-2 py-1 font-mono text-xs text-slate-200;
+  }
+
+  .rich-text-output code {
+    @apply rounded bg-slate-800 px-1 py-0.5 font-mono text-[0.9em] text-slate-100;
+  }
+}

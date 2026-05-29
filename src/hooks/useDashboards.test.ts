@@ -57,6 +57,10 @@ type SnapshotDoc = {
   data: () => Record<string, unknown>;
 };
 
+const simpleColumns = (id = 'todo', name = 'To do'): DashboardColumn[] => [
+  { id, name, order: 0, isDone: false },
+];
+
 const makeSnapshotDoc = (id: string, data: Record<string, unknown>): SnapshotDoc => ({
   id,
   data: () => data,
@@ -96,10 +100,22 @@ const makeTodoDoc = (
     status: data.status,
   });
 
+const dashboardDocs = (...items: Array<{ id: string; name: string; createdAt: Date; order?: number; columns?: DashboardColumn[] }>) =>
+  items.map((item) =>
+    makeDashboardDoc(item.id, item.name, item.createdAt, item.columns ?? simpleColumns(), item.order ?? 0)
+  );
+
 describe('useDashboards', () => {
   let snapshotNext: ((snapshot: { docs: SnapshotDoc[] }) => void) | null;
   let snapshotError: ((error: { message?: string }) => void) | null;
   const unsubscribeMock = vi.fn();
+
+  const renderUseDashboards = (userId: string | null = 'user-1') => renderHook(() => useDashboards(userId));
+  const emitSnapshot = (docs: SnapshotDoc[]) => {
+    act(() => {
+      snapshotNext?.({ docs });
+    });
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -132,7 +148,7 @@ describe('useDashboards', () => {
   });
 
   it('returns empty state for unauthenticated user', () => {
-    const { result } = renderHook(() => useDashboards(null));
+    const { result } = renderUseDashboards(null);
 
     expect(result.current.dashboards).toEqual([]);
     expect(result.current.activeDashboard).toBeNull();
@@ -143,22 +159,16 @@ describe('useDashboards', () => {
   });
 
   it('loads dashboards and auto-selects first by createdAt', async () => {
-    const { result } = renderHook(() => useDashboards('user-1'));
+    const { result } = renderUseDashboards();
 
     expect(result.current.loading).toBe(true);
 
-    act(() => {
-      snapshotNext?.({
-        docs: [
-          makeDashboardDoc('board-newer', 'Newer', new Date('2026-01-03T00:00:00Z'), [
-            { id: 'todo', name: 'To do', order: 0, isDone: false },
-          ]),
-          makeDashboardDoc('board-older', 'Older', new Date('2026-01-01T00:00:00Z'), [
-            { id: 'todo', name: 'To do', order: 0, isDone: false },
-          ]),
-        ],
-      });
-    });
+    emitSnapshot(
+      dashboardDocs(
+        { id: 'board-newer', name: 'Newer', createdAt: new Date('2026-01-03T00:00:00Z') },
+        { id: 'board-older', name: 'Older', createdAt: new Date('2026-01-01T00:00:00Z') },
+      )
+    );
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -169,17 +179,67 @@ describe('useDashboards', () => {
     expect(result.current.activeDashboard?.id).toBe('board-older');
   });
 
-  it('keeps explicit collapsed state after subsequent snapshots', async () => {
+  it('normalizes invalid timestamps and sorts dashboard columns by order', async () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
-    const docs = [
-      makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-      makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-    ];
-
     act(() => {
-      snapshotNext?.({ docs });
+      snapshotNext?.({
+        docs: [
+          makeSnapshotDoc('board-1', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Board 1',
+            order: 0,
+            columns: [
+              { id: 'late', name: 'Late', order: 3, isDone: false },
+              { id: 'first', name: 'First', order: 0, isDone: false },
+            ],
+            createdAt: 'invalid',
+            updatedAt: 123,
+          }),
+        ],
+      });
     });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(1);
+    });
+
+    expect(result.current.dashboards[0].columns.map((column) => column.id)).toEqual(['first', 'late']);
+    expect(result.current.dashboards[0].createdAt.getTime()).toBe(0);
+    expect(result.current.dashboards[0].updatedAt.getTime()).toBe(0);
+  });
+
+  it('falls back to default columns when dashboard snapshot has no columns array', async () => {
+    const { result } = renderUseDashboards();
+
+    emitSnapshot([
+      makeSnapshotDoc('board-1', {
+        entityType: 'dashboard',
+        userId: 'user-1',
+        name: 'Board 1',
+        order: 0,
+        createdAt: new Date('2026-01-01T00:00:00Z'),
+        updatedAt: new Date('2026-01-01T00:00:00Z'),
+      }),
+    ]);
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(1);
+    });
+
+    expect(result.current.dashboards[0].columns.map((column) => column.id)).toEqual(['todo', 'in_progress', 'done']);
+  });
+
+  it('keeps explicit collapsed state after subsequent snapshots', async () => {
+    const { result } = renderUseDashboards();
+
+    const docs = dashboardDocs(
+      { id: 'board-1', name: 'Board 1', createdAt: new Date('2026-01-01T00:00:00Z') },
+      { id: 'board-2', name: 'Board 2', createdAt: new Date('2026-01-02T00:00:00Z') },
+    );
+
+    emitSnapshot(docs);
 
     await waitFor(() => {
       expect(result.current.activeDashboardId).toBe('board-1');
@@ -191,9 +251,7 @@ describe('useDashboards', () => {
 
     expect(result.current.activeDashboardId).toBeNull();
 
-    act(() => {
-      snapshotNext?.({ docs });
-    });
+    emitSnapshot(docs);
 
     await waitFor(() => {
       expect(result.current.activeDashboardId).toBeNull();
@@ -202,16 +260,14 @@ describe('useDashboards', () => {
   });
 
   it('preserves existing active dashboard when it is still present', async () => {
-    const { result } = renderHook(() => useDashboards('user-1'));
+    const { result } = renderUseDashboards();
 
-    act(() => {
-      snapshotNext?.({
-        docs: [
-          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-          makeDashboardDoc('board-2', 'Board 2', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-        ],
-      });
-    });
+    emitSnapshot(
+      dashboardDocs(
+        { id: 'board-1', name: 'Board 1', createdAt: new Date('2026-01-01T00:00:00Z') },
+        { id: 'board-2', name: 'Board 2', createdAt: new Date('2026-01-02T00:00:00Z') },
+      )
+    );
 
     await waitFor(() => {
       expect(result.current.activeDashboardId).toBe('board-1');
@@ -221,14 +277,12 @@ describe('useDashboards', () => {
       result.current.setActiveDashboardId('board-2');
     });
 
-    act(() => {
-      snapshotNext?.({
-        docs: [
-          makeDashboardDoc('board-1', 'Board 1 edited', new Date('2026-01-01T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-          makeDashboardDoc('board-2', 'Board 2 edited', new Date('2026-01-02T00:00:00Z'), [{ id: 'todo', name: 'To do', order: 0, isDone: false }]),
-        ],
-      });
-    });
+    emitSnapshot(
+      dashboardDocs(
+        { id: 'board-1', name: 'Board 1 edited', createdAt: new Date('2026-01-01T00:00:00Z') },
+        { id: 'board-2', name: 'Board 2 edited', createdAt: new Date('2026-01-02T00:00:00Z') },
+      )
+    );
 
     await waitFor(() => {
       expect(result.current.activeDashboardId).toBe('board-2');
@@ -394,6 +448,44 @@ describe('useDashboards', () => {
     );
   });
 
+  it('addDashboard computes next order from existing dashboards', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc(
+            'board-1',
+            'Board 1',
+            new Date('2026-01-01T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            3
+          ),
+          makeDashboardDoc(
+            'board-2',
+            'Board 2',
+            new Date('2026-01-02T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            7
+          ),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(2);
+    });
+
+    await act(async () => {
+      await result.current.addDashboard('New board', ['To do']);
+    });
+
+    expect(mockAddDoc).toHaveBeenCalledWith(
+      { path: 'todos' },
+      expect.objectContaining({ order: 8 })
+    );
+  });
+
   it('reorderDashboards persists dashboard order updates in a batch', async () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
@@ -435,6 +527,87 @@ describe('useDashboards', () => {
       expect.objectContaining({ order: 0 })
     );
     expect(mockBatchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('reorderDashboards rolls state back when batch commit fails', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc(
+            'board-1',
+            'Board 1',
+            new Date('2026-01-01T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            0
+          ),
+          makeDashboardDoc(
+            'board-2',
+            'Board 2',
+            new Date('2026-01-02T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            1
+          ),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards.map((item) => item.id)).toEqual(['board-1', 'board-2']);
+    });
+
+    mockBatchCommit.mockRejectedValueOnce(new Error('commit failed'));
+
+    let thrownError: unknown;
+    await act(async () => {
+      try {
+        await result.current.reorderDashboards(['board-2', 'board-1']);
+      } catch (error) {
+        thrownError = error;
+      }
+    });
+
+    expect(thrownError).toBeInstanceOf(Error);
+    expect((thrownError as Error).message).toBe('commit failed');
+
+    expect(result.current.dashboards.map((item) => item.id)).toEqual(['board-1', 'board-2']);
+  });
+
+  it('reorderDashboards skips batch write when order does not change', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc(
+            'board-1',
+            'Board 1',
+            new Date('2026-01-01T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            0
+          ),
+          makeDashboardDoc(
+            'board-2',
+            'Board 2',
+            new Date('2026-01-02T00:00:00Z'),
+            [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            1
+          ),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(2);
+    });
+
+    await act(async () => {
+      await result.current.reorderDashboards(['board-1', 'board-2']);
+    });
+
+    expect(mockBatchUpdate).not.toHaveBeenCalled();
+    expect(mockBatchCommit).not.toHaveBeenCalled();
   });
 
   it('updateDashboard validates input and repairs out-of-range todo columns', async () => {
@@ -484,6 +657,62 @@ describe('useDashboards', () => {
     );
     expect(mockBatchCommit).toHaveBeenCalledTimes(1);
     expect(mockUpdateDoc).not.toHaveBeenCalled();
+  });
+
+  it('updateDashboard keeps todo when only status maps to an existing column', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    const columns: DashboardColumn[] = [
+      { id: 'todo', name: 'To do', order: 0, isDone: false },
+      { id: 'doing', name: 'Doing', order: 1, isDone: false },
+    ];
+
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [makeTodoDoc('todo-status-only', { boardId: 'board-1', status: 'todo' })],
+    });
+
+    await act(async () => {
+      await result.current.updateDashboard('board-1', 'Board Updated', columns);
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/board-1' },
+      expect.objectContaining({ name: 'Board Updated' })
+    );
+    expect(mockBatchUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateDashboard generates fallback id for blank column ids and repairs todos to that id', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    const columns: DashboardColumn[] = [
+      { id: '   ', name: 'Backlog', order: 0, isDone: false },
+      { id: 'done', name: 'Done', order: 1, isDone: true },
+    ];
+
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [makeTodoDoc('todo-bad', { boardId: 'board-1', columnId: 'missing', status: 'missing' })],
+    });
+
+    await act(async () => {
+      await result.current.updateDashboard('board-1', 'Board Updated', columns);
+    });
+
+    const boardUpdateCall = mockBatchUpdate.mock.calls.find((call) => call[0]?.path === 'todos/board-1');
+    const todoRepairCall = mockBatchUpdate.mock.calls.find((call) => call[0]?.path === 'todos/todo-bad');
+
+    expect(boardUpdateCall).toBeTruthy();
+    expect(todoRepairCall).toBeTruthy();
+
+    const generatedColumnId = boardUpdateCall?.[1]?.columns?.[0]?.id as string;
+
+    expect(generatedColumnId).toEqual(expect.any(String));
+    expect(generatedColumnId.trim().length).toBeGreaterThan(0);
+    expect(boardUpdateCall?.[1]?.columns?.[0]?.name).toBe('Backlog');
+    expect(boardUpdateCall?.[1]?.columns?.[1]?.id).toBe('done');
+    expect(todoRepairCall?.[1]).toEqual(
+      expect.objectContaining({ columnId: generatedColumnId, status: generatedColumnId })
+    );
   });
 
   it('deleteDashboard validates and reassigns todos before deleting dashboard', async () => {
@@ -638,5 +867,169 @@ describe('useDashboards', () => {
       { path: 'todos/legacy-board' },
       expect.objectContaining({ order: 0 })
     );
+  });
+
+  it('uses schema-first path when dashboard update needs more than one batch', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    const columns: DashboardColumn[] = [
+      { id: 'todo', name: 'To do', order: 0, isDone: false },
+      { id: 'doing', name: 'Doing', order: 1, isDone: false },
+    ];
+
+    const largeTodoDocs = Array.from({ length: 500 }, (_, index) =>
+      makeTodoDoc(`todo-${index}`, { boardId: 'board-1', columnId: 'missing', status: 'missing' })
+    );
+
+    mockGetDocs.mockResolvedValueOnce({ docs: largeTodoDocs });
+
+    await act(async () => {
+      await result.current.updateDashboard('board-1', 'Board Updated', columns);
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      { path: 'todos/board-1' },
+      expect.objectContaining({ name: 'Board Updated' })
+    );
+    expect(mockBatchCommit).toHaveBeenCalledTimes(2);
+  });
+
+  it('deleteDashboard throws when fallback dashboard has no columns', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs.mockResolvedValueOnce({
+      docs: [
+        makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+          { id: 'todo', name: 'To do', order: 0, isDone: false },
+        ]),
+        makeSnapshotDoc('board-2', {
+          entityType: 'dashboard',
+          userId: 'user-1',
+          name: 'Board 2',
+          order: 1,
+          columns: [],
+          createdAt: new Date('2026-01-02T00:00:00Z'),
+          updatedAt: new Date('2026-01-02T00:00:00Z'),
+        }),
+      ],
+    });
+
+    await expect(result.current.deleteDashboard('board-1')).rejects.toThrow(
+      'Fallback dashboard must have at least one column'
+    );
+  });
+
+  it('deleteDashboard sorts fallback columns by order before reassignment', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+          ]),
+          makeSnapshotDoc('board-2', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Board 2',
+            order: 1,
+            columns: [
+              { id: 'later', name: 'Later', order: 2, isDone: false },
+              { id: 'first', name: 'First', order: 0, isDone: false },
+            ],
+            createdAt: new Date('2026-01-02T00:00:00Z'),
+            updatedAt: new Date('2026-01-02T00:00:00Z'),
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        docs: [makeTodoDoc('todo-1', { boardId: 'board-1', columnId: 'todo', status: 'todo' })],
+      });
+
+    await act(async () => {
+      await result.current.deleteDashboard('board-1');
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/todo-1' },
+      expect.objectContaining({ columnId: 'first', status: 'first' })
+    );
+  });
+
+  it('deleteDashboard uses default fallback columns when firestore dashboard has no columns field', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+          ]),
+          makeSnapshotDoc('board-2', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Board 2',
+            createdAt: new Date('2026-01-02T00:00:00Z'),
+            updatedAt: new Date('2026-01-02T00:00:00Z'),
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        docs: [makeTodoDoc('todo-1', { boardId: 'board-1', columnId: 'todo', status: 'todo' })],
+      });
+
+    await act(async () => {
+      await result.current.deleteDashboard('board-1');
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/todo-1' },
+      expect.objectContaining({ columnId: 'todo', status: 'todo' })
+    );
+  });
+
+  it('deleteDashboard normalizes malformed fallback columns', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+          ]),
+          makeSnapshotDoc('board-2', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Board 2',
+            order: 1,
+            columns: [{}, { id: 'done', name: 'Done-ish' }],
+            createdAt: new Date('2026-01-02T00:00:00Z'),
+            updatedAt: new Date('2026-01-02T00:00:00Z'),
+          }),
+        ],
+      })
+      .mockResolvedValueOnce({
+        docs: [makeTodoDoc('todo-1', { boardId: 'board-1', columnId: 'todo', status: 'todo' })],
+      });
+
+    await act(async () => {
+      await result.current.deleteDashboard('board-1');
+    });
+
+    expect(mockBatchUpdate).toHaveBeenCalledWith(
+      { path: 'todos/todo-1' },
+      expect.objectContaining({ columnId: 'col-0', status: 'col-0' })
+    );
+  });
+
+  it('throws authentication errors for mutating actions when user is missing', async () => {
+    const { result } = renderHook(() => useDashboards(null));
+
+    await expect(result.current.addDashboard('Board', ['Todo'])).rejects.toThrow('User must be authenticated');
+    await expect(result.current.reorderDashboards(['board-1'])).rejects.toThrow('User must be authenticated');
+    await expect(
+      result.current.updateDashboard('board-1', 'Board', [{ id: 'todo', name: 'To do', order: 0, isDone: false }])
+    ).rejects.toThrow('User must be authenticated');
+    await expect(result.current.deleteDashboard('board-1')).rejects.toThrow('User must be authenticated');
   });
 });

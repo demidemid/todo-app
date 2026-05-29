@@ -34,13 +34,18 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
   const {
     isEditing,
     setIsEditing,
+    isEditingTitle,
+    setIsEditingTitle,
     title,
     setTitle,
     description,
     setDescription,
     saving,
     error,
+    handleSaveTitle,
+    handleCancelEditTitle,
     handleSave,
+    handleCancelEdit,
     handleDelete,
   } = useTodoModalEditor({
     todo,
@@ -49,6 +54,23 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     deleteTodo,
   });
 
+  const handleSaveShortcut = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
+
+    if (isEditingTitle) {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleSaveTitle();
+      return;
+    }
+
+    if (isEditing) {
+      event.preventDefault();
+      event.stopPropagation();
+      void handleSave();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"
@@ -56,13 +78,14 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       data-testid="todo-modal"
     >
       <div
-        className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl relative flex flex-col md:flex-row gap-6"
+        className="relative flex max-h-[90vh] w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:flex-row"
         onClick={(event) => event.stopPropagation()}
+        onKeyDownCapture={handleSaveShortcut}
       >
         <IconButton
           variant="neutral"
           size="lg"
-          className="absolute right-4 top-4 rounded-full"
+          className="absolute right-4 top-4 size-8 shrink-0 rounded-full"
           onClick={onClose}
           label="Close"
         >
@@ -71,14 +94,24 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         <TodoModalDetailsPanel
           todo={todo}
           isEditing={isEditing}
+          isEditingTitle={isEditingTitle}
           title={title}
           description={description}
           saving={saving}
           error={error}
-          onStartEdit={() => setIsEditing(true)}
-          onCancelEdit={() => setIsEditing(false)}
+          onStartEdit={() => {
+            setIsEditing(true);
+            setIsEditingTitle(false);
+          }}
+          onCancelEdit={handleCancelEdit}
           onSave={handleSave}
           onDelete={handleDelete}
+          onStartEditTitle={() => {
+            setIsEditingTitle(true);
+            setIsEditing(false);
+          }}
+          onSaveTitle={handleSaveTitle}
+          onCancelEditTitle={handleCancelEditTitle}
           onTitleChange={setTitle}
           onDescriptionChange={setDescription}
         />

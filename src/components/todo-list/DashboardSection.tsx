@@ -5,7 +5,8 @@ import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
-import { Textarea } from '../ui/Textarea';
+import { RichTextEditor } from '../todo-modal/RichTextEditor';
+import { MessageCircle } from 'lucide-react';
 
 interface DragState {
   todoId: string;
@@ -93,6 +94,15 @@ export const DashboardSection = ({
   onMenuEdit,
   onMenuDelete,
 }: DashboardSectionProps) => {
+  const toggleDashboard = () => onToggle(dashboard.id);
+
+  const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleDashboard();
+    }
+  };
+
   return (
     <section
       ref={sectionRef}
@@ -106,7 +116,14 @@ export const DashboardSection = ({
       onDragOver={onDashboardDragOver}
       onDrop={onDashboardDrop}
     >
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div
+        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={toggleDashboard}
+        onKeyDown={handleHeaderKeyDown}
+      >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <IconButton
             variant="neutral"
@@ -134,36 +151,47 @@ export const DashboardSection = ({
 
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 
-          <IconButton
-            variant="neutral"
-            onClick={() => onOpenEditDashboard(dashboard.id)}
-            data-testid={`edit-dashboard-button-${dashboard.id}`}
-            label={`Edit dashboard ${dashboard.name}`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-          </IconButton>
+          <div className="ml-1 flex items-center">
+            <IconButton
+              variant="neutral"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenEditDashboard(dashboard.id);
+              }}
+              data-testid={`edit-dashboard-button-${dashboard.id}`}
+              label={`Edit dashboard ${dashboard.name}`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </IconButton>
 
-          <IconButton
-            variant="danger"
-            onClick={() => onDeleteDashboard(dashboard.id, dashboard.name)}
-            data-testid={`delete-dashboard-button-${dashboard.id}`}
-            label={`Delete dashboard ${dashboard.name}`}
-            disabled={dashboardsLength <= 1}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-            </svg>
-          </IconButton>
+            <IconButton
+              variant="danger"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteDashboard(dashboard.id, dashboard.name);
+              }}
+              data-testid={`delete-dashboard-button-${dashboard.id}`}
+              label={`Delete dashboard ${dashboard.name}`}
+              disabled={dashboardsLength <= 1}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+            </IconButton>
+          </div>
         </div>
 
         <IconButton
           variant="neutral"
-          onClick={() => onToggle(dashboard.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleDashboard();
+          }}
           data-testid={`dashboard-toggle-${dashboard.id}`}
           label={isExpanded ? 'Collapse dashboard' : 'Expand dashboard'}
         >
@@ -255,7 +283,7 @@ export const DashboardSection = ({
                           onClick={() => {
                             if (editingTodoId !== todo.id) onOpenTodoModal(todo);
                           }}
-                          className={`rounded-lg border border-white/10 bg-slate-900/70 p-3 select-none transition-shadow duration-150 hover:shadow-lg ${
+                          className={`relative rounded-lg border border-white/10 bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
                             editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
                           }`}
                         >
@@ -273,13 +301,11 @@ export const DashboardSection = ({
                               />
 
                               <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">Description</label>
-                              <Textarea
+                              <RichTextEditor
                                 value={editingDescription}
-                                onChange={(event) => onEditDescriptionChange(event.target.value)}
-                                onKeyDown={(event) => onEditKeyDown(event, todo.id)}
-                                data-testid={`edit-description-${todo.id}`}
-                                rows={3}
-                                className="mb-3 resize-none rounded-md px-2 py-1.5 text-xs"
+                                onChange={onEditDescriptionChange}
+                                className="mb-3"
+                                placeholder="Write a description with formatting..."
                               />
 
                               <div className="flex justify-end gap-2">
@@ -306,7 +332,6 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <p className="text-sm font-semibold text-slate-100">{todo.title}</p>
-                                {todo.description && <p className="mt-1 text-xs text-slate-300">{todo.description}</p>}
                               </div>
                               <div className="relative flex items-center gap-2">
                                 <IconButton
@@ -344,6 +369,10 @@ export const DashboardSection = ({
                                     onClose={onCloseMenu}
                                   />
                                 )}
+                              </div>
+                              <div className="pointer-events-none absolute bottom-2 left-3 inline-flex items-center gap-1 text-[11px] font-medium text-white">
+                                <MessageCircle size={12} className="text-white" aria-hidden="true" />
+                                <span>{todo.comments?.length ?? 0}</span>
                               </div>
                             </div>
                           )}
