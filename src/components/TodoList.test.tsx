@@ -15,11 +15,13 @@ const mockAddDashboard = vi.fn();
 const mockUpdateDashboard = vi.fn();
 const mockDeleteDashboard = vi.fn();
 const mockReorderDashboards = vi.fn();
+const mockShareDashboard = vi.fn();
 const mockSetActiveDashboardId = vi.fn();
 
 const mockUseTodos = vi.fn();
 const mockUseComments = vi.fn();
 const mockUseDashboards = vi.fn();
+const mockUseUsers = vi.fn();
 
 vi.mock('../hooks/useTodos', () => ({
   useTodos: (userId: string) => mockUseTodos(userId),
@@ -31,6 +33,10 @@ vi.mock('../hooks/useComments', () => ({
 
 vi.mock('../hooks/useDashboards', () => ({
   useDashboards: (userId: string | null) => mockUseDashboards(userId),
+}));
+
+vi.mock('../hooks/useUsers', () => ({
+  useUsers: (userId: string | null) => mockUseUsers(userId),
 }));
 
 const createColumn = (overrides: Partial<DashboardColumn> = {}): DashboardColumn => ({
@@ -90,6 +96,14 @@ const createDashboardsState = (dashboards: Dashboard[] = [createDashboard()]) =>
   updateDashboard: mockUpdateDashboard,
   deleteDashboard: mockDeleteDashboard,
   reorderDashboards: mockReorderDashboards,
+  shareDashboard: mockShareDashboard,
+});
+
+const createUsersState = (overrides: Record<string, unknown> = {}) => ({
+  users: [],
+  loading: false,
+  error: null,
+  ...overrides,
 });
 
 const createCommentsState = (overrides: Record<string, unknown> = {}) => ({
@@ -112,6 +126,10 @@ const setCommentsState = (overrides: Record<string, unknown> = {}) => {
   mockUseComments.mockReturnValue(createCommentsState(overrides));
 };
 
+const setUsersState = (overrides: Record<string, unknown> = {}) => {
+  mockUseUsers.mockReturnValue(createUsersState(overrides));
+};
+
 const SearchParamsProbe = () => {
   const location = useLocation();
   return <div data-testid="location-search">{location.search}</div>;
@@ -132,6 +150,7 @@ describe('TodoList', () => {
     setTodosState();
     setCommentsState();
     setDashboardsState();
+    setUsersState();
   });
 
   it('opens card modal and shows comments list', async () => {
@@ -297,6 +316,86 @@ describe('TodoList', () => {
         { id: 'done', name: 'Done', order: 2, isDone: true },
       ]);
     });
+  });
+
+  it('shares dashboard via modal multi-select', async () => {
+    const user = userEvent.setup();
+    mockShareDashboard.mockResolvedValue(undefined);
+
+    setUsersState({
+      users: [
+        { id: 'u-2', email: 'alice@example.com' },
+        { id: 'u-3', email: 'bob@example.com' },
+      ],
+    });
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+    expect(screen.getByTestId('share-dashboard-modal')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('share-user-checkbox-u-2'));
+    await user.click(screen.getByTestId('share-user-checkbox-u-3'));
+    expect(screen.getByTestId('share-selected-count')).toHaveTextContent('Selected: 2');
+
+    await user.click(screen.getByRole('button', { name: 'Save access' }));
+
+    await waitFor(() => {
+      expect(mockShareDashboard).toHaveBeenCalledWith(
+        'board-1',
+        ['u-2', 'u-3'],
+        ['alice@example.com', 'bob@example.com'],
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('share-dashboard-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows users loading error in share modal', async () => {
+    const user = userEvent.setup();
+
+    setUsersState({
+      users: [],
+      loading: false,
+      error: 'Missing or insufficient permissions.',
+    });
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+
+    expect(screen.getByTestId('share-dashboard-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('share-users-error')).toHaveTextContent(
+      'Failed to load users: Missing or insufficient permissions.'
+    );
+
+    const saveButton = screen.getByRole('button', { name: 'Save access' });
+    expect(saveButton).toBeDisabled();
+
+    await user.click(saveButton);
+    expect(mockShareDashboard).not.toHaveBeenCalled();
+  });
+
+  it('disables share submit while users are loading', async () => {
+    const user = userEvent.setup();
+
+    setUsersState({
+      users: [],
+      loading: true,
+      error: null,
+    });
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+
+    const saveButton = screen.getByRole('button', { name: 'Save access' });
+    expect(saveButton).toBeDisabled();
+
+    await user.click(saveButton);
+    expect(mockShareDashboard).not.toHaveBeenCalled();
   });
 
   it('shows validation error and blocks save for duplicate dashboard column names', async () => {
@@ -482,6 +581,33 @@ describe('TodoList', () => {
     fireEvent.drop(targetDashboard);
 
     expect(mockReorderDashboards).toHaveBeenCalledWith(['board-2', 'board-1']);
+  });
+
+  it('prevents dragging and reordering shared dashboards', async () => {
+    setDashboardsState([
+      createDashboard({ id: 'board-1', userId: 'user-1', order: 0 }),
+      createDashboard({
+        id: 'board-2',
+        userId: 'user-2',
+        name: 'Shared dashboard',
+        order: 1,
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
+
+    renderTodoList();
+
+    const sharedDragHandle = screen.getByTestId('dashboard-drag-handle-board-2');
+    expect(sharedDragHandle).toBeDisabled();
+
+    fireEvent.drop(screen.getByTestId('dashboard-board-2'), {
+      dataTransfer: {
+        getData: () => 'board-2',
+      },
+    });
+
+    expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
 
   it('cancels inline edit by Escape', async () => {

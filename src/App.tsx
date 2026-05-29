@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth } from './firebase'
+import { db } from './firebase'
 import { Login } from './components/Login'
 import { TodoList } from './components/TodoList'
 import { IconButton } from './components/ui/IconButton'
@@ -15,6 +17,16 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser)
       setLoading(false)
+
+      if (currentUser?.email) {
+        void setDoc(
+          doc(db, 'users', currentUser.uid),
+          {
+            email: currentUser.email.trim().toLowerCase(),
+            updatedAt: serverTimestamp(),
+          }
+        )
+      }
     })
 
     return () => unsubscribe()

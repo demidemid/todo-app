@@ -81,6 +81,29 @@ Quick deployment command:
 firebase deploy --only firestore:rules
 ```
 
+If you see `Missing or insufficient permissions` when opening share users list:
+
+1. Install Firebase CLI or use `npx` (no global install needed).
+2. Login once:
+
+```bash
+npx firebase-tools login
+```
+
+3. Deploy rules to your Firebase project:
+
+```bash
+VITE_FIREBASE_PROJECT_ID=<your_project_id> npx firebase-tools deploy --only firestore:rules --project "$VITE_FIREBASE_PROJECT_ID"
+```
+
+Or use the package script:
+
+```bash
+yarn firebase:rules --project <your_project_id>
+```
+
+After deploy, reload the app and ensure at least one other account has signed in once so it exists in `users/{uid}`.
+
 ## Running the App
 
 ### Development mode

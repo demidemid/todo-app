@@ -42,6 +42,24 @@ interface EditDashboardModalProps {
   onSubmit: (event: React.FormEvent) => void;
 }
 
+interface ShareTargetUser {
+  id: string;
+  email: string;
+}
+
+interface ShareDashboardModalProps {
+  open: boolean;
+  dashboardName: string;
+  users: ShareTargetUser[];
+  selectedUserIds: string[];
+  loadingUsers: boolean;
+  usersError: string | null;
+  actionError: string;
+  onClose: () => void;
+  onToggleUser: (userId: string) => void;
+  onSubmit: (event: React.FormEvent) => void;
+}
+
 export const CreateDashboardModal = ({
   open,
   dashboardName,
@@ -254,6 +272,88 @@ export const EditDashboardModal = ({
           </Button>
           <Button type="submit">
             Save dashboard
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export const ShareDashboardModal = ({
+  open,
+  dashboardName,
+  users,
+  selectedUserIds,
+  loadingUsers,
+  usersError,
+  actionError,
+  onClose,
+  onToggleUser,
+  onSubmit,
+}: ShareDashboardModalProps) => {
+  if (!open) return null;
+
+  const selectedCount = selectedUserIds.length;
+  const isSaveDisabled = loadingUsers || Boolean(usersError);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-lg rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        data-testid="share-dashboard-modal"
+      >
+        <h3 className="mb-1 text-lg font-semibold text-white">Share dashboard</h3>
+        <p className="mb-4 text-sm text-slate-300">
+          Pick users who should access <span className="font-semibold text-slate-100">{dashboardName}</span>.
+        </p>
+
+        <div className="mb-4 rounded-lg border border-white/10 bg-slate-950/40 p-3">
+          {loadingUsers ? (
+            <p className="text-sm text-slate-300">Loading users...</p>
+          ) : usersError ? (
+            <p className="text-sm text-rose-300" data-testid="share-users-error">Failed to load users: {usersError}</p>
+          ) : users.length === 0 ? (
+            <p className="text-sm text-slate-400">No other users found yet.</p>
+          ) : (
+            <ul className="max-h-64 space-y-1 overflow-auto">
+              {users.map((user) => {
+                const checked = selectedUserIds.includes(user.id);
+                return (
+                  <li key={user.id}>
+                    <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-white/5">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleUser(user.id)}
+                        className="size-4 accent-cyan-400"
+                        data-testid={`share-user-checkbox-${user.id}`}
+                      />
+                      <span className="truncate text-sm text-slate-100">{user.email}</span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <p className="mb-3 text-xs uppercase tracking-wide text-slate-400" data-testid="share-selected-count">
+          Selected: {selectedCount}
+        </p>
+
+        {actionError && <p className="mb-3 text-sm text-rose-300">{actionError}</p>}
+
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSaveDisabled}>
+            Save access
           </Button>
         </div>
       </form>

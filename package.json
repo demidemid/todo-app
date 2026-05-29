@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "firebase:rules": "npx firebase-tools deploy --only firestore:rules",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --reporter=default --no-color",
     "test:watch": "vitest"

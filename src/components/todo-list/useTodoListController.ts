@@ -347,19 +347,28 @@ export const useTodoListController = ({
     }
   };
 
-  const handleDashboardDrop = async (targetIndex: number, draggedDashboardId?: string) => {
+  const handleDashboardDrop = async (
+    targetIndex: number,
+    draggedDashboardId?: string,
+    reorderableDashboardIds?: string[]
+  ) => {
     const activeDragId = draggedDashboardId ?? dashboardDragId;
     if (!activeDragId) return;
 
-    const sourceIndex = dashboards.findIndex((dashboard) => dashboard.id === activeDragId);
+    const reorderableIdSet = reorderableDashboardIds ? new Set(reorderableDashboardIds) : null;
+    const reorderableDashboards = reorderableIdSet
+      ? dashboards.filter((dashboard) => reorderableIdSet.has(dashboard.id))
+      : dashboards;
+
+    const sourceIndex = reorderableDashboards.findIndex((dashboard) => dashboard.id === activeDragId);
     if (sourceIndex < 0) {
       setDashboardDragId(null);
       setDashboardDropIndex(null);
       return;
     }
 
-    const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, dashboards.length));
-    const nextDashboards = [...dashboards];
+    const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, reorderableDashboards.length));
+    const nextDashboards = [...reorderableDashboards];
     const [movedDashboard] = nextDashboards.splice(sourceIndex, 1);
 
     const insertIndex = sourceIndex < normalizedTargetIndex ? normalizedTargetIndex - 1 : normalizedTargetIndex;

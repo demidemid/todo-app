@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDoc,
   and,
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getDocs,
   onSnapshot,
   query,
-  setDoc,
   Timestamp,
   updateDoc,
   writeBatch,
@@ -64,8 +64,23 @@ const compareDashboardsByOrder = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: 
   return a.createdAt.getTime() - b.createdAt.getTime();
 };
 
+const isPermissionDeniedError = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) return false;
+
+  const maybeCode = 'code' in error ? (error as { code?: unknown }).code : undefined;
+  const maybeMessage = 'message' in error ? (error as { message?: unknown }).message : undefined;
+
+  if (typeof maybeCode === 'string' && maybeCode === 'permission-denied') return true;
+  if (typeof maybeMessage === 'string') {
+    return maybeMessage.toLowerCase().includes('missing or insufficient permissions');
+  }
+
+  return false;
+};
+
 export const useDashboards = (userId: string | null) => {
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
+  const [sharedDashboards, setSharedDashboards] = useState<Dashboard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(null);
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
@@ -74,8 +89,68 @@ export const useDashboards = (userId: string | null) => {
 
   useEffect(() => {
     if (!userId) return;
+    let isEffectCancelled = false;
     hasResolvedInitialSelectionRef.current = false;
     hasMigratedLegacyTodosRef.current = false;
+
+    const fetchSharedDashboards = async () => {
+      const sharedQuery = query(
+        collection(db, 'todos'),
+        and(where('entityType', '==', 'dashboard'), where('sharedWith', 'array-contains', userId))
+      );
+
+      try {
+        const snapshot = await getDocs(sharedQuery);
+        if (isEffectCancelled) return;
+
+        const items: Dashboard[] = snapshot.docs
+          .filter((item) => item.data().entityType === 'dashboard')
+          .map((item) => {
+            const data = item.data();
+            const columns = Array.isArray(data.columns)
+              ? data.columns
+                  .map((col, index) => ({
+                    id: typeof col?.id === 'string' ? col.id : `col-${index}`,
+                    name: typeof col?.name === 'string' ? col.name : `Column ${index + 1}`,
+                    order: typeof col?.order === 'number' ? col.order : index,
+                    isDone: typeof col?.isDone === 'boolean' ? col.isDone : col?.id === 'done',
+                  }))
+                  .sort((a, b) => a.order - b.order)
+              : defaultColumns();
+
+            return {
+              id: item.id,
+              userId: typeof data.userId === 'string' ? data.userId : '',
+              name: typeof data.name === 'string' ? data.name : 'Dashboard',
+              order: typeof data.order === 'number' ? data.order : Number.NaN,
+              columns,
+              sharedWith: Array.isArray(data.sharedWith)
+                ? data.sharedWith.filter((value): value is string => typeof value === 'string')
+                : [],
+              sharedWithEmails: Array.isArray(data.sharedWithEmails)
+                ? data.sharedWithEmails.filter((value): value is string => typeof value === 'string')
+                : [],
+              createdAt: parseTimestamp(data.createdAt),
+              updatedAt: parseTimestamp(data.updatedAt),
+            };
+          });
+
+        const normalizedItems = items
+          .map((dashboard, index) => ({
+            ...dashboard,
+            order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+          }))
+          .sort(compareDashboardsByOrder);
+
+        if (isEffectCancelled) return;
+        setSharedDashboards(normalizedItems);
+      } catch {
+        if (isEffectCancelled) return;
+        setSharedDashboards([]);
+      }
+    };
+
+    void fetchSharedDashboards();
 
     const q = query(
       collection(db, 'todos'),
@@ -103,31 +178,22 @@ export const useDashboards = (userId: string | null) => {
             name: typeof data.name === 'string' ? data.name : 'Dashboard',
             order: typeof data.order === 'number' ? data.order : Number.NaN,
             columns,
+            sharedWith: Array.isArray(data.sharedWith)
+              ? data.sharedWith.filter((value): value is string => typeof value === 'string')
+              : [],
+            sharedWithEmails: Array.isArray(data.sharedWithEmails)
+              ? data.sharedWithEmails.filter((value): value is string => typeof value === 'string')
+              : [],
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
           };
         });
 
         if (items.length === 0) {
-          try {
-            await setDoc(doc(db, 'todos', `default-dashboard-${userId}`), {
-              entityType: 'dashboard',
-              userId,
-              name: 'My Dashboard',
-              order: 0,
-              columns: defaultColumns(),
-              createdAt: Timestamp.now(),
-              updatedAt: Timestamp.now(),
-            });
-
-            // Stop showing loader while waiting for the next snapshot with created dashboard.
-            setError(null);
-            setLoadedUserId(userId);
-          } catch (bootstrapError) {
-            setError(bootstrapError instanceof Error ? bootstrapError.message : 'Failed to create default dashboard');
-            setDashboards([]);
-            setLoadedUserId(userId);
-          }
+          setDashboards([]);
+          setError(null);
+          setLoadedUserId(userId);
+          setActiveDashboardId(null);
           return;
         }
 
@@ -173,8 +239,10 @@ export const useDashboards = (userId: string | null) => {
                 const data = item.data();
                 const hasBoardId = typeof data.boardId === 'string' && data.boardId.length > 0;
                 const hasColumnId = typeof data.columnId === 'string' && data.columnId.length > 0;
+                const hasWeight = typeof data.weight === 'number' && Number.isFinite(data.weight);
+                const hasLegacyCompleted = 'completed' in data;
 
-                if (hasBoardId && hasColumnId) return null;
+                if (hasBoardId && hasColumnId && hasWeight && !hasLegacyCompleted) return null;
                 if (!defaultColumnId) return null;
 
                 const nextBoardId = hasBoardId ? data.boardId : defaultBoard.id;
@@ -185,26 +253,42 @@ export const useDashboards = (userId: string | null) => {
                       ? data.status
                       : defaultColumnId;
 
-                return updateDoc(doc(db, 'todos', item.id), {
+                const updateData: Record<string, unknown> = {
                   boardId: nextBoardId,
                   columnId: nextColumnId,
                   status: nextColumnId,
                   updatedAt: Timestamp.now(),
-                });
+                };
+
+                if (!hasWeight) {
+                  updateData.weight = parseTimestamp(data.createdAt).getTime();
+                }
+
+                if (hasLegacyCompleted) {
+                  updateData.completed = deleteField();
+                }
+
+                return updateDoc(doc(db, 'todos', item.id), updateData);
               })
               .filter((value): value is Promise<void> => value !== null);
 
             await Promise.all([...dashboardOrderBackfills, ...migrationPromises]);
           } catch (migrationError) {
-            hasMigratedLegacyTodosRef.current = false;
-            migrationErrorMessage =
-              migrationError instanceof Error ? migrationError.message : 'Failed to migrate legacy todos';
+            if (isPermissionDeniedError(migrationError)) {
+              // Under stricter rules, legacy docs may be unreadable; skip migration and keep dashboards usable.
+              migrationErrorMessage = null;
+            } else {
+              hasMigratedLegacyTodosRef.current = false;
+              migrationErrorMessage =
+                migrationError instanceof Error ? migrationError.message : 'Failed to migrate legacy todos';
+            }
           }
         }
 
         setDashboards(normalizedItems);
         setError(migrationErrorMessage);
         setLoadedUserId(userId);
+        void fetchSharedDashboards();
 
         setActiveDashboardId((prev) => {
           if (prev && normalizedItems.some((board) => board.id === prev)) {
@@ -224,11 +308,16 @@ export const useDashboards = (userId: string | null) => {
       (snapshotError) => {
         setError(snapshotError.message || 'Failed to load dashboards');
         setDashboards([]);
+        setSharedDashboards([]);
         setLoadedUserId(userId);
       }
     );
 
-    return () => unsub();
+    return () => {
+      isEffectCancelled = true;
+      unsub();
+      setSharedDashboards([]);
+    };
   }, [userId]);
 
   const addDashboard = async (name: string, columnNames: string[]) => {
@@ -259,6 +348,8 @@ export const useDashboards = (userId: string | null) => {
       name: normalizedName,
       order: dashboards.reduce((maxOrder, dashboard) => Math.max(maxOrder, dashboard.order), -1) + 1,
       columns,
+      sharedWith: [],
+      sharedWithEmails: [],
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
@@ -477,6 +568,33 @@ export const useDashboards = (userId: string | null) => {
     setActiveDashboardId(fallbackDashboard.id);
   };
 
+  const shareDashboard = async (dashboardId: string, sharedWithUserIds: string[], sharedWithEmails: string[]) => {
+    if (!userId) throw new Error('User must be authenticated');
+
+    const dashboard = dashboards.find((item) => item.id === dashboardId);
+    if (!dashboard) throw new Error('Dashboard not found');
+    if (dashboard.userId !== userId) throw new Error('Only dashboard owner can share access');
+
+    const nextUserIds = Array.from(new Set(sharedWithUserIds.filter((id) => id && id !== userId)));
+    const nextEmails = Array.from(new Set(sharedWithEmails.map((email) => email.trim().toLowerCase()).filter(Boolean)));
+
+    await updateDoc(doc(db, 'todos', dashboardId), {
+      sharedWith: nextUserIds,
+      sharedWithEmails: nextEmails,
+      updatedAt: Timestamp.now(),
+    });
+  };
+
+  const loading = loadedUserId !== userId;
+  const visibleDashboards = useMemo(() => {
+    if (loadedUserId !== userId) return [];
+
+    return [...dashboards, ...sharedDashboards.filter((shared) => !dashboards.some((owned) => owned.id === shared.id))]
+      .sort(compareDashboardsByOrder);
+  }, [dashboards, loadedUserId, sharedDashboards, userId]);
+  const visibleError = loadedUserId === userId ? error : null;
+  const visibleActive = visibleDashboards.find((board) => board.id === activeDashboardId) ?? null;
+
   if (!userId) {
     return {
       dashboards: [],
@@ -489,13 +607,9 @@ export const useDashboards = (userId: string | null) => {
       updateDashboard,
       deleteDashboard,
       reorderDashboards,
+      shareDashboard,
     };
   }
-
-  const loading = loadedUserId !== userId;
-  const visibleDashboards = loadedUserId === userId ? dashboards : [];
-  const visibleError = loadedUserId === userId ? error : null;
-  const visibleActive = visibleDashboards.find((board) => board.id === activeDashboardId) ?? null;
 
   return {
     dashboards: visibleDashboards,
@@ -508,5 +622,6 @@ export const useDashboards = (userId: string | null) => {
     updateDashboard,
     deleteDashboard,
     reorderDashboards,
+    shareDashboard,
   };
 };

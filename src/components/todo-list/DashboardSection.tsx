@@ -40,6 +40,8 @@ interface DashboardSectionProps {
   onDashboardDrop?: (event: React.DragEvent<HTMLElement>) => void;
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
+  onOpenShareDashboard?: (dashboardId: string) => void;
+  canManageDashboard?: boolean;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
   onMoveTodo: (todoId: string, targetColumnId: string, targetIndex: number) => void;
   onSetDragState: (state: DragState | null) => void;
@@ -79,6 +81,8 @@ export const DashboardSection = ({
   onDashboardDrop,
   onOpenEditDashboard,
   onDeleteDashboard,
+  onOpenShareDashboard,
+  canManageDashboard = true,
   onOpenCreateCard,
   onMoveTodo,
   onSetDragState,
@@ -130,9 +134,15 @@ export const DashboardSection = ({
             size="sm"
             label="Drag dashboard"
             data-testid={`dashboard-drag-handle-${dashboard.id}`}
-            className="cursor-grab active:cursor-grabbing"
-            draggable
+            className={canManageDashboard ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
+            draggable={canManageDashboard}
+            disabled={!canManageDashboard}
             onDragStart={(event) => {
+              if (!canManageDashboard) {
+                event.preventDefault();
+                return;
+              }
+
               event.stopPropagation();
               if (event.dataTransfer) {
                 event.dataTransfer.effectAllowed = 'move';
@@ -151,39 +161,58 @@ export const DashboardSection = ({
 
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
 
-          <div className="ml-1 flex items-center">
-            <IconButton
-              variant="neutral"
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenEditDashboard(dashboard.id);
-              }}
-              data-testid={`edit-dashboard-button-${dashboard.id}`}
-              label={`Edit dashboard ${dashboard.name}`}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-            </IconButton>
+          {canManageDashboard && (
+            <div className="ml-1 flex items-center">
+              <IconButton
+                variant="neutral"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenShareDashboard?.(dashboard.id);
+                }}
+                data-testid={`share-dashboard-button-${dashboard.id}`}
+                label={`Share dashboard ${dashboard.name}`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M16 5a3 3 0 1 0-2.83-4H13a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M6 14a3 3 0 1 0-2.83-4H3a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M17 18a3 3 0 1 0-2.83-4H14a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="m8.7 12.3 5.6 3.4M14.3 8.3 8.7 11.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </IconButton>
 
-            <IconButton
-              variant="danger"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDeleteDashboard(dashboard.id, dashboard.name);
-              }}
-              data-testid={`delete-dashboard-button-${dashboard.id}`}
-              label={`Delete dashboard ${dashboard.name}`}
-              disabled={dashboardsLength <= 1}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-              </svg>
-            </IconButton>
-          </div>
+              <IconButton
+                variant="neutral"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpenEditDashboard(dashboard.id);
+                }}
+                data-testid={`edit-dashboard-button-${dashboard.id}`}
+                label={`Edit dashboard ${dashboard.name}`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </IconButton>
+
+              <IconButton
+                variant="danger"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDeleteDashboard(dashboard.id, dashboard.name);
+                }}
+                data-testid={`delete-dashboard-button-${dashboard.id}`}
+                label={`Delete dashboard ${dashboard.name}`}
+                disabled={dashboardsLength <= 1}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </IconButton>
+            </div>
+          )}
         </div>
 
         <IconButton

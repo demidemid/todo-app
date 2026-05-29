@@ -10,13 +10,13 @@ const mockDoc = vi.fn();
 const mockGetDocs = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
-const mockSetDoc = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockWriteBatch = vi.fn();
 const mockBatchUpdate = vi.fn();
 const mockBatchCommit = vi.fn();
 const mockAnd = vi.fn();
 const mockWhere = vi.fn();
+const mockDeleteField = vi.fn();
 
 vi.mock('firebase/firestore', () => ({
   Timestamp: class TimestampMock {
@@ -41,11 +41,11 @@ vi.mock('firebase/firestore', () => ({
   getDocs: (...args: unknown[]) => mockGetDocs(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
-  setDoc: (...args: unknown[]) => mockSetDoc(...args),
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
   and: (...args: unknown[]) => mockAnd(...args),
   where: (...args: unknown[]) => mockWhere(...args),
+  deleteField: (...args: unknown[]) => mockDeleteField(...args),
 }));
 
 vi.mock('../firebase', () => ({
@@ -127,6 +127,7 @@ describe('useDashboards', () => {
     mockQuery.mockReturnValue({ query: true });
     mockAnd.mockReturnValue({ and: true });
     mockWhere.mockReturnValue({ where: true });
+    mockDeleteField.mockReturnValue({ deleteField: true });
     mockDoc.mockImplementation((_, collectionName: string, id: string) => ({ path: `${collectionName}/${id}` }));
     mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
       snapshotNext = onNext;
@@ -135,7 +136,6 @@ describe('useDashboards', () => {
     });
     mockAddDoc.mockResolvedValue({ id: 'new-board-id' });
     mockGetDocs.mockResolvedValue({ docs: [] });
-    mockSetDoc.mockResolvedValue(undefined);
     mockUpdateDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
     mockBatchUpdate.mockReset();
@@ -366,43 +366,20 @@ describe('useDashboards', () => {
     });
   });
 
-  it('creates default dashboard when snapshot is empty', async () => {
+  it('keeps dashboards empty when snapshot is empty', async () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
     await act(async () => {
       snapshotNext?.({ docs: [] });
     });
 
-    expect(mockSetDoc).toHaveBeenCalledTimes(1);
-    expect(mockSetDoc).toHaveBeenCalledWith(
-      { path: 'todos/default-dashboard-user-1' },
-      expect.objectContaining({
-        entityType: 'dashboard',
-        userId: 'user-1',
-        name: 'My Dashboard',
-        order: 0,
-      })
-    );
+    expect(result.current.dashboards).toEqual([]);
+    expect(result.current.activeDashboardId).toBeNull();
     expect(mockAddDoc).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
-    });
-  });
-
-  it('surfaces error when default dashboard bootstrap fails', async () => {
-    mockSetDoc.mockRejectedValueOnce(new Error('permission denied'));
-    const { result } = renderHook(() => useDashboards('user-1'));
-
-    await act(async () => {
-      snapshotNext?.({ docs: [] });
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-      expect(result.current.error).toBe('permission denied');
-      expect(result.current.dashboards).toEqual([]);
     });
   });
 
@@ -837,6 +814,36 @@ describe('useDashboards', () => {
     });
 
     expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores permission-denied during legacy migration and keeps dashboards visible', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({
+        docs: [makeTodoDoc('legacy-1', { status: 'todo' })],
+      });
+    mockUpdateDoc.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+          ]),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards.some((dashboard) => dashboard.id === 'board-1')).toBe(true);
+    });
+
+    expect(result.current.error).toBeNull();
   });
 
   it('backfills missing dashboard order for legacy dashboard docs', async () => {
