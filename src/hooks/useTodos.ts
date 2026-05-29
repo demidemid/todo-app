@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   addDoc,
+  and,
   collection,
   deleteDoc,
   doc,
@@ -13,6 +14,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
+
+export type AccessibleBoardInput = string | { id: string; userId?: string };
+
+type NormalizedBoardAccess = { id: string; ownerUserId: string | null };
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -114,100 +119,210 @@ const getFirestoreErrorMessage = (error: unknown): string => {
   return 'Unexpected Firestore error';
 };
 
-export const useTodos = (userId: string | null) => {
+const unique = <T,>(values: T[]): T[] => Array.from(new Set(values));
+
+const chunkArray = <T,>(values: T[], chunkSize: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += chunkSize) {
+    chunks.push(values.slice(index, index + chunkSize));
+  }
+  return chunks;
+};
+
+const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string, unknown> }>): Todo[] => {
+  return docs
+    .filter((item) => item.data().entityType !== 'dashboard')
+    .flatMap((item) => {
+      const data = item.data();
+      const createdAt = parseTimestamp(data.createdAt);
+      const status = parseStatus(data.status, data.completed);
+      const weight = parseWeight(data.weight);
+      const boardId = typeof data.boardId === 'string' && data.boardId.length > 0 ? data.boardId : null;
+      const columnId =
+        typeof data.columnId === 'string' && data.columnId.length > 0
+          ? data.columnId
+          : typeof data.status === 'string' && data.status.length > 0
+            ? data.status
+            : status;
+
+      if (!boardId) {
+        console.warn('Skipping todo without boardId; waiting for legacy migration.', { id: item.id });
+        return [];
+      }
+
+      return [
+        {
+          ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
+          id: item.id,
+          status,
+          boardId,
+          columnId,
+          weight,
+          createdAt,
+          updatedAt: parseTimestamp(data.updatedAt),
+        },
+      ];
+    });
+};
+
+export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoardInput[]) => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedSubscriptionKey, setResolvedSubscriptionKey] = useState<string>('');
+
+  const normalizedBoardAccessKey =
+    accessibleBoards === undefined
+      ? '__all__'
+      : unique(
+          accessibleBoards
+            .map((item) => {
+              if (typeof item === 'string') {
+                if (!item) return null;
+                return `${item}@@${userId ?? ''}`;
+              }
+
+              if (!item.id) return null;
+              return `${item.id}@@${item.userId ?? ''}`;
+            })
+            .filter((item): item is string => item !== null)
+        )
+          .sort()
+          .join('|');
+
+  const parseNormalizedBoardAccess = (key: string): NormalizedBoardAccess[] => {
+    if (key === '__all__' || key.length === 0) return [];
+
+    return key
+      .split('|')
+      .map((token) => {
+        const [id, ownerUserId = ''] = token.split('@@');
+        return {
+          id,
+          ownerUserId: ownerUserId.length > 0 ? ownerUserId : null,
+        };
+      })
+      .filter((item) => item.id.length > 0);
+  };
+
+  const shouldSkipBoardLoading = normalizedBoardAccessKey !== '__all__' && normalizedBoardAccessKey.length === 0;
+  const subscriptionKey = `${userId ?? '__anon__'}|${normalizedBoardAccessKey}`;
 
   useEffect(() => {
-    if (!userId) {
-      setTodos([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
+    if (!userId || shouldSkipBoardLoading) return;
 
-    setLoading(true);
-    setError(null);
+    const useBoardFiltering = normalizedBoardAccessKey !== '__all__';
+    const boardAccess = parseNormalizedBoardAccess(normalizedBoardAccessKey);
 
-    let unsubscribeSnapshot: (() => void) | null = null;
+    const unsubs: Array<() => void> = [];
     let hasSnapshotResponse = false;
     const snapshotTimeout = window.setTimeout(() => {
       if (!hasSnapshotResponse) {
-        setLoading(false);
         setError('Timed out while loading todos. Firestore may be unavailable or blocked by project configuration.');
+        setResolvedSubscriptionKey(subscriptionKey);
       }
     }, 10000);
 
-    try {
-      const q = query(collection(db, 'todos'), where('userId', '==', userId));
-
-      unsubscribeSnapshot = onSnapshot(
-        q,
-        (snapshot) => {
-          hasSnapshotResponse = true;
-          window.clearTimeout(snapshotTimeout);
-
-          try {
-            const nextTodos = snapshot.docs
-              .filter((item) => item.data().entityType !== 'dashboard')
-              .flatMap((item) => {
-              const data = item.data();
-              const createdAt = parseTimestamp(data.createdAt);
-              const status = parseStatus(data.status, data.completed);
-              const weight = parseWeight(data.weight);
-              const boardId = typeof data.boardId === 'string' && data.boardId.length > 0 ? data.boardId : null;
-              const columnId =
-                typeof data.columnId === 'string' && data.columnId.length > 0
-                  ? data.columnId
-                  : typeof data.status === 'string' && data.status.length > 0
-                    ? data.status
-                    : status;
-
-              if (!boardId) {
-                console.warn('Skipping todo without boardId; waiting for legacy migration.', { id: item.id });
-                return [];
-              }
-
-              return [{
-                ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
-                id: item.id,
-                status,
-                boardId,
-                columnId,
-                weight,
-                createdAt,
-                updatedAt: parseTimestamp(data.updatedAt),
-              }];
-              });
-
-            setTodos(nextTodos);
-          } catch (parseError) {
-            setError(parseError instanceof Error ? parseError.message : 'Failed to parse todos');
-          } finally {
-            setLoading(false);
-          }
-        },
-        (snapshotError) => {
-          hasSnapshotResponse = true;
-          window.clearTimeout(snapshotTimeout);
-          setError(getFirestoreErrorMessage(snapshotError));
-          setLoading(false);
-        }
-      );
-    } catch (subscribeError) {
+    const onSuccess = (nextTodos: Todo[]) => {
+      hasSnapshotResponse = true;
       window.clearTimeout(snapshotTimeout);
-      setError(getFirestoreErrorMessage(subscribeError));
-      setLoading(false);
+      setTodos(nextTodos);
+      setError(null);
+      setResolvedSubscriptionKey(subscriptionKey);
+    };
+
+    const onFailure = (snapshotError: unknown) => {
+      hasSnapshotResponse = true;
+      window.clearTimeout(snapshotTimeout);
+      setError(getFirestoreErrorMessage(snapshotError));
+      setResolvedSubscriptionKey(subscriptionKey);
+    };
+
+    try {
+      if (!useBoardFiltering) {
+        const q = query(collection(db, 'todos'), where('userId', '==', userId));
+        const unsubscribeSnapshot = onSnapshot(
+          q,
+          (snapshot) => {
+            try {
+              onSuccess(parseSnapshotTodos(snapshot.docs));
+            } catch (parseError) {
+              onFailure(parseError);
+            }
+          },
+          onFailure
+        );
+        unsubs.push(unsubscribeSnapshot);
+      } else {
+        const ownerBoardIds = boardAccess
+          .filter((board) => board.ownerUserId === userId || board.ownerUserId == null)
+          .map((board) => board.id);
+        const sharedBoardIds = boardAccess
+          .filter((board) => board.ownerUserId !== userId && board.ownerUserId != null)
+          .map((board) => board.id);
+
+        const trackedSnapshots = new Map<string, Todo[]>();
+
+        const syncCombinedTodos = () => {
+          const merged = Array.from(trackedSnapshots.values()).flat();
+          const deduped = merged.filter((item, index, all) => all.findIndex((next) => next.id === item.id) === index);
+          onSuccess(deduped);
+        };
+
+        const subscribeChunkedBoards = (boardIds: string[], mode: 'owner' | 'shared') => {
+          const chunkedBoardIds = chunkArray(boardIds, 10);
+
+          chunkedBoardIds.forEach((ids, index) => {
+            const boardQuery =
+              mode === 'owner'
+                ? query(
+                    collection(db, 'todos'),
+                    and(
+                      where('entityType', '==', 'todo'),
+                      where('userId', '==', userId),
+                      where('boardId', 'in', ids)
+                    )
+                  )
+                : query(collection(db, 'todos'), and(where('entityType', '==', 'todo'), where('boardId', 'in', ids)));
+
+            const key = `${mode}:${index}:${ids.join(',')}`;
+            const unsubscribeSnapshot = onSnapshot(
+              boardQuery,
+              (snapshot) => {
+                try {
+                  trackedSnapshots.set(key, parseSnapshotTodos(snapshot.docs));
+                  syncCombinedTodos();
+                } catch (parseError) {
+                  onFailure(parseError);
+                }
+              },
+              onFailure
+            );
+
+            unsubs.push(unsubscribeSnapshot);
+          });
+        };
+
+        if (ownerBoardIds.length > 0) {
+          subscribeChunkedBoards(unique(ownerBoardIds), 'owner');
+        }
+
+        if (sharedBoardIds.length > 0) {
+          subscribeChunkedBoards(unique(sharedBoardIds), 'shared');
+        }
+
+        if (ownerBoardIds.length === 0 && sharedBoardIds.length === 0) {
+          onSuccess([]);
+        }
+      }
+    } catch (subscribeError) {
+      onFailure(subscribeError);
     }
 
     return () => {
       window.clearTimeout(snapshotTimeout);
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-      }
+      unsubs.forEach((unsubscribeSnapshot) => unsubscribeSnapshot());
     };
-  }, [userId]);
+  }, [normalizedBoardAccessKey, shouldSkipBoardLoading, subscriptionKey, userId]);
 
   const addTodo = async (
     todo: Pick<TodoInput, 'title' | 'description'>,
@@ -246,5 +361,18 @@ export const useTodos = (userId: string | null) => {
     await deleteDoc(doc(db, 'todos', id));
   };
 
-  return { todos, loading, error, addTodo, updateTodo, deleteTodo };
+  if (!userId || shouldSkipBoardLoading) {
+    return { todos: [], loading: false, error: null, addTodo, updateTodo, deleteTodo };
+  }
+
+  const isCurrentSubscriptionResolved = resolvedSubscriptionKey === subscriptionKey;
+
+  return {
+    todos: isCurrentSubscriptionResolved ? todos : [],
+    loading: !isCurrentSubscriptionResolved,
+    error: isCurrentSubscriptionResolved ? error : null,
+    addTodo,
+    updateTodo,
+    deleteTodo,
+  };
 };

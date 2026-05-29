@@ -11,6 +11,8 @@ export interface Dashboard {
   name: string;
   order: number;
   columns: DashboardColumn[];
+  sharedWith?: string[];
+  sharedWithEmails?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

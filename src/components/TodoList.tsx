@@ -1,12 +1,14 @@
-import { TodoModal } from './TodoModal';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DashboardSection } from './todo-list/DashboardSection';
-import { CreateCardModal, CreateDashboardModal, EditDashboardModal } from './todo-list/TodoListModals';
-import { useTodos } from '../hooks/useTodos';
 import { useDashboards } from '../hooks/useDashboards';
-import { useTodoListController } from './todo-list/useTodoListController';
+import { useTodos } from '../hooks/useTodos';
+import { useUsers } from '../hooks/useUsers';
+import type { Dashboard } from '../types/dashboard';
+import { TodoModal } from './TodoModal';
+import { DashboardSection } from './todo-list/DashboardSection';
+import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
+import { useTodoListController } from './todo-list/useTodoListController';
 import { IconButton } from './ui/IconButton';
 
 interface TodoListProps {
@@ -18,7 +20,10 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
-  const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId);
+  const [shareDashboardId, setShareDashboardId] = useState<string | null>(null);
+  const [shareSelectedUserIds, setShareSelectedUserIds] = useState<string[]>([]);
+  const [shareActionError, setShareActionError] = useState('');
+
   const {
     dashboards,
     activeDashboard,
@@ -30,7 +35,16 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     updateDashboard,
     deleteDashboard,
     reorderDashboards,
+    shareDashboard,
   } = useDashboards(userId);
+
+  const boardAccess = useMemo(
+    () => dashboards.map((dashboard) => ({ id: dashboard.id, userId: dashboard.userId })),
+    [dashboards]
+  );
+  const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId, boardAccess);
+  const { users, loading: usersLoading, error: usersError } = useUsers(userId);
+
   const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
   const controller = useTodoListController({
     todos,
@@ -50,14 +64,20 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const modalTodoId = searchParams.get('card');
   const dashboardParamId = searchParams.get('dashboard');
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
+  const shareDashboardTarget = shareDashboardId
+    ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
+    : null;
 
-  const updateSearch = useCallback((updater: (nextParams: URLSearchParams) => void) => {
-    setSearchParams((prevParams) => {
-      const nextParams = new URLSearchParams(prevParams);
-      updater(nextParams);
-      return nextParams;
-    });
-  }, [setSearchParams]);
+  const updateSearch = useCallback(
+    (updater: (nextParams: URLSearchParams) => void) => {
+      setSearchParams((prevParams) => {
+        const nextParams = new URLSearchParams(prevParams);
+        updater(nextParams);
+        return nextParams;
+      });
+    },
+    [setSearchParams]
+  );
 
   useEffect(() => {
     if (dashboards.length === 0 || !dashboardParamId) return;
@@ -71,7 +91,9 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
       return;
     }
 
-    setActiveDashboardId((prevDashboardId) => (prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId));
+    setActiveDashboardId((prevDashboardId) =>
+      prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId
+    );
   }, [dashboardParamId, dashboards, setActiveDashboardId, updateSearch]);
 
   const openTodoByLink = (todoId: string, dashboardId: string) => {
@@ -85,6 +107,43 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     updateSearch((nextParams) => {
       nextParams.delete('card');
     });
+  };
+
+  const openShareModal = (dashboard: Dashboard) => {
+    setShareDashboardId(dashboard.id);
+    setShareSelectedUserIds(dashboard.sharedWith ?? []);
+    setShareActionError('');
+  };
+
+  const closeShareModal = () => {
+    setShareDashboardId(null);
+    setShareSelectedUserIds([]);
+    setShareActionError('');
+  };
+
+  const toggleShareUser = (targetUserId: string) => {
+    setShareSelectedUserIds((prev) =>
+      prev.includes(targetUserId)
+        ? prev.filter((userIdItem) => userIdItem !== targetUserId)
+        : [...prev, targetUserId]
+    );
+  };
+
+  const handleSaveShare = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!shareDashboardTarget) return;
+
+    setShareActionError('');
+
+    try {
+      const selectedEmails = users
+        .filter((user) => shareSelectedUserIds.includes(user.id))
+        .map((user) => user.email);
+      await shareDashboard(shareDashboardTarget.id, shareSelectedUserIds, selectedEmails);
+      closeShareModal();
+    } catch (shareError) {
+      setShareActionError(shareError instanceof Error ? shareError.message : 'Failed to share dashboard');
+    }
   };
 
   if (loading || dashboardsLoading) {
@@ -169,6 +228,19 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         onSubmit={controller.handleSaveDashboardEdit}
       />
 
+      <ShareDashboardModal
+        open={shareDashboardTarget != null}
+        dashboardName={shareDashboardTarget?.name ?? ''}
+        users={users}
+        selectedUserIds={shareSelectedUserIds}
+        loadingUsers={usersLoading}
+        usersError={usersError}
+        actionError={shareActionError}
+        onClose={closeShareModal}
+        onToggleUser={toggleShareUser}
+        onSubmit={handleSaveShare}
+      />
+
       <div
         className="space-y-3"
         onDragOver={(event) => {
@@ -251,19 +323,20 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             menuButtonRefs={controller.menuButtonRefs}
             dragState={controller.dragState}
             dropTarget={controller.dropTarget}
-              onToggle={(dashboardId) => {
-                const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
+            canManageDashboard={dashboard.userId === userId}
+            onToggle={(dashboardId) => {
+              const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
 
-                setActiveDashboardId(nextDashboardId);
-                updateSearch((nextParams) => {
-                  if (nextDashboardId) {
-                    nextParams.set('dashboard', nextDashboardId);
-                  } else {
-                    nextParams.delete('dashboard');
-                    nextParams.delete('card');
-                  }
-                });
-              }}
+              setActiveDashboardId(nextDashboardId);
+              updateSearch((nextParams) => {
+                if (nextDashboardId) {
+                  nextParams.set('dashboard', nextDashboardId);
+                } else {
+                  nextParams.delete('dashboard');
+                  nextParams.delete('card');
+                }
+              });
+            }}
             onDashboardDragStart={() => {
               controller.setDashboardDragId(dashboard.id);
               controller.setDashboardDropIndex(index);
@@ -283,17 +356,26 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
               event.stopPropagation();
               const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
 
-              const sourceIndex = dashboards.findIndex((item) => item.id === (draggedDashboardId ?? controller.dashboardDragId));
+              const sourceIndex = dashboards.findIndex(
+                (item) => item.id === (draggedDashboardId ?? controller.dashboardDragId)
+              );
               const targetIndex = sourceIndex < index ? index + 1 : index;
               void controller.handleDashboardDrop(targetIndex, draggedDashboardId);
             }}
             onOpenEditDashboard={controller.openEditDashboard}
-            onDeleteDashboard={(dashboardId, dashboardName) => void controller.handleDeleteDashboard(dashboardId, dashboardName)}
+            onDeleteDashboard={(dashboardId, dashboardName) =>
+              void controller.handleDeleteDashboard(dashboardId, dashboardName)
+            }
+            onOpenShareDashboard={(dashboardId) => {
+              const nextDashboard = dashboards.find((item) => item.id === dashboardId);
+              if (!nextDashboard || nextDashboard.userId !== userId) return;
+              openShareModal(nextDashboard);
+            }}
             onOpenCreateCard={(dashboardId, columnId) => {
               setActiveDashboardId(dashboardId);
-                updateSearch((nextParams) => {
-                  nextParams.set('dashboard', dashboardId);
-                });
+              updateSearch((nextParams) => {
+                nextParams.set('dashboard', dashboardId);
+              });
               controller.setCreateCardDashboardId(dashboardId);
               controller.setCreateCardColumnId(columnId);
               controller.setIsCreateModalOpen(true);
@@ -302,7 +384,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
             onSetDragState={controller.setDragState}
             onSetDropTarget={controller.setDropTarget}
             onOpenTodoModal={(todo) => {
-                openTodoByLink(todo.id, todo.boardId);
+              openTodoByLink(todo.id, todo.boardId);
             }}
             onCancelEdit={controller.cancelEdit}
             onSaveEdit={(todoId) => void controller.handleSaveEdit(todoId)}

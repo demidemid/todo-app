@@ -17,6 +17,7 @@ const mockBatchUpdate = vi.fn();
 const mockBatchCommit = vi.fn();
 const mockAnd = vi.fn();
 const mockWhere = vi.fn();
+const mockDeleteField = vi.fn();
 
 vi.mock('firebase/firestore', () => ({
   Timestamp: class TimestampMock {
@@ -46,6 +47,7 @@ vi.mock('firebase/firestore', () => ({
   writeBatch: (...args: unknown[]) => mockWriteBatch(...args),
   and: (...args: unknown[]) => mockAnd(...args),
   where: (...args: unknown[]) => mockWhere(...args),
+  deleteField: (...args: unknown[]) => mockDeleteField(...args),
 }));
 
 vi.mock('../firebase', () => ({
@@ -127,6 +129,7 @@ describe('useDashboards', () => {
     mockQuery.mockReturnValue({ query: true });
     mockAnd.mockReturnValue({ and: true });
     mockWhere.mockReturnValue({ where: true });
+    mockDeleteField.mockReturnValue({ deleteField: true });
     mockDoc.mockImplementation((_, collectionName: string, id: string) => ({ path: `${collectionName}/${id}` }));
     mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
       snapshotNext = onNext;
@@ -837,6 +840,36 @@ describe('useDashboards', () => {
     });
 
     expect(mockUpdateDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores permission-denied during legacy migration and keeps dashboards visible', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    mockGetDocs
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({
+        docs: [makeTodoDoc('legacy-1', { status: 'todo' })],
+      });
+    mockUpdateDoc.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDashboardDoc('board-1', 'Board 1', new Date('2026-01-01T00:00:00Z'), [
+            { id: 'todo', name: 'To do', order: 0, isDone: false },
+          ]),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards.some((dashboard) => dashboard.id === 'board-1')).toBe(true);
+    });
+
+    expect(result.current.error).toBeNull();
   });
 
   it('backfills missing dashboard order for legacy dashboard docs', async () => {
