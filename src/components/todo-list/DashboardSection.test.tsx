@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Dashboard } from '../../types/dashboard';
@@ -47,7 +48,7 @@ const todo: Todo = {
   updatedAt: new Date('2026-01-02T00:00:00Z'),
 };
 
-const createProps = () => ({
+const createProps = (): ComponentProps<typeof DashboardSection> => ({
   dashboard,
   isExpanded: true,
   isDragging: false,
