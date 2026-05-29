@@ -146,7 +146,11 @@ service cloud.firestore {
         && isValidPayload(request.resource.data, docId)
         && (
           (request.resource.data.entityType == 'dashboard' && request.resource.data.userId == request.auth.uid)
-          || (request.resource.data.entityType == 'todo' && canAccessDashboard(request.resource.data.boardId))
+          || (
+            request.resource.data.entityType == 'todo'
+            && request.resource.data.userId == request.auth.uid
+            && canAccessDashboard(request.resource.data.boardId)
+          )
         );
 
       allow update: if isSignedIn()
