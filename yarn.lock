@@ -8740,6 +8740,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-icons@npm:^5.6.0":
+  version: 5.6.0
+  resolution: "react-icons@npm:5.6.0"
+  peerDependencies:
+    react: "*"
+  checksum: 10c0/addba1ebfd45cdf7f69291d0c93df64fca1271cfdb66df657abd223e3451c73356b035f50e75858627dd182b02129596c79eaaaa45d32eb52658e443a992645c
+  languageName: node
+  linkType: hard
+
 "react-is@npm:^17.0.1":
   version: 17.0.2
   resolution: "react-is@npm:17.0.2"
@@ -9858,6 +9867,7 @@ __metadata:
     postcss: "npm:^8.5.8"
     react: "npm:^19.2.4"
     react-dom: "npm:^19.2.4"
+    react-icons: "npm:^5.6.0"
     react-router-dom: "npm:^7.16.0"
     tailwindcss: "npm:^4.2.2"
     typescript: "npm:~6.0.2"

@@ -205,6 +205,51 @@ describeRules('firestore rules', () => {
     )
   })
 
+  it('allows a shared member to add files to a todo they did not create', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        files: [
+          {
+            id: 'file-1',
+            name: 'spec.pdf',
+            path: 'todos/owner-todo/file-1-spec.pdf',
+            url: 'https://example.com/spec.pdf',
+            size: 1234,
+            contentType: 'application/pdf',
+            uploadedBy: 'recipient-1',
+            uploadedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+          },
+        ],
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('rejects shared member changing title while uploading files to another users todo', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertFails(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        title: 'Renamed through file update',
+        files: [
+          {
+            id: 'file-2',
+            name: 'doc.txt',
+            path: 'todos/owner-todo/file-2-doc.txt',
+            url: 'https://example.com/doc.txt',
+            size: 10,
+            contentType: 'text/plain',
+            uploadedBy: 'recipient-1',
+            uploadedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+          },
+        ],
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
   it('rejects direct reads of unrelated private todos', async () => {
     const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
 

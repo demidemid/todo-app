@@ -1,10 +1,25 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Todo } from '../types/todo';
 import { TodoModal } from './TodoModal';
 
 const mockUseTodoModalController = vi.fn();
 const mockUseTodoModalEditor = vi.fn();
+const mockStorageRef = vi.fn();
+const mockUploadBytes = vi.fn();
+const mockGetDownloadURL = vi.fn();
+const mockDeleteObject = vi.fn();
+
+vi.mock('../firebase', () => ({
+  storage: {},
+}));
+
+vi.mock('firebase/storage', () => ({
+  ref: (...args: unknown[]) => mockStorageRef(...args),
+  uploadBytes: (...args: unknown[]) => mockUploadBytes(...args),
+  getDownloadURL: (...args: unknown[]) => mockGetDownloadURL(...args),
+  deleteObject: (...args: unknown[]) => mockDeleteObject(...args),
+}));
 
 vi.mock('./todo-modal/useTodoModalController', () => ({
   useTodoModalController: (args: unknown) => mockUseTodoModalController(args),
@@ -81,6 +96,12 @@ describe('TodoModal', () => {
     vi.clearAllMocks();
     mockUseTodoModalController.mockReturnValue(createControllerState());
     mockUseTodoModalEditor.mockReturnValue(createEditorState());
+    mockStorageRef.mockImplementation((_, path: string) => ({ fullPath: path }));
+    mockUploadBytes.mockResolvedValue(undefined);
+    mockGetDownloadURL.mockResolvedValue('https://example.com/uploaded.pdf');
+    mockDeleteObject.mockResolvedValue(undefined);
+    updateTodo.mockResolvedValue(undefined);
+    deleteTodo.mockResolvedValue(undefined);
   });
 
   it('closes when clicking the backdrop but not when clicking inside modal content', () => {
@@ -231,5 +252,194 @@ describe('TodoModal', () => {
 
     expect(screen.getByText('Comments unavailable')).toBeInTheDocument();
     expect(screen.getByText('Failed to add comment')).toBeInTheDocument();
+  });
+
+  it('opens hidden file input when add file action is clicked', () => {
+    const inputClickSpy = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => undefined);
+
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Добавить файл' }));
+
+    expect(inputClickSpy).toHaveBeenCalled();
+    inputClickSpy.mockRestore();
+  });
+
+  it('uploads selected files to storage and saves metadata to todo', async () => {
+    const fixedUuid: `${string}-${string}-${string}-${string}-${string}` = '11111111-1111-1111-1111-111111111111';
+    const randomUuidSpy = vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(fixedUuid);
+
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const file = new File(['hello'], 'spec.pdf', { type: 'application/pdf' });
+    const input = screen.getByTestId('todo-file-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(mockUploadBytes).toHaveBeenCalledTimes(1);
+      expect(updateTodo).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockStorageRef).toHaveBeenCalledWith(expect.anything(), 'todos/todo-1/11111111-1111-1111-1111-111111111111-spec.pdf');
+    expect(updateTodo).toHaveBeenCalledWith(
+      'todo-1',
+      expect.objectContaining({
+        files: [
+          expect.objectContaining({
+            id: '11111111-1111-1111-1111-111111111111',
+            name: 'spec.pdf',
+            path: 'todos/todo-1/11111111-1111-1111-1111-111111111111-spec.pdf',
+            url: 'https://example.com/uploaded.pdf',
+            uploadedBy: 'user-1',
+          }),
+        ],
+      }),
+    );
+
+    randomUuidSpy.mockRestore();
+  });
+
+  it('shows error when metadata save fails after successful upload', async () => {
+    const metadataError = Object.assign(new Error('Missing or insufficient permissions.'), {
+      code: 'permission-denied',
+    });
+    updateTodo.mockRejectedValueOnce(metadataError);
+
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const file = new File(['hello'], 'spec.pdf', { type: 'application/pdf' });
+    const input = screen.getByTestId('todo-file-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to save file metadata/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when storage upload fails', async () => {
+    const uploadError = Object.assign(new Error('storage write denied'), {
+      code: 'storage/unauthorized',
+    });
+    mockUploadBytes.mockRejectedValueOnce(uploadError);
+
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const file = new File(['hello'], 'spec.pdf', { type: 'application/pdf' });
+    const input = screen.getByTestId('todo-file-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to upload file/)).toBeInTheDocument();
+    });
+  });
+
+  it('deletes file from storage and removes metadata entry', async () => {
+    const todoWithFile: Todo = {
+      ...todo,
+      files: [
+        {
+          id: 'file-1',
+          name: 'spec.pdf',
+          path: 'todos/todo-1/file-1-spec.pdf',
+          url: 'https://example.com/spec.pdf',
+          size: 10,
+          contentType: 'application/pdf',
+          uploadedBy: 'user-1',
+          uploadedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithFile}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('delete-file-file-1'));
+
+    await waitFor(() => {
+      expect(mockDeleteObject).toHaveBeenCalledTimes(1);
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', { files: [] });
+    });
+  });
+
+  it('shows error when deleting file metadata fails', async () => {
+    const todoWithFile: Todo = {
+      ...todo,
+      files: [
+        {
+          id: 'file-1',
+          name: 'spec.pdf',
+          path: 'todos/todo-1/file-1-spec.pdf',
+          url: 'https://example.com/spec.pdf',
+          size: 10,
+          contentType: 'application/pdf',
+          uploadedBy: 'user-1',
+          uploadedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+    };
+    const removeError = Object.assign(new Error('write failed'), { code: 'permission-denied' });
+    updateTodo.mockRejectedValueOnce(removeError);
+
+    render(
+      <TodoModal
+        todo={todoWithFile}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('delete-file-file-1'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to delete file/)).toBeInTheDocument();
+    });
   });
 });

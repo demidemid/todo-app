@@ -205,4 +205,36 @@ describe('DashboardSection', () => {
 
     expect(screen.getByText('This dashboard has no columns yet.')).toBeInTheDocument();
   });
+
+  it('renders downloadable file links on card and does not open modal when file link is clicked', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          files: [
+            {
+              id: 'file-1',
+              name: 'spec.pdf',
+              path: 'todos/todo-1/spec.pdf',
+              url: 'https://example.com/spec.pdf',
+              size: 123,
+              contentType: 'application/pdf',
+              uploadedBy: 'user-1',
+              uploadedAt: new Date('2026-01-02T00:00:00Z'),
+            },
+          ],
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    const fileLink = screen.getByRole('link', { name: 'spec.pdf' });
+    expect(fileLink).toHaveAttribute('href', 'https://example.com/spec.pdf');
+    fireEvent.click(fileLink);
+
+    expect(props.onOpenTodoModal).not.toHaveBeenCalled();
+  });
 });

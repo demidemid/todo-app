@@ -105,6 +105,21 @@ const dashboardDocs = (...items: Array<{ id: string; name: string; createdAt: Da
     makeDashboardDoc(item.id, item.name, item.createdAt, item.columns ?? simpleColumns(), item.order ?? 0)
   );
 
+const expectAsyncActionToThrow = async (action: () => Promise<unknown>, message: string) => {
+  let thrownError: unknown;
+
+  await act(async () => {
+    try {
+      await action();
+    } catch (error) {
+      thrownError = error;
+    }
+  });
+
+  expect(thrownError).toBeInstanceOf(Error);
+  expect((thrownError as Error).message).toBe(message);
+};
+
 describe('useDashboards', () => {
   let snapshotNext: ((snapshot: { docs: SnapshotDoc[] }) => void) | null;
   let snapshotError: ((error: { message?: string }) => void) | null;
@@ -400,9 +415,10 @@ describe('useDashboards', () => {
   it('addDashboard validates and writes normalized dashboard', async () => {
     const { result } = renderHook(() => useDashboards('user-1'));
 
-    await expect(result.current.addDashboard(' ', ['todo'])).rejects.toThrow('Dashboard name is required');
-    await expect(result.current.addDashboard('Board', [' ', ''])).rejects.toThrow('At least one column is required');
-    await expect(result.current.addDashboard('Board', ['Todo', ' todo '])).rejects.toThrow(
+    await expectAsyncActionToThrow(() => result.current.addDashboard(' ', ['todo']), 'Dashboard name is required');
+    await expectAsyncActionToThrow(() => result.current.addDashboard('Board', [' ', '']), 'At least one column is required');
+    await expectAsyncActionToThrow(
+      () => result.current.addDashboard('Board', ['Todo', ' todo ']),
       'Column names must be unique within a dashboard'
     );
 
@@ -595,14 +611,16 @@ describe('useDashboards', () => {
       { id: 'doing', name: 'Doing', order: 1, isDone: false },
     ];
 
-    await expect(result.current.updateDashboard('board-1', ' ', columns)).rejects.toThrow('Dashboard name is required');
-    await expect(result.current.updateDashboard('board-1', 'Board', [])).rejects.toThrow('At least one column is required');
-    await expect(
-      result.current.updateDashboard('board-1', 'Board', [
-        { id: 'todo', name: 'Same', order: 0, isDone: false },
-        { id: 'doing', name: ' same ', order: 1, isDone: false },
-      ])
-    ).rejects.toThrow('Column names must be unique within a dashboard');
+    await expectAsyncActionToThrow(() => result.current.updateDashboard('board-1', ' ', columns), 'Dashboard name is required');
+    await expectAsyncActionToThrow(() => result.current.updateDashboard('board-1', 'Board', []), 'At least one column is required');
+    await expectAsyncActionToThrow(
+      () =>
+        result.current.updateDashboard('board-1', 'Board', [
+          { id: 'todo', name: 'Same', order: 0, isDone: false },
+          { id: 'doing', name: ' same ', order: 1, isDone: false },
+        ]),
+      'Column names must be unique within a dashboard'
+    );
 
     mockGetDocs.mockResolvedValueOnce({
       docs: [
@@ -921,7 +939,8 @@ describe('useDashboards', () => {
       ],
     });
 
-    await expect(result.current.deleteDashboard('board-1')).rejects.toThrow(
+    await expectAsyncActionToThrow(
+      () => result.current.deleteDashboard('board-1'),
       'Fallback dashboard must have at least one column'
     );
   });
