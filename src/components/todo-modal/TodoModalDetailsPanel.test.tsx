@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Todo } from '../../types/todo';
 import { TodoModalDetailsPanel } from './TodoModalDetailsPanel';
 
+type TodoModalDetailsPanelProps = React.ComponentProps<typeof TodoModalDetailsPanel>;
+
 const todo: Todo = {
   id: 'todo-1',
   userId: 'user-1',
@@ -16,7 +18,7 @@ const todo: Todo = {
   updatedAt: new Date('2026-01-02T12:00:00Z'),
 };
 
-const createProps = () => ({
+const createProps = (): TodoModalDetailsPanelProps => ({
   todo,
   files: [],
   filesUploading: false,
