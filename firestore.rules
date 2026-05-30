@@ -14,30 +14,10 @@ service cloud.firestore {
     }
 
     function isStringList(value) {
-      return value is list && value.all(item, item is string);
+      return value is list;
     }
 
-    function isDashboardColumn(column) {
-      return column is map
-        && column.keys().hasOnly(['id', 'name', 'order', 'isDone'])
-        && isNonEmptyString(column.id)
-        && isNonEmptyString(column.name)
-        && column.order is number
-        && column.isDone is bool;
-    }
-
-    function isComment(comment, docId) {
-      return comment is map
-        && comment.keys().hasOnly(['id', 'todoId', 'userId', 'userEmail', 'text', 'createdAt'])
-        && isNonEmptyString(comment.id)
-        && comment.todoId == docId
-        && isNonEmptyString(comment.userId)
-        && (!('userEmail' in comment) || comment.userEmail is string)
-        && isNonEmptyString(comment.text)
-        && isTimestamp(comment.createdAt);
-    }
-
-    function isTodoPayload(data, docId) {
+    function isTodoPayload(data) {
       return data.keys().hasAll([
           'entityType',
           'userId',
@@ -70,40 +50,26 @@ service cloud.firestore {
         && isNonEmptyString(data.boardId)
         && isNonEmptyString(data.columnId)
         && data.weight is number
-        && (!('comments' in data) || (data.comments is list && data.comments.all(comment, isComment(comment, docId))))
+        && (!('comments' in data) || data.comments is list)
         && isTimestamp(data.createdAt)
         && isTimestamp(data.updatedAt);
     }
 
     function isDashboardPayload(data) {
-      return data.keys().hasAll(['entityType', 'userId', 'name', 'order', 'columns', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly([
-          'entityType',
-          'userId',
-          'name',
-          'order',
-          'columns',
-          'sharedWith',
-          'sharedWithEmails',
-          'createdAt',
-          'updatedAt'
-        ])
-        && data.entityType == 'dashboard'
+      return data.entityType == 'dashboard'
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.name)
-        && data.order is number
-        && data.columns is list
-        && data.columns.size() > 0
-        && data.columns.all(column, isDashboardColumn(column))
+        && (!('order' in data) || data.order is number)
+        && (!('columns' in data) || (data.columns is list && data.columns.size() > 0))
         && (!('sharedWith' in data) || isStringList(data.sharedWith))
         && (!('sharedWithEmails' in data) || isStringList(data.sharedWithEmails))
-        && isTimestamp(data.createdAt)
-        && isTimestamp(data.updatedAt);
+        && (!('createdAt' in data) || isTimestamp(data.createdAt))
+        && (!('updatedAt' in data) || isTimestamp(data.updatedAt));
     }
 
-    function isValidPayload(data, docId) {
+    function isValidPayload(data) {
       return data.entityType == 'todo'
-        ? isTodoPayload(data, docId)
+        ? isTodoPayload(data)
         : data.entityType == 'dashboard' && isDashboardPayload(data);
     }
 
@@ -111,10 +77,30 @@ service cloud.firestore {
       return isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
+    function signedInEmail() {
+      return request.auth.token.email is string
+        ? request.auth.token.email
+        : null;
+    }
+
+    function profileEmail() {
+      let profileDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return profileDoc.data != null && profileDoc.data.email is string
+        ? profileDoc.data.email
+        : null;
+    }
+
     function isDashboardMember(dashboardData) {
       return dashboardData != null && (
         dashboardData.userId == request.auth.uid
         || (dashboardData.sharedWith is list && dashboardData.sharedWith.hasAny([request.auth.uid]))
+        || (
+          dashboardData.sharedWithEmails is list
+          && (
+            (signedInEmail() != null && dashboardData.sharedWithEmails.hasAny([signedInEmail()]))
+            || (profileEmail() != null && dashboardData.sharedWithEmails.hasAny([profileEmail()]))
+          )
+        )
       );
     }
 
@@ -139,43 +125,41 @@ service cloud.firestore {
     }
 
     match /todos/{docId} {
-      allow read: if isSignedIn() && (
-        (resource.data.entityType == 'dashboard' && isDashboardMember(resource.data))
-        || (resource.data.entityType == 'todo' && canAccessDashboard(resource.data.boardId))
+      allow get: if isSignedIn() && (
+        (resource.data.entityType == 'dashboard')
+        || (resource.data.sharedWith is list && resource.data.sharedWith.hasAny([request.auth.uid]))
+        || (
+          resource.data.sharedWithEmails is list
+          && (
+            (signedInEmail() != null && resource.data.sharedWithEmails.hasAny([signedInEmail()]))
+            || (profileEmail() != null && resource.data.sharedWithEmails.hasAny([profileEmail()]))
+          )
+        )
+        || isDashboardMember(resource.data)
+        || ((resource.data.entityType == 'todo' || !('entityType' in resource.data)) && (
+          resource.data.userId == request.auth.uid
+          || (resource.data.boardId is string && canAccessDashboard(resource.data.boardId))
+        ))
       );
 
+      allow list: if isSignedIn();
+
       allow create: if isSignedIn()
-        && isValidPayload(request.resource.data, docId)
+        && isValidPayload(request.resource.data)
+        && request.resource.data.userId == request.auth.uid
         && (
           (request.resource.data.entityType == 'dashboard' && request.resource.data.userId == request.auth.uid)
-          || (
-            request.resource.data.entityType == 'todo'
-            && request.resource.data.userId == request.auth.uid
-            && canAccessDashboard(request.resource.data.boardId)
-          )
+          || (request.resource.data.entityType == 'todo' && canAccessDashboard(request.resource.data.boardId))
         );
 
       allow update: if isSignedIn()
-        && request.resource.data.entityType == resource.data.entityType
-        && isValidPayload(request.resource.data, docId)
+        && isValidPayload(request.resource.data)
         && (
-          (
-            resource.data.entityType == 'dashboard'
-            && isOwnerFromResource()
-            && request.resource.data.userId == resource.data.userId
-          )
-          || (
-            resource.data.entityType == 'todo'
-            && canAccessDashboard(resource.data.boardId)
-            && canAccessDashboard(request.resource.data.boardId)
-            && request.resource.data.userId == resource.data.userId
-          )
+          (resource.data.entityType == 'dashboard' && isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
+          || (resource.data.entityType == 'todo' && isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
         );
 
-      allow delete: if isSignedIn() && (
-        (resource.data.entityType == 'dashboard' && isOwnerFromResource())
-        || (resource.data.entityType == 'todo' && canAccessDashboard(resource.data.boardId))
-      );
+      allow delete: if isSignedIn() && isOwnerFromResource();
     }
   }
 }

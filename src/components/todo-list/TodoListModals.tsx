@@ -52,11 +52,13 @@ interface ShareDashboardModalProps {
   dashboardName: string;
   users: ShareTargetUser[];
   selectedUserIds: string[];
+  recipientEmails: string;
   loadingUsers: boolean;
   usersError: string | null;
   actionError: string;
   onClose: () => void;
   onToggleUser: (userId: string) => void;
+  onRecipientEmailsChange: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void;
 }
 
@@ -284,11 +286,13 @@ export const ShareDashboardModal = ({
   dashboardName,
   users,
   selectedUserIds,
+  recipientEmails,
   loadingUsers,
   usersError,
   actionError,
   onClose,
   onToggleUser,
+  onRecipientEmailsChange,
   onSubmit,
 }: ShareDashboardModalProps) => {
   if (!open) return null;
@@ -313,6 +317,20 @@ export const ShareDashboardModal = ({
         </p>
 
         <div className="mb-4 rounded-lg border border-white/10 bg-slate-950/40 p-3">
+          <label className="mb-2 block text-xs uppercase tracking-wide text-slate-400">
+            Share by email
+          </label>
+          <Textarea
+            value={recipientEmails}
+            onChange={(event) => onRecipientEmailsChange(event.target.value)}
+            placeholder="hardcorovec@ya.ru, other@example.com"
+            rows={3}
+            className="mb-4"
+          />
+          <p className="mb-3 text-xs text-slate-400">
+            Use this if the person is not listed below. Separate multiple emails with commas or new lines.
+          </p>
+
           {loadingUsers ? (
             <p className="text-sm text-slate-300">Loading users...</p>
           ) : usersError ? (

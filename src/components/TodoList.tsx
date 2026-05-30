@@ -18,10 +18,12 @@ interface TodoListProps {
 
 export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const dashboardParamId = searchParams.get('dashboard');
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
   const [shareDashboardId, setShareDashboardId] = useState<string | null>(null);
   const [shareSelectedUserIds, setShareSelectedUserIds] = useState<string[]>([]);
+  const [shareRecipientEmails, setShareRecipientEmails] = useState('');
   const [shareActionError, setShareActionError] = useState('');
 
   const {
@@ -36,11 +38,19 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
     deleteDashboard,
     reorderDashboards,
     shareDashboard,
-  } = useDashboards(userId);
+  } = useDashboards(userId, userEmail ?? null, dashboardParamId);
 
   const boardAccess = useMemo(
-    () => dashboards.map((dashboard) => ({ id: dashboard.id, userId: dashboard.userId })),
-    [dashboards]
+    () =>
+      dashboards.map((dashboard) => ({
+        id: dashboard.id,
+        userId: dashboard.userId,
+        readAllTodos:
+          dashboard.userId !== userId
+          || (dashboard.sharedWith?.length ?? 0) > 0
+          || (dashboard.sharedWithEmails?.length ?? 0) > 0,
+      })),
+    [dashboards, userId]
   );
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId, boardAccess);
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
@@ -71,7 +81,6 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   });
 
   const modalTodoId = searchParams.get('card');
-  const dashboardParamId = searchParams.get('dashboard');
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
   const shareDashboardTarget = shareDashboardId
     ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
@@ -121,12 +130,14 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
   const openShareModal = (dashboard: Dashboard) => {
     setShareDashboardId(dashboard.id);
     setShareSelectedUserIds(dashboard.sharedWith ?? []);
+    setShareRecipientEmails((dashboard.sharedWithEmails ?? []).join(', '));
     setShareActionError('');
   };
 
   const closeShareModal = () => {
     setShareDashboardId(null);
     setShareSelectedUserIds([]);
+    setShareRecipientEmails('');
     setShareActionError('');
   };
 
@@ -149,7 +160,12 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
       const selectedEmails = users
         .filter((user) => shareSelectedUserIds.includes(user.id))
         .map((user) => user.email);
-      await shareDashboard(shareDashboardTarget.id, shareSelectedUserIds, selectedEmails);
+      const manualEmails = shareRecipientEmails
+        .split(/[\n,;]/)
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean);
+
+      await shareDashboard(shareDashboardTarget.id, shareSelectedUserIds, [...selectedEmails, ...manualEmails]);
       closeShareModal();
     } catch (shareError) {
       setShareActionError(shareError instanceof Error ? shareError.message : 'Failed to share dashboard');
@@ -243,11 +259,13 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
         dashboardName={shareDashboardTarget?.name ?? ''}
         users={users}
         selectedUserIds={shareSelectedUserIds}
+        recipientEmails={shareRecipientEmails}
         loadingUsers={usersLoading}
         usersError={usersError}
         actionError={shareActionError}
         onClose={closeShareModal}
         onToggleUser={toggleShareUser}
+        onRecipientEmailsChange={setShareRecipientEmails}
         onSubmit={handleSaveShare}
       />
 

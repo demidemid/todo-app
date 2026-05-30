@@ -6,6 +6,7 @@ import {
   deleteField,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -83,7 +84,7 @@ const isPermissionDeniedError = (error: unknown): boolean => {
   return false;
 };
 
-export const useDashboards = (userId: string | null) => {
+export const useDashboards = (userId: string | null, userEmail?: string | null, targetDashboardId?: string | null) => {
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);
   const [sharedDashboards, setSharedDashboards] = useState<Dashboard[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -91,26 +92,55 @@ export const useDashboards = (userId: string | null) => {
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const hasResolvedInitialSelectionRef = useRef(false);
   const hasMigratedLegacyTodosRef = useRef(false);
+  const targetDashboardIdRef = useRef<string | null>(targetDashboardId ?? null);
+
+  useEffect(() => {
+    targetDashboardIdRef.current = targetDashboardId ?? null;
+  }, [targetDashboardId]);
 
   useEffect(() => {
     if (!userId) return;
     let isEffectCancelled = false;
+    const normalizedEmail = typeof userEmail === 'string' ? userEmail.trim().toLowerCase() : '';
     hasResolvedInitialSelectionRef.current = false;
     hasMigratedLegacyTodosRef.current = false;
 
     const fetchSharedDashboards = async () => {
-      const sharedQuery = query(
-        collection(db, 'todos'),
-        and(where('entityType', '==', 'dashboard'), where('sharedWith', 'array-contains', userId))
-      );
-
       try {
-        const snapshot = await getDocs(sharedQuery);
+        const [byUidSnapshot, byEmailSnapshot] = await Promise.all([
+          getDocs(query(collection(db, 'todos'), where('sharedWith', 'array-contains', userId))).catch(() => {
+            return { docs: [] } as { docs: Array<{ id: string; data: () => Record<string, unknown> }> };
+          }),
+          normalizedEmail.length > 0
+            ? getDocs(query(collection(db, 'todos'), where('sharedWithEmails', 'array-contains', normalizedEmail))).catch(() => {
+                return { docs: [] } as { docs: Array<{ id: string; data: () => Record<string, unknown> }> };
+              })
+            : Promise.resolve({ docs: [] } as { docs: Array<{ id: string; data: () => Record<string, unknown> }> }),
+        ]);
         if (isEffectCancelled) return;
 
-        const items: Dashboard[] = snapshot.docs
-          .filter((item) => item.data().entityType === 'dashboard')
-          .map((item) => {
+        const docsById = new Map<string, { id: string; data: () => Record<string, unknown> }>();
+        [byUidSnapshot, byEmailSnapshot].forEach((snapshot) => {
+          snapshot.docs.forEach((item) => {
+            docsById.set(item.id, item);
+          });
+        });
+
+        if (targetDashboardIdRef.current && !docsById.has(targetDashboardIdRef.current)) {
+          try {
+            const dashboardSnapshot = await getDoc(doc(db, 'todos', targetDashboardIdRef.current));
+            if (dashboardSnapshot.exists()) {
+              docsById.set(dashboardSnapshot.id, {
+                id: dashboardSnapshot.id,
+                data: () => dashboardSnapshot.data() as Record<string, unknown>,
+              });
+            }
+          } catch {
+            // If direct read is denied or missing, keep shared list from query results only.
+          }
+        }
+
+        const itemsFromAllQueries: Dashboard[] = Array.from(docsById.values()).map((item) => {
             const data = item.data();
             const columns = Array.isArray(data.columns)
               ? data.columns
@@ -140,7 +170,7 @@ export const useDashboards = (userId: string | null) => {
             };
           });
 
-        const normalizedItems = items
+        const normalizedItems = itemsFromAllQueries
           .map((dashboard, index) => ({
             ...dashboard,
             order: normalizeOrder(dashboard.order, index),
@@ -149,6 +179,11 @@ export const useDashboards = (userId: string | null) => {
 
         if (isEffectCancelled) return;
         setSharedDashboards(normalizedItems);
+
+        if (!hasResolvedInitialSelectionRef.current && normalizedItems.length > 0) {
+          hasResolvedInitialSelectionRef.current = true;
+          setActiveDashboardId((prev) => prev ?? normalizedItems[0].id);
+        }
       } catch {
         if (isEffectCancelled) return;
         setSharedDashboards([]);
@@ -198,7 +233,7 @@ export const useDashboards = (userId: string | null) => {
           setDashboards([]);
           setError(null);
           setLoadedUserId(userId);
-          setActiveDashboardId(null);
+          setActiveDashboardId((prev) => prev ?? targetDashboardIdRef.current ?? null);
           return;
         }
 
@@ -323,7 +358,7 @@ export const useDashboards = (userId: string | null) => {
       unsub();
       setSharedDashboards([]);
     };
-  }, [userId]);
+  }, [userEmail, userId]);
 
   const addDashboard = async (name: string, columnNames: string[]) => {
     if (!userId) throw new Error('User must be authenticated');

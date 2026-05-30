@@ -15,7 +15,7 @@ import {
 import { db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
 
-export type AccessibleBoardInput = string | { id: string; userId?: string };
+export type AccessibleBoardInput = string | { id: string; userId?: string; readAllTodos?: boolean };
 const logTodosSubscriptionError = (source: string, error: unknown) => {
   if (isFirestoreError(error)) {
     console.warn(`[useTodos:${source}] Firestore error ${error.code}: ${error.message}`);
@@ -30,7 +30,7 @@ const logTodosSubscriptionError = (source: string, error: unknown) => {
   console.warn(`[useTodos:${source}] Unknown subscription error`, error);
 };
 
-type NormalizedBoardAccess = { id: string; ownerUserId: string | null };
+type NormalizedBoardAccess = { id: string; ownerUserId: string | null; readAllTodos: boolean };
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -196,11 +196,11 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
             .map((item) => {
               if (typeof item === 'string') {
                 if (!item) return null;
-                return `${item}@@${userId ?? ''}`;
+                return `${item}@@${userId ?? ''}@@0`;
               }
 
               if (!item.id) return null;
-              return `${item.id}@@${item.userId ?? ''}`;
+              return `${item.id}@@${item.userId ?? ''}@@${item.readAllTodos ? '1' : '0'}`;
             })
             .filter((item): item is string => item !== null)
         )
@@ -213,10 +213,11 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
     return key
       .split('|')
       .map((token) => {
-        const [id, ownerUserId = ''] = token.split('@@');
+        const [id, ownerUserId = '', readAllTodos = '0'] = token.split('@@');
         return {
           id,
           ownerUserId: ownerUserId.length > 0 ? ownerUserId : null,
+          readAllTodos: readAllTodos === '1',
         };
       })
       .filter((item) => item.id.length > 0);
@@ -272,11 +273,11 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
         );
         unsubs.push(unsubscribeSnapshot);
       } else {
-        const ownerBoardIds = boardAccess
-          .filter((board) => board.ownerUserId === userId || board.ownerUserId == null)
+        const personalBoardIds = boardAccess
+          .filter((board) => (board.ownerUserId === userId || board.ownerUserId == null) && !board.readAllTodos)
           .map((board) => board.id);
-        const sharedBoardIds = boardAccess
-          .filter((board) => board.ownerUserId !== userId && board.ownerUserId != null)
+        const collaborativeBoardIds = boardAccess
+          .filter((board) => board.readAllTodos || (board.ownerUserId !== userId && board.ownerUserId != null))
           .map((board) => board.id);
 
         const trackedSnapshots = new Map<string, Todo[]>();
@@ -296,12 +297,11 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
                 ? query(
                     collection(db, 'todos'),
                     and(
-                      where('entityType', '==', 'todo'),
                       where('userId', '==', userId),
                       where('boardId', 'in', ids)
                     )
                   )
-                : query(collection(db, 'todos'), and(where('entityType', '==', 'todo'), where('boardId', 'in', ids)));
+                : query(collection(db, 'todos'), where('boardId', 'in', ids));
 
             const key = `${mode}:${index}:${ids.join(',')}`;
             const unsubscribeSnapshot = onSnapshot(
@@ -330,15 +330,15 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
           });
         };
 
-        if (ownerBoardIds.length > 0) {
-          subscribeChunkedBoards(unique(ownerBoardIds), 'owner');
+        if (personalBoardIds.length > 0) {
+          subscribeChunkedBoards(unique(personalBoardIds), 'owner');
         }
 
-        if (sharedBoardIds.length > 0) {
-          subscribeChunkedBoards(unique(sharedBoardIds), 'shared');
+        if (collaborativeBoardIds.length > 0) {
+          subscribeChunkedBoards(unique(collaborativeBoardIds), 'shared');
         }
 
-        if (ownerBoardIds.length === 0 && sharedBoardIds.length === 0) {
+        if (personalBoardIds.length === 0 && collaborativeBoardIds.length === 0) {
           onSuccess([]);
         }
       }
