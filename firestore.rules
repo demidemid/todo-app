@@ -112,15 +112,18 @@ service cloud.firestore {
     }
 
     function isDashboardMember(dashboardData) {
-      return dashboardData.userId == request.auth.uid
-        || (dashboardData.sharedWith is list && dashboardData.sharedWith.hasAny([request.auth.uid]));
+      return dashboardData != null && (
+        dashboardData.userId == request.auth.uid
+        || (dashboardData.sharedWith is list && dashboardData.sharedWith.hasAny([request.auth.uid]))
+      );
     }
 
     function canAccessDashboard(dashboardId) {
+      let dashboardDoc = get(/databases/$(database)/documents/todos/$(dashboardId));
       return isSignedIn()
-        && exists(/databases/$(database)/documents/todos/$(dashboardId))
-        && get(/databases/$(database)/documents/todos/$(dashboardId)).data.entityType == 'dashboard'
-        && isDashboardMember(get(/databases/$(database)/documents/todos/$(dashboardId)).data);
+        && dashboardDoc.data != null
+        && dashboardDoc.data.entityType == 'dashboard'
+        && isDashboardMember(dashboardDoc.data);
     }
 
     function isUsersPayload(data, userId) {

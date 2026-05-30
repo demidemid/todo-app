@@ -8,6 +8,7 @@ const mockDeleteDoc = vi.fn();
 const mockDoc = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
+const mockAnd = vi.fn();
 const mockUpdateDoc = vi.fn();
 const mockWhere = vi.fn();
 
@@ -33,6 +34,7 @@ vi.mock('firebase/firestore', () => ({
   doc: (...args: unknown[]) => mockDoc(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
+  and: (...args: unknown[]) => mockAnd(...args),
   updateDoc: (...args: unknown[]) => mockUpdateDoc(...args),
   where: (...args: unknown[]) => mockWhere(...args),
 }));
@@ -64,6 +66,7 @@ describe('useTodos', () => {
 
     mockCollection.mockReturnValue({ path: 'todos' });
     mockWhere.mockReturnValue({ where: true });
+    mockAnd.mockReturnValue({ and: true });
     mockQuery.mockReturnValue({ query: true });
     mockDoc.mockImplementation((_, collectionName: string, id: string) => ({ path: `${collectionName}/${id}` }));
     mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
@@ -171,6 +174,36 @@ describe('useTodos', () => {
     await waitFor(() => {
       expect(result.current.error).toContain('Cloud Firestore API is disabled for project demo-project');
     });
+  });
+
+  it('treats permission-denied from shared board subscription as non-fatal', async () => {
+    const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-shared', userId: 'owner-2' }]));
+
+    act(() => {
+      snapshotError?.({ code: 'permission-denied', message: 'rules reject shared board' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.todos).toEqual([]);
+  });
+
+  it('treats permission-denied from owner board chunk subscription as non-fatal', async () => {
+    const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-owned', userId: 'user-1' }]));
+
+    act(() => {
+      snapshotError?.({ code: 'permission-denied', message: 'rules reject owner chunk' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.todos).toEqual([]);
   });
 
   it('sets timeout error when snapshot does not respond', async () => {
