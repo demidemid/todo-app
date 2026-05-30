@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
 
 
@@ -32,34 +33,37 @@ export const CardMenu: React.FC<CardMenuProps> = ({ onEdit, onDelete, onClose, a
   return (
     <div
       ref={menuRef}
-      className="absolute right-2 top-8 z-50 w-32 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
+      className="absolute right-0 top-10 z-50 w-32 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
       data-testid="card-menu"
     >
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="block w-full rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
+        className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
         onClick={() => {
           onEdit();
           onClose();
         }}
         data-testid="card-menu-edit"
       >
-        Edit
+        <Pencil size={14} aria-hidden="true" />
+        <span>Edit</span>
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="sm"
-        className="block w-full rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-4 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
+        title="Delete card"
+        className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-4 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
         onClick={() => {
           onDelete();
           onClose();
         }}
         data-testid="card-menu-delete"
       >
-        Delete
+        <Trash2 size={14} aria-hidden="true" />
+        <span>Delete</span>
       </Button>
     </div>
   );

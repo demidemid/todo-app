@@ -52,6 +52,20 @@ describe('CardMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('shows hint on delete action', () => {
+    render(
+      <CardMenu
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onClose={onClose}
+        anchorRef={anchorRef}
+        anchorId={anchorId}
+      />,
+    );
+
+    expect(screen.getByTestId('card-menu-delete')).toHaveAttribute('title', 'Delete card');
+  });
+
   it('closes on outside mousedown but not when clicking inside the menu or on the anchor', () => {
     render(
       <CardMenu

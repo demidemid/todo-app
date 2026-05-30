@@ -88,17 +88,26 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
 });
 
 describe('DashboardSection', () => {
-  it('toggles from header click and keyboard, while edit/delete buttons use dedicated handlers', () => {
+  it('toggles from header click and keyboard, while dashboard actions are handled via ellipsis menu', () => {
     const props = createProps();
+    props.onOpenShareDashboard = vi.fn();
     render(<DashboardSection {...props} />);
 
     fireEvent.click(screen.getByText('Board 1'));
     fireEvent.keyDown(screen.getByRole('button', { expanded: true }), { key: 'Enter' });
     fireEvent.keyDown(screen.getByRole('button', { expanded: true }), { key: ' ' });
+
+    fireEvent.click(screen.getByTestId('dashboard-actions-trigger-board-1'));
+    fireEvent.click(screen.getByTestId('share-dashboard-button-board-1'));
+
+    fireEvent.click(screen.getByTestId('dashboard-actions-trigger-board-1'));
     fireEvent.click(screen.getByTestId('edit-dashboard-button-board-1'));
+
+    fireEvent.click(screen.getByTestId('dashboard-actions-trigger-board-1'));
     fireEvent.click(screen.getByTestId('delete-dashboard-button-board-1'));
 
     expect(props.onToggle).toHaveBeenCalledTimes(3);
+    expect(props.onOpenShareDashboard).toHaveBeenCalledWith('board-1');
     expect(props.onOpenEditDashboard).toHaveBeenCalledWith('board-1');
     expect(props.onDeleteDashboard).toHaveBeenCalledWith('board-1', 'Board 1');
   });
@@ -188,6 +197,10 @@ describe('DashboardSection', () => {
     const props = createProps();
     props.menuOpenId = 'todo-1';
     render(<DashboardSection {...props} />);
+
+    const trigger = screen.getByTestId('card-menu-trigger-todo-1');
+    expect(trigger).toHaveClass('bg-cyan-300/15');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
     fireEvent.click(screen.getByTestId('mock-card-menu-edit'));
     fireEvent.click(screen.getByTestId('mock-card-menu-delete'));

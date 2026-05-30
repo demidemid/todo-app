@@ -49,11 +49,11 @@ describe('TodoModalDetailsPanel', () => {
 
     render(<TodoModalDetailsPanel {...props} />);
 
-    expect(screen.getByText('Card title')).toBeInTheDocument();
+    expect(screen.getAllByText((_, node) => node?.textContent === 'Card title').length).toBeGreaterThan(0);
     expect(screen.getByTestId('todo-actions-panel')).toBeInTheDocument();
-    expect(screen.getByText('Files')).toBeInTheDocument();
-    expect(screen.getByText('No files yet.')).toBeInTheDocument();
-    expect(screen.getByText(/Status:/)).toHaveTextContent('in progress');
+    expect(screen.queryByText('Files')).not.toBeInTheDocument();
+    expect(screen.queryByText('No files yet.')).not.toBeInTheDocument();
+    expect(screen.getByText(/Status:/)).toHaveTextContent('IN PROGRESS');
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete card' })).toBeInTheDocument();

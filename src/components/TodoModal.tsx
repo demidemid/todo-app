@@ -16,9 +16,10 @@ interface TodoModalProps {
   onClose: () => void;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
+  columns?: { id: string; name: string }[];
 }
 
-export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo }) => {
+export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = React.useState(false);
   const [deletingFileIds, setDeletingFileIds] = React.useState<string[]>([]);
@@ -243,6 +244,10 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           onDescriptionChange={setDescription}
           onOpenFilePicker={openFilePicker}
           onDeleteFile={handleDeleteFile}
+          columns={columns}
+          onMoveToNextStatus={async (todoId, nextColumnId) => {
+            await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
+          }}
         />
 
         <TodoModalCommentsPanel

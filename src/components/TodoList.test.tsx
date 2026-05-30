@@ -144,6 +144,15 @@ const renderTodoList = (initialEntries: string[] = ['/']) => {
   );
 };
 
+const clickDashboardAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  action: 'share' | 'edit' | 'delete',
+  dashboardId = 'board-1'
+) => {
+  await user.click(screen.getByTestId(`dashboard-actions-trigger-${dashboardId}`));
+  await user.click(screen.getByTestId(`${action}-dashboard-button-${dashboardId}`));
+};
+
 describe('TodoList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -301,7 +310,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'edit');
     expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
 
     const nameInput = screen.getByDisplayValue('My Dashboard');
@@ -331,7 +340,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'share');
     expect(screen.getByTestId('share-dashboard-modal')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('share-user-checkbox-u-2'));
@@ -364,7 +373,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'share');
 
     expect(screen.getByTestId('share-dashboard-modal')).toBeInTheDocument();
     expect(screen.getByTestId('share-users-error')).toHaveTextContent(
@@ -389,7 +398,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('share-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'share');
 
     const saveButton = screen.getByRole('button', { name: 'Save access' });
     expect(saveButton).toBeDisabled();
@@ -403,7 +412,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'edit');
 
     const firstColumn = screen.getByTestId('edit-dashboard-column-todo');
     const secondColumn = screen.getByTestId('edit-dashboard-column-in_progress');
@@ -436,7 +445,7 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('delete-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'delete');
 
     await waitFor(() => {
       expect(mockDeleteDashboard).toHaveBeenCalledWith('board-1');
@@ -453,7 +462,7 @@ describe('TodoList', () => {
     // Ignore the initial sync call from query parameter.
     mockSetActiveDashboardId.mockClear();
 
-    await user.click(screen.getByTestId('dashboard-toggle-board-1'));
+    await user.click(screen.getByText('My Dashboard'));
 
     expect(mockSetActiveDashboardId).toHaveBeenCalledTimes(1);
     expect(mockSetActiveDashboardId).toHaveBeenCalledWith(null);
@@ -539,11 +548,11 @@ describe('TodoList', () => {
 
     renderTodoList();
 
-    await user.click(screen.getByTestId('edit-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'edit');
     expect(screen.getByTestId('edit-dashboard-modal')).toBeInTheDocument();
     expect(mockSetActiveDashboardId).not.toHaveBeenCalled();
 
-    await user.click(screen.getByTestId('delete-dashboard-button-board-1'));
+    await clickDashboardAction(user, 'delete');
     expect(confirmSpy).toHaveBeenCalled();
     expect(mockSetActiveDashboardId).not.toHaveBeenCalled();
 
@@ -553,8 +562,8 @@ describe('TodoList', () => {
   it('adds tooltip title to icon buttons', () => {
     renderTodoList();
 
-    const toggleButton = screen.getByTestId('dashboard-toggle-board-1');
-    expect(toggleButton).toHaveAttribute('title', 'Collapse dashboard');
+    const triggerButton = screen.getByTestId('dashboard-actions-trigger-board-1');
+    expect(triggerButton).toHaveAttribute('title', 'Open dashboard actions');
   });
 
   it('reorders dashboards via drag-and-drop', () => {
