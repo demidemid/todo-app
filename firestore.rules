@@ -22,7 +22,7 @@ service cloud.firestore {
         && column.keys().hasOnly(['id', 'name', 'order', 'isDone'])
         && isNonEmptyString(column.id)
         && isNonEmptyString(column.name)
-        && column.order is int
+        && column.order is number
         && column.isDone is bool;
     }
 
@@ -91,7 +91,7 @@ service cloud.firestore {
         && data.entityType == 'dashboard'
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.name)
-        && data.order is int
+        && data.order is number
         && data.columns is list
         && data.columns.size() > 0
         && data.columns.all(column, isDashboardColumn(column))
