@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "firebase:rules": "npx firebase-tools deploy --only firestore:rules",
     "test": "vitest run",
+    "test:e2e": "FIREBASE_PROJECT_ID=todo-app-e2e firebase emulators:exec --project todo-app-e2e --only firestore,auth \"playwright test\"",
     "test:coverage": "vitest run --coverage --reporter=default --no-color",
     "test:watch": "vitest"
   },
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@firebase/rules-unit-testing": "^5.0.1",
+    "@playwright/test": "^1.55.0",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
