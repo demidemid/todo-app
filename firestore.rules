@@ -124,10 +124,9 @@ service cloud.firestore {
     }
 
     function isUsersPayload(data, userId) {
-      return data.keys().hasOnly(['email', 'updatedAt'])
-        && isNonEmptyString(data.email)
-        && isTimestamp(data.updatedAt)
-        && userId == request.auth.uid;
+      return userId == request.auth.uid
+        && (!('email' in data) || data.email is string)
+        && (!('updatedAt' in data) || isTimestamp(data.updatedAt));
     }
 
     match /users/{userId} {
