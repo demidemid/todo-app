@@ -64,6 +64,11 @@ const compareDashboardsByOrder = (a: Pick<Dashboard, 'order' | 'createdAt'>, b: 
   return a.createdAt.getTime() - b.createdAt.getTime();
 };
 
+const normalizeOrder = (value: unknown, fallback: number): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.trunc(value);
+};
+
 const isPermissionDeniedError = (error: unknown): boolean => {
   if (typeof error !== 'object' || error === null) return false;
 
@@ -138,7 +143,7 @@ export const useDashboards = (userId: string | null) => {
         const normalizedItems = items
           .map((dashboard, index) => ({
             ...dashboard,
-            order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+            order: normalizeOrder(dashboard.order, index),
           }))
           .sort(compareDashboardsByOrder);
 
@@ -200,7 +205,7 @@ export const useDashboards = (userId: string | null) => {
         const sortedByCreatedAt = [...items].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
         const normalizedItems = sortedByCreatedAt.map((dashboard, index) => ({
           ...dashboard,
-          order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+          order: normalizeOrder(dashboard.order, index),
         }));
 
         normalizedItems.sort(compareDashboardsByOrder);
@@ -346,7 +351,8 @@ export const useDashboards = (userId: string | null) => {
       entityType: 'dashboard',
       userId,
       name: normalizedName,
-      order: dashboards.reduce((maxOrder, dashboard) => Math.max(maxOrder, dashboard.order), -1) + 1,
+      order:
+        dashboards.reduce((maxOrder, dashboard) => Math.max(maxOrder, normalizeOrder(dashboard.order, 0)), -1) + 1,
       columns,
       sharedWith: [],
       sharedWithEmails: [],
@@ -432,7 +438,10 @@ export const useDashboards = (userId: string | null) => {
 
     const columnIds = new Set(normalizedColumns.map((column) => column.id));
     const fallbackColumnId = normalizedColumns[0].id;
-    const currentDashboardOrder = dashboards.find((dashboard) => dashboard.id === dashboardId)?.order ?? 0;
+    const currentDashboardOrder = normalizeOrder(
+      dashboards.find((dashboard) => dashboard.id === dashboardId)?.order,
+      0
+    );
     const dashboardUpdateData = {
       name: normalizedName,
       order: currentDashboardOrder,
@@ -527,7 +536,7 @@ export const useDashboards = (userId: string | null) => {
       .filter((dashboard) => dashboard.id !== dashboardId)
       .map((dashboard, index) => ({
         ...dashboard,
-        order: Number.isFinite(dashboard.order) ? dashboard.order : index,
+        order: normalizeOrder(dashboard.order, index),
       }))
       .sort(compareDashboardsByOrder);
 
