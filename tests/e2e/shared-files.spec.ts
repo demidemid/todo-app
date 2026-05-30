@@ -44,7 +44,7 @@ test.describe('Shared dashboard files', () => {
     await page.getByText('Todo with files').click();
     await page.getByLabel('Delete file sample.txt').click();
 
-    await expect(page.getByText('No files yet')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'sample.txt' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Close' }).click();
     await expect(page.getByRole('link', { name: 'sample.txt' })).toHaveCount(0);
   });

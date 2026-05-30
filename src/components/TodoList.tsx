@@ -453,6 +453,7 @@ export const TodoList = ({ userId, userEmail }: TodoListProps) => {
           onClose={closeTodoLink}
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}
+          columns={columns}
         />
       )}
     </div>

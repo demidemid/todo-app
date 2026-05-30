@@ -1,4 +1,4 @@
-import type React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CardMenu } from '../CardMenu';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 
 const extensionFromFileName = (fileName: string): string => {
@@ -122,7 +122,35 @@ export const DashboardSection = ({
   onMenuEdit,
   onMenuDelete,
 }: DashboardSectionProps) => {
+  const [isDashboardActionsOpen, setIsDashboardActionsOpen] = useState(false);
+  const dashboardActionsRef = useRef<HTMLDivElement | null>(null);
   const toggleDashboard = () => onToggle(dashboard.id);
+
+  useEffect(() => {
+    if (!isDashboardActionsOpen) return;
+
+    const handleOutsidePointer = (event: MouseEvent) => {
+      if (!dashboardActionsRef.current) return;
+      const target = event.target;
+      if (target instanceof Node && !dashboardActionsRef.current.contains(target)) {
+        setIsDashboardActionsOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsDashboardActionsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsidePointer);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsidePointer);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isDashboardActionsOpen]);
 
   const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -184,75 +212,87 @@ export const DashboardSection = ({
           </IconButton>
 
           <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
-
-          {canManageDashboard && (
-            <div className="ml-1 flex items-center">
-              <IconButton
-                variant="neutral"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenShareDashboard?.(dashboard.id);
-                }}
-                data-testid={`share-dashboard-button-${dashboard.id}`}
-                label={`Share dashboard ${dashboard.name}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M16 5a3 3 0 1 0-2.83-4H13a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M6 14a3 3 0 1 0-2.83-4H3a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M17 18a3 3 0 1 0-2.83-4H14a3 3 0 0 0 0 6 3 3 0 0 0 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="m8.7 12.3 5.6 3.4M14.3 8.3 8.7 11.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </IconButton>
-
-              <IconButton
-                variant="neutral"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenEditDashboard(dashboard.id);
-                }}
-                data-testid={`edit-dashboard-button-${dashboard.id}`}
-                label={`Edit dashboard ${dashboard.name}`}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M4 20h4l10-10-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                  <path d="m12 6 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </IconButton>
-
-              <IconButton
-                variant="danger"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDeleteDashboard(dashboard.id, dashboard.name);
-                }}
-                data-testid={`delete-dashboard-button-${dashboard.id}`}
-                label={`Delete dashboard ${dashboard.name}`}
-                disabled={dashboardsLength <= 1}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M4 7h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M10 3h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M6 7l1 13h10l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                </svg>
-              </IconButton>
-            </div>
-          )}
         </div>
 
-        <IconButton
-          variant="neutral"
-          onClick={(event) => {
-            event.stopPropagation();
-            toggleDashboard();
-          }}
-          data-testid={`dashboard-toggle-${dashboard.id}`}
-          label={isExpanded ? 'Collapse dashboard' : 'Expand dashboard'}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            {!isExpanded && <path d="M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />}
-          </svg>
-        </IconButton>
+        {canManageDashboard && (
+          <div className="relative flex items-center" ref={dashboardActionsRef}>
+            <IconButton
+              variant="neutral"
+              label="Open dashboard actions"
+              data-testid={`dashboard-actions-trigger-${dashboard.id}`}
+              aria-haspopup="menu"
+              aria-expanded={isDashboardActionsOpen}
+              className={isDashboardActionsOpen ? 'border-cyan-300/40 bg-cyan-300/15 text-cyan-100' : ''}
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsDashboardActionsOpen((prev) => !prev);
+              }}
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="4" r="1.5" fill="currentColor" />
+                <circle cx="10" cy="10" r="1.5" fill="currentColor" />
+                <circle cx="10" cy="16" r="1.5" fill="currentColor" />
+              </svg>
+            </IconButton>
+
+            {isDashboardActionsOpen && (
+              <div
+                className="absolute right-0 top-10 z-50 w-40 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
+                data-testid={`dashboard-actions-menu-${dashboard.id}`}
+                role="menu"
+                aria-label={`Dashboard actions for ${dashboard.name}`}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsDashboardActionsOpen(false);
+                    onOpenShareDashboard?.(dashboard.id);
+                  }}
+                  data-testid={`share-dashboard-button-${dashboard.id}`}
+                >
+                  <Share2 size={14} aria-hidden="true" />
+                  <span>Share</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsDashboardActionsOpen(false);
+                    onOpenEditDashboard(dashboard.id);
+                  }}
+                  data-testid={`edit-dashboard-button-${dashboard.id}`}
+                >
+                  <Pencil size={14} aria-hidden="true" />
+                  <span>Edit</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-4 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsDashboardActionsOpen(false);
+                    onDeleteDashboard(dashboard.id, dashboard.name);
+                  }}
+                  data-testid={`delete-dashboard-button-${dashboard.id}`}
+                  disabled={dashboardsLength <= 1}
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                  <span>Delete</span>
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {isExpanded && (
@@ -412,7 +452,10 @@ export const DashboardSection = ({
                                   variant="neutral"
                                   size="sm"
                                   label="Open menu"
+                                  className={menuOpenId === todo.id ? 'border-cyan-300/40 bg-cyan-300/15 text-cyan-100' : ''}
                                   data-testid={`card-menu-trigger-${todo.id}`}
+                                  aria-haspopup="menu"
+                                  aria-expanded={menuOpenId === todo.id}
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     onToggleMenu(todo.id);
