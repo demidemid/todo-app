@@ -25,7 +25,14 @@ function App() {
             email: currentUser.email.trim().toLowerCase(),
             updatedAt: serverTimestamp(),
           }
-        )
+        ).catch((profileError) => {
+          if (profileError instanceof Error && profileError.message.includes('ERR_BLOCKED_BY_CLIENT')) {
+            console.warn('Firestore request was blocked by a browser extension or privacy filter.')
+            return
+          }
+
+          console.warn('Failed to sync user profile to Firestore', profileError)
+        })
       }
     })
 

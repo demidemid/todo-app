@@ -16,6 +16,19 @@ import { db } from '../firebase';
 import type { Todo, TodoInput } from '../types/todo';
 
 export type AccessibleBoardInput = string | { id: string; userId?: string };
+const logTodosSubscriptionError = (source: string, error: unknown) => {
+  if (isFirestoreError(error)) {
+    console.warn(`[useTodos:${source}] Firestore error ${error.code}: ${error.message}`);
+    return;
+  }
+
+  if (error instanceof Error) {
+    console.warn(`[useTodos:${source}] ${error.message}`);
+    return;
+  }
+
+  console.warn(`[useTodos:${source}] Unknown subscription error`, error);
+};
 
 type NormalizedBoardAccess = { id: string; ownerUserId: string | null };
 
@@ -117,6 +130,11 @@ const getFirestoreErrorMessage = (error: unknown): string => {
   }
 
   return 'Unexpected Firestore error';
+};
+
+const isPermissionDeniedError = (error: unknown): boolean => {
+  if (!isFirestoreError(error)) return false;
+  return error.code === 'permission-denied';
 };
 
 const unique = <T,>(values: T[]): T[] => Array.from(new Set(values));
@@ -230,9 +248,10 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
       setResolvedSubscriptionKey(subscriptionKey);
     };
 
-    const onFailure = (snapshotError: unknown) => {
+    const onFailure = (snapshotError: unknown, source = 'unknown') => {
       hasSnapshotResponse = true;
       window.clearTimeout(snapshotTimeout);
+      logTodosSubscriptionError(source, snapshotError);
       setError(getFirestoreErrorMessage(snapshotError));
       setResolvedSubscriptionKey(subscriptionKey);
     };
@@ -246,10 +265,10 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
             try {
               onSuccess(parseSnapshotTodos(snapshot.docs));
             } catch (parseError) {
-              onFailure(parseError);
+              onFailure(parseError, 'main-parse');
             }
           },
-          onFailure
+          (snapshotError) => onFailure(snapshotError, 'main-snapshot')
         );
         unsubs.push(unsubscribeSnapshot);
       } else {
@@ -292,10 +311,19 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
                   trackedSnapshots.set(key, parseSnapshotTodos(snapshot.docs));
                   syncCombinedTodos();
                 } catch (parseError) {
-                  onFailure(parseError);
+                  onFailure(parseError, `${mode}-chunk-parse:${key}`);
                 }
               },
-              onFailure
+              (snapshotError) => {
+                if (isPermissionDeniedError(snapshotError)) {
+                  logTodosSubscriptionError(`${mode}-chunk-permission-denied:${key}`, snapshotError);
+                  trackedSnapshots.set(key, []);
+                  syncCombinedTodos();
+                  return;
+                }
+
+                onFailure(snapshotError, `${mode}-chunk-snapshot:${key}`);
+              }
             );
 
             unsubs.push(unsubscribeSnapshot);
@@ -315,7 +343,7 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
         }
       }
     } catch (subscribeError) {
-      onFailure(subscribeError);
+      onFailure(subscribeError, 'subscription-setup');
     }
 
     return () => {
