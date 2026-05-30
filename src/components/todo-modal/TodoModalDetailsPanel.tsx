@@ -81,6 +81,7 @@ export const TodoModalDetailsPanel = ({
   onCancelEditTitle,
   onTitleChange,
   onDescriptionChange,
+  onOpenFilePicker,
   onDeleteFile,
 }: TodoModalDetailsPanelProps) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -172,38 +173,57 @@ export const TodoModalDetailsPanel = ({
 
         {!isEditing && (
           <div className="mb-4 flex items-center justify-between" data-testid="todo-actions-panel">
-            <IconButton
-              variant="primary"
-              size="md"
-              label="Open actions menu"
-              className="h-10! w-10! aspect-square shrink-0 rounded-full! border-cyan-300/35 bg-cyan-300/15 p-0! text-xl font-semibold leading-none text-cyan-100"
-              data-testid="todo-actions-trigger"
-              onClick={() => setIsActionMenuOpen((prev) => !prev)}
-              ref={actionMenuRef}
-            >
-              <Plus size={18} aria-hidden="true" />
-            </IconButton>
-
-            {/* Кнопка перевода на следующий статус по центру */}
-            {columns.length > 1 && (() => {
-              const idx = columns.findIndex((c) => c.id === todo.columnId);
-              const next = idx >= 0 && idx < columns.length - 1 ? columns[idx + 1] : null;
-              if (!next) return null;
-              return (
-                <button
-                  type="button"
-                  className="flex flex-row items-center justify-center mx-4 px-3 py-2 rounded-lg border border-cyan-400/60 bg-transparent text-cyan-100 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 hover:border-cyan-300 disabled:opacity-60"
-                  style={{ minWidth: 0 }}
-                  disabled={saving}
-                  onClick={() => onMoveToNextStatus && onMoveToNextStatus(todo.id, next.id)}
-                  data-testid="todo-next-status-btn"
+            <div className="relative flex items-center gap-2" ref={actionMenuRef}>
+              <IconButton
+                variant="primary"
+                size="md"
+                label="Open actions menu"
+                className="h-10! w-10! aspect-square shrink-0 rounded-full! border-cyan-300/35 bg-cyan-300/15 p-0! text-xl font-semibold leading-none text-cyan-100"
+                data-testid="todo-actions-trigger"
+                onClick={() => setIsActionMenuOpen((prev) => !prev)}
+              >
+                <Plus size={18} aria-hidden="true" />
+              </IconButton>
+              {isActionMenuOpen && (
+                <div
+                  className="absolute left-0 top-12 z-10 min-w-[160px] rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
+                  data-testid="todo-actions-menu"
+                  role="menu"
                 >
-                  <ArrowRight size={18} className="mr-2" />
-                  <span className="text-xs font-bold tracking-wide uppercase whitespace-nowrap">{next.name}</span>
-                </button>
-              );
-            })()}
-
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsActionMenuOpen(false);
+                      onOpenFilePicker();
+                    }}
+                  >
+                    <Plus size={16} />
+                    Добавить файл
+                  </button>
+                </div>
+              )}
+              {/* Кнопка перевода на следующий статус по центру */}
+              {columns.length > 1 && (() => {
+                const idx = columns.findIndex((c) => c.id === todo.columnId);
+                const next = idx >= 0 && idx < columns.length - 1 ? columns[idx + 1] : null;
+                if (!next) return null;
+                return (
+                  <button
+                    type="button"
+                    className="flex flex-row items-center justify-center mx-4 px-3 py-2 rounded-lg border border-cyan-400/60 bg-transparent text-cyan-100 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 hover:border-cyan-300 disabled:opacity-60"
+                    style={{ minWidth: 0 }}
+                    disabled={saving}
+                    onClick={() => onMoveToNextStatus && onMoveToNextStatus(todo.id, next.id)}
+                    data-testid="todo-next-status-btn"
+                  >
+                    <ArrowRight size={18} className="mr-2" />
+                    <span className="text-xs font-bold tracking-wide uppercase whitespace-nowrap">{next.name}</span>
+                  </button>
+                );
+              })()}
+            </div>
             <IconButton
               variant="danger"
               label="Delete card"
