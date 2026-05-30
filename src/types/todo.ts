@@ -2,6 +2,17 @@ import type { Comment } from './comment';
 
 export type TodoStatus = string;
 
+export interface TodoFile {
+  id: string;
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+  contentType: string;
+  uploadedBy: string;
+  uploadedAt: Date;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -14,6 +25,7 @@ export interface Todo {
   updatedAt: Date;
   userId: string;
   comments?: Comment[];
+  files?: TodoFile[];
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>;

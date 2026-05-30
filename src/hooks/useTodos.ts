@@ -13,7 +13,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import type { Todo, TodoInput } from '../types/todo';
+import type { Todo, TodoFile, TodoInput } from '../types/todo';
 
 export type AccessibleBoardInput = string | { id: string; userId?: string; readAllTodos?: boolean };
 const logTodosSubscriptionError = (source: string, error: unknown) => {
@@ -168,6 +168,34 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
         return [];
       }
 
+      const files: TodoFile[] = Array.isArray(data.files)
+        ? data.files
+            .map((entry, index) => {
+              const file = entry as Record<string, unknown>;
+              const id = typeof file.id === 'string' ? file.id : `${item.id}-file-${index}`;
+              const name = typeof file.name === 'string' ? file.name : `file-${index + 1}`;
+              const path = typeof file.path === 'string' ? file.path : '';
+              const url = typeof file.url === 'string' ? file.url : '';
+
+              if (!url) return null;
+
+              return {
+                id,
+                name,
+                path,
+                url,
+                size: typeof file.size === 'number' && Number.isFinite(file.size) ? file.size : 0,
+                contentType:
+                  typeof file.contentType === 'string' && file.contentType.length > 0
+                    ? file.contentType
+                    : 'application/octet-stream',
+                uploadedBy: typeof file.uploadedBy === 'string' ? file.uploadedBy : 'unknown',
+                uploadedAt: parseTimestamp(file.uploadedAt),
+              } as TodoFile;
+            })
+            .filter((file): file is TodoFile => file !== null)
+        : [];
+
       return [
         {
           ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
@@ -176,6 +204,7 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
           boardId,
           columnId,
           weight,
+          files,
           createdAt,
           updatedAt: parseTimestamp(data.updatedAt),
         },

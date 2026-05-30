@@ -17,6 +17,10 @@ service cloud.firestore {
       return value is list;
     }
 
+    function isTodoFilesList(value) {
+      return value is list;
+    }
+
     function isTodoPayload(data) {
       return data.keys().hasAll([
           'entityType',
@@ -39,6 +43,7 @@ service cloud.firestore {
           'columnId',
           'weight',
           'comments',
+          'files',
           'createdAt',
           'updatedAt'
         ])
@@ -51,6 +56,46 @@ service cloud.firestore {
         && isNonEmptyString(data.columnId)
         && data.weight is number
         && (!('comments' in data) || data.comments is list)
+        && (!('files' in data) || isTodoFilesList(data.files))
+        && isTimestamp(data.createdAt)
+        && isTimestamp(data.updatedAt);
+    }
+
+    function isTodoLikePayload(data) {
+      return data.keys().hasAll([
+          'userId',
+          'title',
+          'status',
+          'boardId',
+          'columnId',
+          'weight',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'entityType',
+          'userId',
+          'title',
+          'description',
+          'status',
+          'boardId',
+          'columnId',
+          'weight',
+          'comments',
+          'files',
+          'createdAt',
+          'updatedAt'
+        ])
+        && (!('entityType' in data) || data.entityType == 'todo')
+        && isNonEmptyString(data.userId)
+        && isNonEmptyString(data.title)
+        && (!('description' in data) || data.description is string)
+        && isNonEmptyString(data.status)
+        && isNonEmptyString(data.boardId)
+        && isNonEmptyString(data.columnId)
+        && data.weight is number
+        && (!('comments' in data) || data.comments is list)
+        && (!('files' in data) || isTodoFilesList(data.files))
         && isTimestamp(data.createdAt)
         && isTimestamp(data.updatedAt);
     }
@@ -112,18 +157,18 @@ service cloud.firestore {
         && isDashboardMember(dashboardDoc.data);
     }
 
-    function isTodoCommentOnlyUpdate() {
-      return request.resource.data.entityType == resource.data.entityType
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.title == resource.data.title
-        && request.resource.data.description == resource.data.description
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.boardId == resource.data.boardId
-        && request.resource.data.columnId == resource.data.columnId
-        && request.resource.data.weight == resource.data.weight
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.comments is list
-        && request.resource.data.updatedAt is timestamp;
+    function isTodoSharedCollaboratorUpdate(nextData, currentData) {
+      return ('userId' in nextData)
+        && ('userId' in currentData)
+        && nextData.userId == currentData.userId
+        && ('boardId' in nextData)
+        && ('boardId' in currentData)
+        && nextData.boardId == currentData.boardId
+        && nextData.diff(currentData).changedKeys().hasOnly(['comments', 'files', 'updatedAt'])
+        && (!('comments' in nextData) || nextData.comments is list)
+        && (!('files' in nextData) || nextData.files is list)
+        && ('updatedAt' in nextData)
+        && nextData.updatedAt is timestamp;
     }
 
     function isUsersPayload(data, userId) {
@@ -167,12 +212,22 @@ service cloud.firestore {
         );
 
       allow update: if isSignedIn()
-        && isValidPayload(request.resource.data)
         && (
-          (resource.data.entityType == 'dashboard' && isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
-          || (resource.data.entityType == 'todo' && (
-            (isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
-            || (resource.data.boardId is string && canAccessDashboard(resource.data.boardId) && isTodoCommentOnlyUpdate())
+          (resource.data.entityType == 'dashboard'
+            && isValidPayload(request.resource.data)
+            && isOwnerFromResource()
+            && request.resource.data.userId == resource.data.userId)
+          || (((resource.data.entityType == 'todo') || !('entityType' in resource.data)) && (
+            (isOwnerFromResource()
+              && isTodoLikePayload(request.resource.data)
+              && (!('entityType' in request.resource.data) || request.resource.data.entityType == resource.data.entityType)
+              && request.resource.data.userId == resource.data.userId)
+            || (
+              ('boardId' in resource.data)
+              && resource.data.boardId is string
+              && canAccessDashboard(resource.data.boardId)
+              && isTodoSharedCollaboratorUpdate(request.resource.data, resource.data)
+            )
           ))
         );
 

@@ -18,6 +18,10 @@ const todo: Todo = {
 
 const createProps = () => ({
   todo,
+  files: [],
+  filesUploading: false,
+  deletingFileIds: [],
+  filesError: '',
   isEditing: false,
   isEditingTitle: false,
   title: 'Card title',
@@ -33,6 +37,8 @@ const createProps = () => ({
   onCancelEditTitle: vi.fn(),
   onTitleChange: vi.fn(),
   onDescriptionChange: vi.fn(),
+  onOpenFilePicker: vi.fn(),
+  onDeleteFile: vi.fn(),
 });
 
 describe('TodoModalDetailsPanel', () => {
@@ -43,6 +49,8 @@ describe('TodoModalDetailsPanel', () => {
 
     expect(screen.getByText('Card title')).toBeInTheDocument();
     expect(screen.getByTestId('todo-actions-panel')).toBeInTheDocument();
+    expect(screen.getByText('Files')).toBeInTheDocument();
+    expect(screen.getByText('No files yet.')).toBeInTheDocument();
     expect(screen.getByText(/Status:/)).toHaveTextContent('in progress');
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
@@ -59,6 +67,9 @@ describe('TodoModalDetailsPanel', () => {
 
     expect(screen.getByTestId('todo-actions-menu')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Добавить файл' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Добавить файл' }));
+    expect(props.onOpenFilePicker).toHaveBeenCalledTimes(1);
   });
 
   it('hides description output when description is empty', () => {
@@ -107,5 +118,27 @@ describe('TodoModalDetailsPanel', () => {
     render(<TodoModalDetailsPanel {...props} error="Delete failed" />);
 
     expect(screen.getByText('Delete failed')).toBeInTheDocument();
+  });
+
+  it('calls delete handler from red file action button', () => {
+    const props = createProps();
+    props.files = [
+      {
+        id: 'file-1',
+        name: 'report.pdf',
+        path: 'todos/todo-1/report.pdf',
+        url: 'https://example.com/report.pdf',
+        size: 123,
+        contentType: 'application/pdf',
+        uploadedBy: 'user-1',
+        uploadedAt: new Date('2026-01-01T10:00:00Z'),
+      },
+    ];
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('delete-file-file-1'));
+
+    expect(props.onDeleteFile).toHaveBeenCalledWith('file-1');
   });
 });

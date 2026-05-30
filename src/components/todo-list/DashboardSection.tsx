@@ -7,6 +7,30 @@ import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
 import { MessageCircle } from 'lucide-react';
+import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
+
+const extensionFromFileName = (fileName: string): string => {
+  const normalized = fileName.trim().toLowerCase();
+  const dotIndex = normalized.lastIndexOf('.');
+  if (dotIndex < 0 || dotIndex === normalized.length - 1) return '';
+  return normalized.slice(dotIndex + 1);
+};
+
+const FileTypeIcon = ({ fileName }: { fileName: string }) => {
+  const extension = extensionFromFileName(fileName);
+
+  if (['pdf'].includes(extension)) return <FaFilePdf className="shrink-0 text-rose-300" aria-hidden="true" />;
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'heic'].includes(extension)) return <FaFileImage className="shrink-0 text-emerald-300" aria-hidden="true" />;
+  if (['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(extension)) return <FaFileVideo className="shrink-0 text-cyan-300" aria-hidden="true" />;
+  if (['mp3', 'wav', 'ogg', 'aac', 'flac'].includes(extension)) return <FaFileAudio className="shrink-0 text-fuchsia-300" aria-hidden="true" />;
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) return <FaFileArchive className="shrink-0 text-amber-300" aria-hidden="true" />;
+  if (['doc', 'docx', 'rtf', 'odt'].includes(extension)) return <FaFileWord className="shrink-0 text-sky-300" aria-hidden="true" />;
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(extension)) return <FaFileExcel className="shrink-0 text-green-300" aria-hidden="true" />;
+  if (['ppt', 'pptx', 'odp'].includes(extension)) return <FaFilePowerpoint className="shrink-0 text-orange-300" aria-hidden="true" />;
+  if (['ts', 'tsx', 'js', 'jsx', 'json', 'html', 'css', 'md', 'xml', 'yml', 'yaml'].includes(extension)) return <FaFileCode className="shrink-0 text-violet-300" aria-hidden="true" />;
+
+  return <FaFile className="shrink-0 text-slate-300" aria-hidden="true" />;
+};
 
 interface DragState {
   todoId: string;
@@ -359,8 +383,29 @@ export const DashboardSection = ({
                             </div>
                           ) : (
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold text-slate-100">{todo.title}</p>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+                                {Array.isArray(todo.files) && todo.files.length > 0 && (
+                                  <ul className="mt-1 space-y-0.5">
+                                    {todo.files.map((file) => (
+                                      <li key={file.id} className="text-xs text-slate-300">
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                          <FileTypeIcon fileName={file.name} />
+                                          <a
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            download
+                                            onClick={(event) => event.stopPropagation()}
+                                            className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                                          >
+                                            {file.name}
+                                          </a>
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                               <div className="relative flex items-center gap-2">
                                 <IconButton
