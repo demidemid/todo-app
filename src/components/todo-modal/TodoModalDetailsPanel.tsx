@@ -1,4 +1,5 @@
-import { Pencil, Check, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Pencil, Check, Trash2, X, Plus } from 'lucide-react';
 import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
@@ -43,6 +44,35 @@ export const TodoModalDetailsPanel = ({
   onTitleChange,
   onDescriptionChange,
 }: TodoModalDetailsPanelProps) => {
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isActionMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!actionMenuRef.current) return;
+      const target = event.target;
+      if (target instanceof Node && !actionMenuRef.current.contains(target)) {
+        setIsActionMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsActionMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isActionMenuOpen]);
+
   return (
     <div className="min-h-0 min-w-0 flex flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto pl-1 pr-2">
@@ -79,6 +109,41 @@ export const TodoModalDetailsPanel = ({
             <IconButton variant="danger" size="md" label="Delete card" onClick={onDelete} disabled={saving} className="shrink-0">
               <Trash2 size={16} />
             </IconButton>
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="mb-4 flex items-center justify-start" data-testid="todo-actions-panel">
+            <div className="relative" ref={actionMenuRef}>
+              <IconButton
+                variant="primary"
+                size="md"
+                label="Open actions menu"
+                className="!h-10 !w-10 aspect-square shrink-0 !rounded-full border-cyan-300/35 bg-cyan-300/15 !p-0 text-xl font-semibold leading-none text-cyan-100"
+                data-testid="todo-actions-trigger"
+                onClick={() => setIsActionMenuOpen((prev) => !prev)}
+              >
+                <Plus size={18} aria-hidden="true" />
+              </IconButton>
+
+              {isActionMenuOpen && (
+                <div
+                  className="absolute left-0 top-12 z-20 min-w-44 rounded-lg border border-white/10 bg-slate-900/95 p-1 shadow-xl"
+                  role="menu"
+                  aria-label="Todo actions"
+                  data-testid="todo-actions-menu"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-100 transition hover:bg-white/10"
+                    onClick={() => setIsActionMenuOpen(false)}
+                  >
+                    Добавить файл
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

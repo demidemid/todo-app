@@ -42,10 +42,23 @@ describe('TodoModalDetailsPanel', () => {
     render(<TodoModalDetailsPanel {...props} />);
 
     expect(screen.getByText('Card title')).toBeInTheDocument();
+    expect(screen.getByTestId('todo-actions-panel')).toBeInTheDocument();
     expect(screen.getByText(/Status:/)).toHaveTextContent('in progress');
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete card' })).toBeInTheDocument();
+  });
+
+  it('opens actions menu with add file item from the plus button', () => {
+    const props = createProps();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.queryByTestId('todo-actions-menu')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+
+    expect(screen.getByTestId('todo-actions-menu')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Добавить файл' })).toBeInTheDocument();
   });
 
   it('hides description output when description is empty', () => {
