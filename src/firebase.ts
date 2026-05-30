@@ -4,12 +4,13 @@ import { connectFirestoreEmulator, enableIndexedDbPersistence, getFirestore } fr
 import { connectStorageEmulator, getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // Fallbacks keep unit tests stable in CI where VITE_* can be unset.
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? 'AIzaSyDUMMY_KEY_FOR_TESTS_1234567890',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? 'localhost',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'demo-test-project',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? 'demo-test-project.appspot.com',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '1234567890',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '1:1234567890:web:demo',
 };
 
 const app = initializeApp(firebaseConfig);

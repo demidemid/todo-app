@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "firebase:rules": "npx firebase-tools deploy --only firestore:rules",
     "test": "vitest run",
-    "test:e2e": "FIREBASE_PROJECT_ID=todo-app-e2e firebase emulators:exec --project todo-app-e2e --only firestore,auth \"playwright test\"",
+    "test:e2e": "FIREBASE_PROJECT_ID=todo-app-e2e firebase emulators:exec --project todo-app-e2e --only firestore,auth,storage \"playwright test\"",
     "test:coverage": "vitest run --coverage --reporter=default --no-color",
     "test:watch": "vitest"
   },
