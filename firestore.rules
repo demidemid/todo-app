@@ -112,6 +112,20 @@ service cloud.firestore {
         && isDashboardMember(dashboardDoc.data);
     }
 
+    function isTodoCommentOnlyUpdate() {
+      return request.resource.data.entityType == resource.data.entityType
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.title == resource.data.title
+        && request.resource.data.description == resource.data.description
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.boardId == resource.data.boardId
+        && request.resource.data.columnId == resource.data.columnId
+        && request.resource.data.weight == resource.data.weight
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.comments is list
+        && request.resource.data.updatedAt is timestamp;
+    }
+
     function isUsersPayload(data, userId) {
       return userId == request.auth.uid
         && (!('email' in data) || data.email is string)
@@ -156,7 +170,10 @@ service cloud.firestore {
         && isValidPayload(request.resource.data)
         && (
           (resource.data.entityType == 'dashboard' && isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
-          || (resource.data.entityType == 'todo' && isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
+          || (resource.data.entityType == 'todo' && (
+            (isOwnerFromResource() && request.resource.data.userId == resource.data.userId)
+            || (resource.data.boardId is string && canAccessDashboard(resource.data.boardId) && isTodoCommentOnlyUpdate())
+          ))
         );
 
       allow delete: if isSignedIn() && isOwnerFromResource();

@@ -120,6 +120,18 @@ The app will start at `http://localhost:5173`
 npm run build
 ```
 
+### Run E2E tests (shared dashboard comments)
+
+This project includes a Playwright e2e scenario that verifies a shared-dashboard member can add comments to cards they did not create.
+
+Run:
+
+```bash
+yarn test:e2e
+```
+
+It starts Firebase Auth + Firestore emulators and runs `tests/e2e/shared-comments.spec.ts` against the app.
+
 ### Preview production build
 
 ```bash
