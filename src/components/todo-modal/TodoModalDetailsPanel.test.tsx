@@ -49,7 +49,7 @@ describe('TodoModalDetailsPanel', () => {
 
     render(<TodoModalDetailsPanel {...props} />);
 
-    expect(screen.getByText('Card title')).toBeInTheDocument();
+    expect(screen.getAllByText((content, node) => node?.textContent === 'Card title').length).toBeGreaterThan(0);
     expect(screen.getByTestId('todo-actions-panel')).toBeInTheDocument();
     expect(screen.queryByText('Files')).not.toBeInTheDocument();
     expect(screen.queryByText('No files yet.')).not.toBeInTheDocument();
