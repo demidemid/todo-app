@@ -425,6 +425,7 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+                                {/* Меню/кнопка (оставляем как есть) */}
                                 {Array.isArray(todo.files) && todo.files.length > 0 && (
                                   <ul className="mt-1 space-y-0.5">
                                     {todo.files.map((file) => (
@@ -442,6 +443,29 @@ export const DashboardSection = ({
                                             {file.name}
                                           </a>
                                         </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                {/* LINKS block — теперь всегда под меню/кнопкой */}
+                                {Array.isArray(todo.links) && todo.links.length > 0 && (
+                                  <ul className="mt-2 space-y-0.5">
+                                    {todo.links.map((link, i) => (
+                                      <li key={link.url + i} className="flex items-center gap-1.5 text-xs text-cyan-200">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-cyan-300" aria-hidden="true">
+                                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20" stroke="currentColor" strokeWidth="2" />
+                                        </svg>
+                                        <a
+                                          href={link.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={e => e.stopPropagation()}
+                                          className="truncate max-w-[120px] underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                                          title={link.url}
+                                        >
+                                          {link.name ? link.name : link.url}
+                                        </a>
                                       </li>
                                     ))}
                                   </ul>

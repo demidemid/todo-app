@@ -244,6 +244,24 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           onDescriptionChange={setDescription}
           onOpenFilePicker={openFilePicker}
           onDeleteFile={handleDeleteFile}
+          onDeleteLink={async (linkIndex) => {
+            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+            await updateTodo(todo.id, {
+              links: currentLinks.filter((_, index) => index !== linkIndex),
+            });
+          }}
+          onAddLink={async (link) => {
+            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+            const normalizedCurrentLinks = currentLinks.map((item) => {
+              const trimmedName = item.name?.trim();
+              return { url: item.url, name: trimmedName || item.url };
+            });
+            const trimmedName = link.name?.trim();
+            const nextLink = { url: link.url, name: trimmedName || link.url };
+            await updateTodo(todo.id, {
+              links: [...normalizedCurrentLinks, nextLink],
+            });
+          }}
           columns={columns}
           onMoveToNextStatus={async (todoId, nextColumnId) => {
             await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });

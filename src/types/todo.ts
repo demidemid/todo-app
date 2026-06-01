@@ -13,6 +13,11 @@ export interface TodoFile {
   uploadedAt: Date;
 }
 
+export interface TodoLink {
+  url: string;
+  name?: string;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -26,6 +31,7 @@ export interface Todo {
   userId: string;
   comments?: Comment[];
   files?: TodoFile[];
+  links?: TodoLink[];
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>;

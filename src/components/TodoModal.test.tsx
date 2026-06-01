@@ -269,10 +269,122 @@ describe('TodoModal', () => {
     );
 
     fireEvent.click(screen.getByTestId('todo-actions-trigger'));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Добавить файл' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add files' }));
 
     expect(inputClickSpy).toHaveBeenCalled();
     inputClickSpy.mockRestore();
+  });
+
+  it('adds link with explicit name from plus actions menu', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-add-link'));
+
+    fireEvent.change(screen.getByPlaceholderText('Name (optional)'), {
+      target: { value: 'Docs' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('URL'), {
+      target: { value: 'https://example.com/docs' },
+    });
+    fireEvent.click(screen.getByTestId('todo-actions-add-link-submit'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        links: [{ name: 'Docs', url: 'https://example.com/docs' }],
+      });
+    });
+  });
+
+  it('uses URL as fallback name when adding link without name', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-add-link'));
+
+    fireEvent.change(screen.getByPlaceholderText('URL'), {
+      target: { value: 'https://example.com/fallback' },
+    });
+    fireEvent.click(screen.getByTestId('todo-actions-add-link-submit'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        links: [{ name: 'https://example.com/fallback', url: 'https://example.com/fallback' }],
+      });
+    });
+  });
+
+  it('deletes selected link by red cross and keeps remaining links', async () => {
+    const todoWithLinks: Todo = {
+      ...todo,
+      links: [
+        { name: 'https://example.com/first', url: 'https://example.com/first' },
+        { name: 'https://example.com/second', url: 'https://example.com/second' },
+      ],
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithLinks}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('delete-link-0'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        links: [{ name: 'https://example.com/second', url: 'https://example.com/second' }],
+      });
+    });
+  });
+
+  it('deletes last link and saves empty links array', async () => {
+    const todoWithSingleLink: Todo = {
+      ...todo,
+      links: [{ name: 'https://example.com/only', url: 'https://example.com/only' }],
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithSingleLink}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('delete-link-0'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        links: [],
+      });
+    });
   });
 
   it('uploads selected files to storage and saves metadata to todo', async () => {

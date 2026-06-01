@@ -1,7 +1,7 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from './ui/Button';
-
 
 interface CardMenuProps {
   onEdit: () => void;
