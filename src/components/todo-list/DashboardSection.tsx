@@ -249,7 +249,6 @@ export const DashboardSection = ({
     onEditTitleChange,
     onEditDescriptionChange,
     onEditKeyDown,
-    onMenuEdit,
     onMenuArchive,
     onMenuDelete,
   } = resolvedActions;
@@ -593,13 +592,6 @@ export const DashboardSection = ({
                                 menuClassName="w-32"
                                 stopPropagation
                                 items={[
-                                  {
-                                    id: 'edit',
-                                    label: 'Edit',
-                                    icon: <Pencil size={14} aria-hidden="true" />,
-                                    onSelect: () => onMenuEdit(todo),
-                                    testId: 'card-menu-edit',
-                                  },
                                   {
                                     id: 'archive',
                                     label: 'Archive',
