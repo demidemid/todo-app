@@ -697,7 +697,7 @@ describe('TodoList', () => {
     expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
 
-  it('cancels inline edit by Escape', async () => {
+  it('does not show edit action in card menu', async () => {
     const user = userEvent.setup();
 
     mockUseTodos.mockReturnValue({
@@ -725,20 +725,12 @@ describe('TodoList', () => {
     renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
-    await user.click(screen.getByTestId('card-menu-edit'));
-    const titleInput = screen.getByTestId('edit-title-t-1');
-    expect(titleInput).toBeInTheDocument();
-
-    fireEvent.keyDown(titleInput, { key: 'Escape' });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('edit-title-t-1')).not.toBeInTheDocument();
-    });
+    expect(screen.queryByTestId('card-menu-edit')).not.toBeInTheDocument();
 
     expect(mockUpdateTodo).not.toHaveBeenCalled();
   });
 
-  it('saves inline edit by Ctrl+Enter / Cmd+Enter', async () => {
+  it('archives card from card menu action', async () => {
     const user = userEvent.setup();
 
     mockUseTodos.mockReturnValue({
@@ -766,18 +758,11 @@ describe('TodoList', () => {
     renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
-    await user.click(screen.getByTestId('card-menu-edit'));
-    const titleInput = screen.getByTestId('edit-title-t-1');
-
-    await user.clear(titleInput);
-    await user.type(titleInput, 'Updated title');
-
-    fireEvent.keyDown(titleInput, { key: 'Enter', ctrlKey: true });
+    await user.click(screen.getByTestId('card-menu-archive'));
 
     await waitFor(() => {
       expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
-        title: 'Updated title',
-        description: '<p>Initial description</p>',
+        archived: true,
       });
     });
   });
@@ -1057,7 +1042,7 @@ describe('TodoList', () => {
     expect(mockUpdateTodo).toHaveBeenCalledTimes(3);
   });
 
-  it('saves inline edit when clicking Save button', async () => {
+  it('deletes card from card menu action', async () => {
     const user = userEvent.setup();
 
     mockUseTodos.mockReturnValue({
@@ -1085,15 +1070,10 @@ describe('TodoList', () => {
     renderTodoList();
 
     await user.click(screen.getByTestId('card-menu-trigger-t-1'));
-    await user.click(screen.getByTestId('card-menu-edit'));
-    await user.type(screen.getByTestId('edit-title-t-1'), ' Updated');
-    await user.click(screen.getByTestId('edit-save-t-1'));
+    await user.click(screen.getByTestId('card-menu-delete'));
 
     await waitFor(() => {
-      expect(mockUpdateTodo).toHaveBeenCalledWith('t-1', {
-        title: 'Initial title Updated',
-        description: '<p>Initial description</p>',
-      });
+      expect(mockDeleteTodo).toHaveBeenCalledWith('t-1');
     });
   });
 

@@ -180,19 +180,18 @@ describe('DashboardSection', () => {
     expect(props.onOpenTodoModal).not.toHaveBeenCalled();
   });
 
-  it('forwards card menu edit/archive/delete actions', () => {
+  it('forwards card menu archive/delete actions and hides edit action', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);
 
     fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
 
-    fireEvent.click(screen.getByTestId('card-menu-edit'));
-    fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
+    expect(screen.queryByTestId('card-menu-edit')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('card-menu-archive'));
     fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
     fireEvent.click(screen.getByTestId('card-menu-delete'));
 
-    expect(props.onMenuEdit).toHaveBeenCalledWith(todo);
+    expect(props.onMenuEdit).not.toHaveBeenCalled();
     expect(props.onMenuArchive).toHaveBeenCalledWith('todo-1');
     expect(props.onMenuDelete).toHaveBeenCalledWith('todo-1');
   });

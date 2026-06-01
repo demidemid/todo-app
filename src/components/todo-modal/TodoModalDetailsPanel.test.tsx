@@ -60,6 +60,22 @@ describe('TodoModalDetailsPanel', () => {
     expect(screen.getByRole('button', { name: 'Delete card' })).toBeInTheDocument();
   });
 
+  it('renders human-readable status name from columns for opaque column ids', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      status: '75E3E2D7-0348-4057-B305-84FFCE842227',
+      columnId: '75E3E2D7-0348-4057-B305-84FFCE842227',
+    };
+    props.columns = [
+      { id: '75E3E2D7-0348-4057-B305-84FFCE842227', name: 'In Review' },
+    ];
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByText(/Status:/)).toHaveTextContent('IN REVIEW');
+  });
+
   it('opens actions menu with add file item from the plus button', () => {
     const props = createProps();
 
