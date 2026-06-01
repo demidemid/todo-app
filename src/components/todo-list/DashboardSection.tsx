@@ -60,20 +60,15 @@ interface DropTarget {
   index: number;
 }
 
-interface DashboardSectionProps {
-  sectionRef?: (element: HTMLElement | null) => void;
-  dashboard: Dashboard;
-  isExpanded: boolean;
-  isDragging?: boolean;
-  isDropTarget?: boolean;
-  dashboardsLength: number;
-  columns: DashboardColumn[];
-  groupedTodos: Record<string, Todo[]>;
+interface DashboardSectionInteractionState {
   editingTodoId: string | null;
   editingTitle: string;
   editingDescription: string;
   dragState: DragState | null;
   dropTarget: DropTarget | null;
+}
+
+interface DashboardSectionActions {
   onToggle: (dashboardId: string) => void;
   onDashboardDragStart?: () => void;
   onDashboardDragEnd?: () => void;
@@ -82,7 +77,6 @@ interface DashboardSectionProps {
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
   onOpenShareDashboard?: (dashboardId: string) => void;
-  canManageDashboard?: boolean;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
   onMoveTodo: (todoId: string, targetColumnId: string, targetIndex: number) => void;
   onSetDragState: (state: DragState | null) => void;
@@ -98,6 +92,46 @@ interface DashboardSectionProps {
   onMenuDelete: (todoId: string) => void;
 }
 
+interface DashboardSectionProps {
+  sectionRef?: (element: HTMLElement | null) => void;
+  dashboard: Dashboard;
+  isExpanded: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  dashboardsLength: number;
+  columns: DashboardColumn[];
+  groupedTodos: Record<string, Todo[]>;
+  interactionState?: DashboardSectionInteractionState;
+  actions?: DashboardSectionActions;
+  editingTodoId?: string | null;
+  editingTitle?: string;
+  editingDescription?: string;
+  dragState?: DragState | null;
+  dropTarget?: DropTarget | null;
+  onToggle?: (dashboardId: string) => void;
+  onDashboardDragStart?: () => void;
+  onDashboardDragEnd?: () => void;
+  onDashboardDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDashboardDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onOpenEditDashboard?: (dashboardId: string) => void;
+  onDeleteDashboard?: (dashboardId: string, dashboardName: string) => void;
+  onOpenShareDashboard?: (dashboardId: string) => void;
+  canManageDashboard?: boolean;
+  onOpenCreateCard?: (dashboardId: string, columnId: string) => void;
+  onMoveTodo?: (todoId: string, targetColumnId: string, targetIndex: number) => void;
+  onSetDragState?: (state: DragState | null) => void;
+  onSetDropTarget?: (state: DropTarget | null) => void;
+  onOpenTodoModal?: (todo: Todo) => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: (todoId: string) => void;
+  onEditTitleChange?: (value: string) => void;
+  onEditDescriptionChange?: (value: string) => void;
+  onEditKeyDown?: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => void;
+  onMenuEdit?: (todo: Todo) => void;
+  onMenuArchive?: (todoId: string) => void;
+  onMenuDelete?: (todoId: string) => void;
+}
+
 export const DashboardSection = ({
   sectionRef,
   dashboard,
@@ -107,34 +141,100 @@ export const DashboardSection = ({
   dashboardsLength,
   columns,
   groupedTodos,
-  editingTodoId,
-  editingTitle,
-  editingDescription,
-  dragState,
-  dropTarget,
-  onToggle,
-  onDashboardDragStart,
-  onDashboardDragEnd,
-  onDashboardDragOver,
-  onDashboardDrop,
-  onOpenEditDashboard,
-  onDeleteDashboard,
-  onOpenShareDashboard,
+  interactionState,
+  actions,
+  editingTodoId: legacyEditingTodoId,
+  editingTitle: legacyEditingTitle,
+  editingDescription: legacyEditingDescription,
+  dragState: legacyDragState,
+  dropTarget: legacyDropTarget,
+  onToggle: legacyOnToggle,
+  onDashboardDragStart: legacyOnDashboardDragStart,
+  onDashboardDragEnd: legacyOnDashboardDragEnd,
+  onDashboardDragOver: legacyOnDashboardDragOver,
+  onDashboardDrop: legacyOnDashboardDrop,
+  onOpenEditDashboard: legacyOnOpenEditDashboard,
+  onDeleteDashboard: legacyOnDeleteDashboard,
+  onOpenShareDashboard: legacyOnOpenShareDashboard,
   canManageDashboard = true,
-  onOpenCreateCard,
-  onMoveTodo,
-  onSetDragState,
-  onSetDropTarget,
-  onOpenTodoModal,
-  onCancelEdit,
-  onSaveEdit,
-  onEditTitleChange,
-  onEditDescriptionChange,
-  onEditKeyDown,
-  onMenuEdit,
-  onMenuArchive,
-  onMenuDelete,
+  onOpenCreateCard: legacyOnOpenCreateCard,
+  onMoveTodo: legacyOnMoveTodo,
+  onSetDragState: legacyOnSetDragState,
+  onSetDropTarget: legacyOnSetDropTarget,
+  onOpenTodoModal: legacyOnOpenTodoModal,
+  onCancelEdit: legacyOnCancelEdit,
+  onSaveEdit: legacyOnSaveEdit,
+  onEditTitleChange: legacyOnEditTitleChange,
+  onEditDescriptionChange: legacyOnEditDescriptionChange,
+  onEditKeyDown: legacyOnEditKeyDown,
+  onMenuEdit: legacyOnMenuEdit,
+  onMenuArchive: legacyOnMenuArchive,
+  onMenuDelete: legacyOnMenuDelete,
 }: DashboardSectionProps) => {
+  const resolvedState: DashboardSectionInteractionState = interactionState ?? {
+    editingTodoId: legacyEditingTodoId ?? null,
+    editingTitle: legacyEditingTitle ?? '',
+    editingDescription: legacyEditingDescription ?? '',
+    dragState: legacyDragState ?? null,
+    dropTarget: legacyDropTarget ?? null,
+  };
+
+  const resolvedActions: DashboardSectionActions = actions ?? {
+    onToggle: legacyOnToggle ?? (() => {}),
+    onDashboardDragStart: legacyOnDashboardDragStart,
+    onDashboardDragEnd: legacyOnDashboardDragEnd,
+    onDashboardDragOver: legacyOnDashboardDragOver,
+    onDashboardDrop: legacyOnDashboardDrop,
+    onOpenEditDashboard: legacyOnOpenEditDashboard ?? (() => {}),
+    onDeleteDashboard: legacyOnDeleteDashboard ?? (() => {}),
+    onOpenShareDashboard: legacyOnOpenShareDashboard,
+    onOpenCreateCard: legacyOnOpenCreateCard ?? (() => {}),
+    onMoveTodo: legacyOnMoveTodo ?? (() => {}),
+    onSetDragState: legacyOnSetDragState ?? (() => {}),
+    onSetDropTarget: legacyOnSetDropTarget ?? (() => {}),
+    onOpenTodoModal: legacyOnOpenTodoModal ?? (() => {}),
+    onCancelEdit: legacyOnCancelEdit ?? (() => {}),
+    onSaveEdit: legacyOnSaveEdit ?? (() => {}),
+    onEditTitleChange: legacyOnEditTitleChange ?? (() => {}),
+    onEditDescriptionChange: legacyOnEditDescriptionChange ?? (() => {}),
+    onEditKeyDown: legacyOnEditKeyDown ?? (() => {}),
+    onMenuEdit: legacyOnMenuEdit ?? (() => {}),
+    onMenuArchive: legacyOnMenuArchive ?? (() => {}),
+    onMenuDelete: legacyOnMenuDelete ?? (() => {}),
+  };
+
+  const {
+    editingTodoId,
+    editingTitle,
+    editingDescription,
+    dragState,
+    dropTarget,
+  } = resolvedState;
+
+  const {
+    onToggle,
+    onDashboardDragStart,
+    onDashboardDragEnd,
+    onDashboardDragOver,
+    onDashboardDrop,
+    onOpenEditDashboard,
+    onDeleteDashboard,
+    onOpenShareDashboard,
+    onOpenCreateCard,
+    onMoveTodo,
+    onSetDragState,
+    onSetDropTarget,
+    onOpenTodoModal,
+    onCancelEdit,
+    onSaveEdit,
+    onEditTitleChange,
+    onEditDescriptionChange,
+    onEditKeyDown,
+    onMenuEdit,
+    onMenuArchive,
+    onMenuDelete,
+  } = resolvedActions;
+
   const toggleDashboard = () => onToggle(dashboard.id);
 
   const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -142,6 +242,17 @@ export const DashboardSection = ({
       event.preventDefault();
       toggleDashboard();
     }
+  };
+
+  const resolveCardDropIndex = (
+    event: React.DragEvent<HTMLElement>,
+    baseIndex: number,
+  ) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.height <= 0) return baseIndex;
+
+    const midpointY = rect.top + rect.height / 2;
+    return event.clientY > midpointY ? baseIndex + 1 : baseIndex;
   };
 
   return (
@@ -250,13 +361,27 @@ export const DashboardSection = ({
                 <section
                   key={column.id}
                   data-testid={`column-${column.id}`}
-                  className="rounded-xl border border-white/10 bg-slate-800/50 p-3"
-                  onDragOver={(event) => event.preventDefault()}
+                  className={`rounded-xl border bg-slate-800/50 p-3 transition-colors ${
+                    dropTarget?.columnId === column.id
+                      ? 'border-cyan-200/70'
+                      : 'border-white/10'
+                  }`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (!dragState) return;
+
+                    onSetDropTarget({ columnId: column.id, index: columnTodos.length });
+                  }}
                   onDrop={(event) => {
                     event.preventDefault();
                     if (!dragState) return;
 
-                    void onMoveTodo(dragState.todoId, column.id, columnTodos.length);
+                    const targetIndex =
+                      dropTarget?.columnId === column.id
+                        ? dropTarget.index
+                        : columnTodos.length;
+
+                    void onMoveTodo(dragState.todoId, column.id, targetIndex);
                     onSetDragState(null);
                     onSetDropTarget(null);
                   }}
@@ -284,29 +409,28 @@ export const DashboardSection = ({
 
                   <div className="space-y-2">
                     {columnTodos.map((todo, index) => (
-                      <div key={todo.id}>
-                        <div
-                          data-testid={`drop-${column.id}-${index}`}
-                          className={`h-2 rounded border border-dashed transition-all duration-150 ${
-                            dropTarget?.columnId === column.id && dropTarget.index === index
-                              ? 'animate-pulse border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
-                              : 'border-cyan-200/20 bg-cyan-300/10'
-                          }`}
-                          onDragOver={(event) => {
-                            event.preventDefault();
-                            onSetDropTarget({ columnId: column.id, index });
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            if (!dragState) return;
+                      <div
+                        key={todo.id}
+                        data-testid={`drop-${column.id}-${index}`}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!dragState) return;
 
-                            void onMoveTodo(dragState.todoId, column.id, index);
-                            onSetDragState(null);
-                            onSetDropTarget(null);
-                          }}
-                        />
+                          const targetIndex = resolveCardDropIndex(event, index);
+                          onSetDropTarget({ columnId: column.id, index: targetIndex });
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (!dragState) return;
 
+                          const targetIndex = resolveCardDropIndex(event, index);
+                          void onMoveTodo(dragState.todoId, column.id, targetIndex);
+                          onSetDragState(null);
+                          onSetDropTarget(null);
+                        }}
+                      >
                         <article
                           data-testid={`card-${todo.id}`}
                           draggable={editingTodoId !== todo.id}
@@ -463,11 +587,7 @@ export const DashboardSection = ({
 
                     <div
                       data-testid={`drop-${column.id}-end`}
-                      className={`h-3 rounded border border-dashed transition-all duration-150 ${
-                        dropTarget?.columnId === column.id && dropTarget.index === columnTodos.length
-                          ? 'animate-pulse border-cyan-100 bg-cyan-300/60 shadow-[0_0_0_1px_rgba(165,243,252,0.35)]'
-                          : 'border-white/20 bg-white/5'
-                      }`}
+                      className="h-0 overflow-hidden"
                       onDragOver={(event) => {
                         event.preventDefault();
                         onSetDropTarget({ columnId: column.id, index: columnTodos.length });

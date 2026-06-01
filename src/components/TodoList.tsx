@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
-import type { Dashboard } from '../types/dashboard';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { TodoModal } from './TodoModal';
 import { DashboardSection } from './todo-list/DashboardSection';
@@ -12,6 +11,8 @@ import { useTodoListController } from './todo-list/useTodoListController';
 import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
+import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
+import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -21,15 +22,21 @@ interface TodoListProps {
   viewMode?: TodoListViewMode;
 }
 
-export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
+const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const dashboardParamId = searchParams.get('dashboard');
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
-  const [shareDashboardId, setShareDashboardId] = useState<string | null>(null);
-  const [shareSelectedUserIds, setShareSelectedUserIds] = useState<string[]>([]);
-  const [shareRecipientEmails, setShareRecipientEmails] = useState('');
-  const [shareActionError, setShareActionError] = useState('');
+  const dashboardHoverId = useTodoListUiStoreScoped((state) => state.dashboardHoverId);
+  const setDashboardHoverId = useTodoListUiStoreScoped((state) => state.setDashboardHoverId);
+  const shareDashboardId = useTodoListUiStoreScoped((state) => state.shareDashboardId);
+  const shareSelectedUserIds = useTodoListUiStoreScoped((state) => state.shareSelectedUserIds);
+  const shareRecipientEmails = useTodoListUiStoreScoped((state) => state.shareRecipientEmails);
+  const shareActionError = useTodoListUiStoreScoped((state) => state.shareActionError);
+  const openShareModal = useTodoListUiStoreScoped((state) => state.openShareModal);
+  const closeShareModal = useTodoListUiStoreScoped((state) => state.closeShareModal);
+  const toggleShareUser = useTodoListUiStoreScoped((state) => state.toggleShareUser);
+  const setShareRecipientEmails = useTodoListUiStoreScoped((state) => state.setShareRecipientEmails);
+  const setShareActionError = useTodoListUiStoreScoped((state) => state.setShareActionError);
 
   const {
     dashboards,
@@ -144,28 +151,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     });
   };
 
-  const openShareModal = (dashboard: Dashboard) => {
-    setShareDashboardId(dashboard.id);
-    setShareSelectedUserIds(dashboard.sharedWith ?? []);
-    setShareRecipientEmails((dashboard.sharedWithEmails ?? []).join(', '));
-    setShareActionError('');
-  };
-
-  const closeShareModal = () => {
-    setShareDashboardId(null);
-    setShareSelectedUserIds([]);
-    setShareRecipientEmails('');
-    setShareActionError('');
-  };
-
-  const toggleShareUser = (targetUserId: string) => {
-    setShareSelectedUserIds((prev) =>
-      prev.includes(targetUserId)
-        ? prev.filter((userIdItem) => userIdItem !== targetUserId)
-        : [...prev, targetUserId]
-    );
-  };
-
   const handleSaveShare = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!shareDashboardTarget) return;
@@ -226,66 +211,81 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
       )}
 
       <CreateDashboardModal
-        open={controller.isCreateDashboardModalOpen}
-        dashboardName={controller.dashboardName}
-        columnDraft={controller.columnDraft}
-        dashboardColumns={controller.dashboardColumns}
-        formError={controller.dashboardFormError}
-        onClose={() => controller.setIsCreateDashboardModalOpen(false)}
-        onDashboardNameChange={controller.setDashboardName}
-        onColumnDraftChange={controller.setColumnDraft}
-        onAddColumn={controller.addColumnToDraft}
-        onSubmit={controller.handleCreateDashboard}
+        state={{
+          open: controller.isCreateDashboardModalOpen,
+          dashboardName: controller.dashboardName,
+          columnDraft: controller.columnDraft,
+          dashboardColumns: controller.dashboardColumns,
+          formError: controller.dashboardFormError,
+        }}
+        actions={{
+          onClose: () => controller.setIsCreateDashboardModalOpen(false),
+          onDashboardNameChange: controller.setDashboardName,
+          onColumnDraftChange: controller.setColumnDraft,
+          onAddColumn: controller.addColumnToDraft,
+          onSubmit: controller.handleCreateDashboard,
+        }}
       />
 
       <CreateCardModal
-        open={controller.isCreateModalOpen}
-        title={controller.title}
-        description={controller.description}
-        onClose={() => {
-          controller.setIsCreateModalOpen(false);
-          controller.setCreateCardDashboardId(null);
-          controller.setCreateCardColumnId(null);
+        state={{
+          open: controller.isCreateModalOpen,
+          title: controller.title,
+          description: controller.description,
         }}
-        onTitleChange={controller.setTitle}
-        onDescriptionChange={controller.setDescription}
-        onSubmit={controller.handleAddTodo}
+        actions={{
+          onClose: () => {
+            controller.setIsCreateModalOpen(false);
+            controller.setCreateCardDashboardId(null);
+            controller.setCreateCardColumnId(null);
+          },
+          onTitleChange: controller.setTitle,
+          onDescriptionChange: controller.setDescription,
+          onSubmit: controller.handleAddTodo,
+        }}
       />
 
       <EditDashboardModal
-        open={controller.isEditDashboardModalOpen}
-        dashboardName={controller.editingDashboardName}
-        columns={controller.editingDashboardColumns}
-        columnDraft={controller.editingColumnDraft}
-        actionError={controller.dashboardActionError}
-        onClose={() => controller.setIsEditDashboardModalOpen(false)}
-        onDashboardNameChange={controller.setEditingDashboardName}
-        onColumnDraftChange={controller.setEditingColumnDraft}
-        onAddColumn={controller.addColumnToEditDraft}
-        onRemoveColumn={(columnId) =>
-          controller.setEditingDashboardColumns((prev) => prev.filter((item) => item.id !== columnId))
-        }
-        onColumnNameChange={(columnId, value) => {
-          controller.setEditingDashboardColumns((prev) =>
-            prev.map((item) => (item.id === columnId ? { ...item, name: value } : item))
-          );
+        state={{
+          open: controller.isEditDashboardModalOpen,
+          dashboardName: controller.editingDashboardName,
+          columns: controller.editingDashboardColumns,
+          columnDraft: controller.editingColumnDraft,
+          actionError: controller.dashboardActionError,
         }}
-        onSubmit={controller.handleSaveDashboardEdit}
+        actions={{
+          onClose: () => controller.setIsEditDashboardModalOpen(false),
+          onDashboardNameChange: controller.setEditingDashboardName,
+          onColumnDraftChange: controller.setEditingColumnDraft,
+          onAddColumn: controller.addColumnToEditDraft,
+          onRemoveColumn: (columnId) =>
+            controller.setEditingDashboardColumns((prev) => prev.filter((item) => item.id !== columnId)),
+          onColumnNameChange: (columnId, value) => {
+            controller.setEditingDashboardColumns((prev) =>
+              prev.map((item) => (item.id === columnId ? { ...item, name: value } : item))
+            );
+          },
+          onSubmit: controller.handleSaveDashboardEdit,
+        }}
       />
 
       <ShareDashboardModal
-        open={shareDashboardTarget != null}
-        dashboardName={shareDashboardTarget?.name ?? ''}
-        users={users}
-        selectedUserIds={shareSelectedUserIds}
-        recipientEmails={shareRecipientEmails}
-        loadingUsers={usersLoading}
-        usersError={usersError}
-        actionError={shareActionError}
-        onClose={closeShareModal}
-        onToggleUser={toggleShareUser}
-        onRecipientEmailsChange={setShareRecipientEmails}
-        onSubmit={handleSaveShare}
+        state={{
+          open: shareDashboardTarget != null,
+          dashboardName: shareDashboardTarget?.name ?? '',
+          users,
+          selectedUserIds: shareSelectedUserIds,
+          recipientEmails: shareRecipientEmails,
+          loadingUsers: usersLoading,
+          usersError,
+          actionError: shareActionError,
+        }}
+        actions={{
+          onClose: closeShareModal,
+          onToggleUser: toggleShareUser,
+          onRecipientEmailsChange: setShareRecipientEmails,
+          onSubmit: handleSaveShare,
+        }}
       />
 
       {viewMode === 'dashboards' ? (
@@ -372,92 +372,95 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               dashboardsLength={dashboards.length}
               columns={columns}
               groupedTodos={groupedTodos}
-              editingTodoId={controller.editingTodoId}
-              editingTitle={controller.editingTitle}
-              editingDescription={controller.editingDescription}
-              dragState={controller.dragState}
-              dropTarget={controller.dropTarget}
+              interactionState={{
+                editingTodoId: controller.editingTodoId,
+                editingTitle: controller.editingTitle,
+                editingDescription: controller.editingDescription,
+                dragState: controller.dragState,
+                dropTarget: controller.dropTarget,
+              }}
               canManageDashboard={dashboard.userId === userId}
-              onToggle={(dashboardId) => {
-                const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
+              actions={{
+                onToggle: (dashboardId) => {
+                  const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
 
-                setActiveDashboardId(nextDashboardId);
-                updateSearch((nextParams) => {
-                  if (nextDashboardId) {
-                    nextParams.set('dashboard', nextDashboardId);
-                  } else {
-                    nextParams.delete('dashboard');
-                    nextParams.delete('card');
-                  }
-                });
-              }}
-              onDashboardDragStart={() => {
-                if (dashboard.userId !== userId) return;
-                controller.setDashboardDragId(dashboard.id);
-                const sourceIndex = manageableIndexById.get(dashboard.id);
-                controller.setDashboardDropIndex(sourceIndex ?? index);
-                setDashboardHoverId(dashboard.id);
-              }}
-              onDashboardDragOver={(event) => {
-                event.preventDefault();
-                if (dashboard.userId !== userId) return;
-                if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
+                  setActiveDashboardId(nextDashboardId);
+                  updateSearch((nextParams) => {
+                    if (nextDashboardId) {
+                      nextParams.set('dashboard', nextDashboardId);
+                    } else {
+                      nextParams.delete('dashboard');
+                      nextParams.delete('card');
+                    }
+                  });
+                },
+                onDashboardDragStart: () => {
+                  if (dashboard.userId !== userId) return;
+                  controller.setDashboardDragId(dashboard.id);
+                  const sourceIndex = manageableIndexById.get(dashboard.id);
+                  controller.setDashboardDropIndex(sourceIndex ?? index);
+                  setDashboardHoverId(dashboard.id);
+                },
+                onDashboardDragOver: (event) => {
+                  event.preventDefault();
+                  if (dashboard.userId !== userId) return;
+                  if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
 
-                const sourceIndex = manageableIndexById.get(controller.dashboardDragId);
-                const targetIndex = manageableIndexById.get(dashboard.id);
-                if (sourceIndex == null || targetIndex == null) return;
+                  const sourceIndex = manageableIndexById.get(controller.dashboardDragId);
+                  const targetIndex = manageableIndexById.get(dashboard.id);
+                  if (sourceIndex == null || targetIndex == null) return;
 
-                const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
-                controller.setDashboardDropIndex(nextIndex);
-                setDashboardHoverId(dashboard.id);
-              }}
-              onDashboardDrop={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (dashboard.userId !== userId) return;
-                const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-                const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
-                if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
+                  const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
+                  controller.setDashboardDropIndex(nextIndex);
+                  setDashboardHoverId(dashboard.id);
+                },
+                onDashboardDrop: (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  if (dashboard.userId !== userId) return;
+                  const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
+                  const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
+                  if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
 
-                const sourceIndex = manageableIndexById.get(activeDragId);
-                const targetIndex = manageableIndexById.get(dashboard.id);
-                if (sourceIndex == null || targetIndex == null) return;
+                  const sourceIndex = manageableIndexById.get(activeDragId);
+                  const targetIndex = manageableIndexById.get(dashboard.id);
+                  if (sourceIndex == null || targetIndex == null) return;
 
-                const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
-                void controller.handleDashboardDrop(nextIndex, draggedDashboardId, manageableDashboardIds);
+                  const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
+                  void controller.handleDashboardDrop(nextIndex, draggedDashboardId, manageableDashboardIds);
+                },
+                onOpenEditDashboard: controller.openEditDashboard,
+                onDeleteDashboard: (dashboardId, dashboardName) =>
+                  void controller.handleDeleteDashboard(dashboardId, dashboardName),
+                onOpenShareDashboard: (dashboardId) => {
+                  const nextDashboard = dashboards.find((item) => item.id === dashboardId);
+                  if (!nextDashboard || nextDashboard.userId !== userId) return;
+                  openShareModal(nextDashboard);
+                },
+                onOpenCreateCard: (dashboardId, columnId) => {
+                  setActiveDashboardId(dashboardId);
+                  updateSearch((nextParams) => {
+                    nextParams.set('dashboard', dashboardId);
+                  });
+                  controller.setCreateCardDashboardId(dashboardId);
+                  controller.setCreateCardColumnId(columnId);
+                  controller.setIsCreateModalOpen(true);
+                },
+                onMoveTodo: controller.handleMoveTodo,
+                onSetDragState: controller.setDragState,
+                onSetDropTarget: controller.setDropTarget,
+                onOpenTodoModal: (todo) => {
+                  openTodoByLink(todo.id, todo.boardId);
+                },
+                onCancelEdit: controller.cancelEdit,
+                onSaveEdit: (todoId) => void controller.handleSaveEdit(todoId),
+                onEditTitleChange: controller.setEditingTitle,
+                onEditDescriptionChange: controller.setEditingDescription,
+                onEditKeyDown: controller.handleEditKeyDown,
+                onMenuEdit: (todo) => controller.startEdit(todo),
+                onMenuArchive: (todoId) => void controller.handleArchiveTodo(todoId),
+                onMenuDelete: (todoId) => void controller.handleDeleteTodo(todoId),
               }}
-              onOpenEditDashboard={controller.openEditDashboard}
-              onDeleteDashboard={(dashboardId, dashboardName) =>
-                void controller.handleDeleteDashboard(dashboardId, dashboardName)
-              }
-              onOpenShareDashboard={(dashboardId) => {
-                const nextDashboard = dashboards.find((item) => item.id === dashboardId);
-                if (!nextDashboard || nextDashboard.userId !== userId) return;
-                openShareModal(nextDashboard);
-              }}
-              onOpenCreateCard={(dashboardId, columnId) => {
-                setActiveDashboardId(dashboardId);
-                updateSearch((nextParams) => {
-                  nextParams.set('dashboard', dashboardId);
-                });
-                controller.setCreateCardDashboardId(dashboardId);
-                controller.setCreateCardColumnId(columnId);
-                controller.setIsCreateModalOpen(true);
-              }}
-              onMoveTodo={controller.handleMoveTodo}
-              onSetDragState={controller.setDragState}
-              onSetDropTarget={controller.setDropTarget}
-              onOpenTodoModal={(todo) => {
-                openTodoByLink(todo.id, todo.boardId);
-              }}
-              onCancelEdit={controller.cancelEdit}
-              onSaveEdit={(todoId) => void controller.handleSaveEdit(todoId)}
-              onEditTitleChange={controller.setEditingTitle}
-              onEditDescriptionChange={controller.setEditingDescription}
-              onEditKeyDown={controller.handleEditKeyDown}
-              onMenuEdit={(todo) => controller.startEdit(todo)}
-              onMenuArchive={(todoId) => void controller.handleArchiveTodo(todoId)}
-              onMenuDelete={(todoId) => void controller.handleDeleteTodo(todoId)}
             />
           ))}
         </div>
@@ -542,3 +545,9 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     </div>
   );
 };
+
+export const TodoList = (props: TodoListProps) => (
+  <TodoListStoresProvider>
+    <TodoListContent {...props} />
+  </TodoListStoresProvider>
+);

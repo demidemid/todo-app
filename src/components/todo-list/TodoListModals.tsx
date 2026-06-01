@@ -5,41 +5,82 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 
 interface CreateDashboardModalProps {
-  open: boolean;
-  dashboardName: string;
-  columnDraft: string;
-  dashboardColumns: string[];
-  formError: string;
-  onClose: () => void;
-  onDashboardNameChange: (value: string) => void;
-  onColumnDraftChange: (value: string) => void;
-  onAddColumn: () => void;
-  onSubmit: (event: React.FormEvent) => void;
+  state?: {
+    open: boolean;
+    dashboardName: string;
+    columnDraft: string;
+    dashboardColumns: string[];
+    formError: string;
+  };
+  actions?: {
+    onClose: () => void;
+    onDashboardNameChange: (value: string) => void;
+    onColumnDraftChange: (value: string) => void;
+    onAddColumn: () => void;
+    onSubmit: (event: React.FormEvent) => void;
+  };
+  open?: boolean;
+  dashboardName?: string;
+  columnDraft?: string;
+  dashboardColumns?: string[];
+  formError?: string;
+  onClose?: () => void;
+  onDashboardNameChange?: (value: string) => void;
+  onColumnDraftChange?: (value: string) => void;
+  onAddColumn?: () => void;
+  onSubmit?: (event: React.FormEvent) => void;
 }
 
 interface CreateCardModalProps {
-  open: boolean;
-  title: string;
-  description: string;
-  onClose: () => void;
-  onTitleChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
+  state?: {
+    open: boolean;
+    title: string;
+    description: string;
+  };
+  actions?: {
+    onClose: () => void;
+    onTitleChange: (value: string) => void;
+    onDescriptionChange: (value: string) => void;
+    onSubmit: (event: React.FormEvent) => void;
+  };
+  open?: boolean;
+  title?: string;
+  description?: string;
+  onClose?: () => void;
+  onTitleChange?: (value: string) => void;
+  onDescriptionChange?: (value: string) => void;
+  onSubmit?: (event: React.FormEvent) => void;
 }
 
 interface EditDashboardModalProps {
-  open: boolean;
-  dashboardName: string;
-  columns: DashboardColumn[];
-  columnDraft: string;
-  actionError: string;
-  onClose: () => void;
-  onDashboardNameChange: (value: string) => void;
-  onColumnDraftChange: (value: string) => void;
-  onAddColumn: () => void;
-  onRemoveColumn: (columnId: string) => void;
-  onColumnNameChange: (columnId: string, value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
+  state?: {
+    open: boolean;
+    dashboardName: string;
+    columns: DashboardColumn[];
+    columnDraft: string;
+    actionError: string;
+  };
+  actions?: {
+    onClose: () => void;
+    onDashboardNameChange: (value: string) => void;
+    onColumnDraftChange: (value: string) => void;
+    onAddColumn: () => void;
+    onRemoveColumn: (columnId: string) => void;
+    onColumnNameChange: (columnId: string, value: string) => void;
+    onSubmit: (event: React.FormEvent) => void;
+  };
+  open?: boolean;
+  dashboardName?: string;
+  columns?: DashboardColumn[];
+  columnDraft?: string;
+  actionError?: string;
+  onClose?: () => void;
+  onDashboardNameChange?: (value: string) => void;
+  onColumnDraftChange?: (value: string) => void;
+  onAddColumn?: () => void;
+  onRemoveColumn?: (columnId: string) => void;
+  onColumnNameChange?: (columnId: string, value: string) => void;
+  onSubmit?: (event: React.FormEvent) => void;
 }
 
 interface ShareTargetUser {
@@ -48,32 +89,69 @@ interface ShareTargetUser {
 }
 
 interface ShareDashboardModalProps {
-  open: boolean;
-  dashboardName: string;
-  users: ShareTargetUser[];
-  selectedUserIds: string[];
-  recipientEmails: string;
-  loadingUsers: boolean;
-  usersError: string | null;
-  actionError: string;
-  onClose: () => void;
-  onToggleUser: (userId: string) => void;
-  onRecipientEmailsChange: (value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
+  state?: {
+    open: boolean;
+    dashboardName: string;
+    users: ShareTargetUser[];
+    selectedUserIds: string[];
+    recipientEmails: string;
+    loadingUsers: boolean;
+    usersError: string | null;
+    actionError: string;
+  };
+  actions?: {
+    onClose: () => void;
+    onToggleUser: (userId: string) => void;
+    onRecipientEmailsChange: (value: string) => void;
+    onSubmit: (event: React.FormEvent) => void;
+  };
+  open?: boolean;
+  dashboardName?: string;
+  users?: ShareTargetUser[];
+  selectedUserIds?: string[];
+  recipientEmails?: string;
+  loadingUsers?: boolean;
+  usersError?: string | null;
+  actionError?: string;
+  onClose?: () => void;
+  onToggleUser?: (userId: string) => void;
+  onRecipientEmailsChange?: (value: string) => void;
+  onSubmit?: (event: React.FormEvent) => void;
 }
 
 export const CreateDashboardModal = ({
-  open,
-  dashboardName,
-  columnDraft,
-  dashboardColumns,
-  formError,
-  onClose,
-  onDashboardNameChange,
-  onColumnDraftChange,
-  onAddColumn,
-  onSubmit,
+  state,
+  actions,
+  open: legacyOpen,
+  dashboardName: legacyDashboardName,
+  columnDraft: legacyColumnDraft,
+  dashboardColumns: legacyDashboardColumns,
+  formError: legacyFormError,
+  onClose: legacyOnClose,
+  onDashboardNameChange: legacyOnDashboardNameChange,
+  onColumnDraftChange: legacyOnColumnDraftChange,
+  onAddColumn: legacyOnAddColumn,
+  onSubmit: legacyOnSubmit,
 }: CreateDashboardModalProps) => {
+  const resolvedState = state ?? {
+    open: legacyOpen ?? false,
+    dashboardName: legacyDashboardName ?? '',
+    columnDraft: legacyColumnDraft ?? '',
+    dashboardColumns: legacyDashboardColumns ?? [],
+    formError: legacyFormError ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onClose: legacyOnClose ?? (() => {}),
+    onDashboardNameChange: legacyOnDashboardNameChange ?? (() => {}),
+    onColumnDraftChange: legacyOnColumnDraftChange ?? (() => {}),
+    onAddColumn: legacyOnAddColumn ?? (() => {}),
+    onSubmit: legacyOnSubmit ?? (() => {}),
+  };
+
+  const { open, dashboardName, columnDraft, dashboardColumns, formError } = resolvedState;
+  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onSubmit } = resolvedActions;
+
   if (!open) return null;
 
   return (
@@ -142,14 +220,32 @@ export const CreateDashboardModal = ({
 };
 
 export const CreateCardModal = ({
-  open,
-  title,
-  description,
-  onClose,
-  onTitleChange,
-  onDescriptionChange,
-  onSubmit,
+  state,
+  actions,
+  open: legacyOpen,
+  title: legacyTitle,
+  description: legacyDescription,
+  onClose: legacyOnClose,
+  onTitleChange: legacyOnTitleChange,
+  onDescriptionChange: legacyOnDescriptionChange,
+  onSubmit: legacyOnSubmit,
 }: CreateCardModalProps) => {
+  const resolvedState = state ?? {
+    open: legacyOpen ?? false,
+    title: legacyTitle ?? '',
+    description: legacyDescription ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onClose: legacyOnClose ?? (() => {}),
+    onTitleChange: legacyOnTitleChange ?? (() => {}),
+    onDescriptionChange: legacyOnDescriptionChange ?? (() => {}),
+    onSubmit: legacyOnSubmit ?? (() => {}),
+  };
+
+  const { open, title, description } = resolvedState;
+  const { onClose, onTitleChange, onDescriptionChange, onSubmit } = resolvedActions;
+
   if (!open) return null;
 
   return (
@@ -200,19 +296,42 @@ export const CreateCardModal = ({
 };
 
 export const EditDashboardModal = ({
-  open,
-  dashboardName,
-  columns,
-  columnDraft,
-  actionError,
-  onClose,
-  onDashboardNameChange,
-  onColumnDraftChange,
-  onAddColumn,
-  onRemoveColumn,
-  onColumnNameChange,
-  onSubmit,
+  state,
+  actions,
+  open: legacyOpen,
+  dashboardName: legacyDashboardName,
+  columns: legacyColumns,
+  columnDraft: legacyColumnDraft,
+  actionError: legacyActionError,
+  onClose: legacyOnClose,
+  onDashboardNameChange: legacyOnDashboardNameChange,
+  onColumnDraftChange: legacyOnColumnDraftChange,
+  onAddColumn: legacyOnAddColumn,
+  onRemoveColumn: legacyOnRemoveColumn,
+  onColumnNameChange: legacyOnColumnNameChange,
+  onSubmit: legacyOnSubmit,
 }: EditDashboardModalProps) => {
+  const resolvedState = state ?? {
+    open: legacyOpen ?? false,
+    dashboardName: legacyDashboardName ?? '',
+    columns: legacyColumns ?? [],
+    columnDraft: legacyColumnDraft ?? '',
+    actionError: legacyActionError ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onClose: legacyOnClose ?? (() => {}),
+    onDashboardNameChange: legacyOnDashboardNameChange ?? (() => {}),
+    onColumnDraftChange: legacyOnColumnDraftChange ?? (() => {}),
+    onAddColumn: legacyOnAddColumn ?? (() => {}),
+    onRemoveColumn: legacyOnRemoveColumn ?? (() => {}),
+    onColumnNameChange: legacyOnColumnNameChange ?? (() => {}),
+    onSubmit: legacyOnSubmit ?? (() => {}),
+  };
+
+  const { open, dashboardName, columns, columnDraft, actionError } = resolvedState;
+  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onRemoveColumn, onColumnNameChange, onSubmit } = resolvedActions;
+
   if (!open) return null;
 
   return (
@@ -282,19 +401,51 @@ export const EditDashboardModal = ({
 };
 
 export const ShareDashboardModal = ({
-  open,
-  dashboardName,
-  users,
-  selectedUserIds,
-  recipientEmails,
-  loadingUsers,
-  usersError,
-  actionError,
-  onClose,
-  onToggleUser,
-  onRecipientEmailsChange,
-  onSubmit,
+  state,
+  actions,
+  open: legacyOpen,
+  dashboardName: legacyDashboardName,
+  users: legacyUsers,
+  selectedUserIds: legacySelectedUserIds,
+  recipientEmails: legacyRecipientEmails,
+  loadingUsers: legacyLoadingUsers,
+  usersError: legacyUsersError,
+  actionError: legacyActionError,
+  onClose: legacyOnClose,
+  onToggleUser: legacyOnToggleUser,
+  onRecipientEmailsChange: legacyOnRecipientEmailsChange,
+  onSubmit: legacyOnSubmit,
 }: ShareDashboardModalProps) => {
+  const resolvedState = state ?? {
+    open: legacyOpen ?? false,
+    dashboardName: legacyDashboardName ?? '',
+    users: legacyUsers ?? [],
+    selectedUserIds: legacySelectedUserIds ?? [],
+    recipientEmails: legacyRecipientEmails ?? '',
+    loadingUsers: legacyLoadingUsers ?? false,
+    usersError: legacyUsersError ?? null,
+    actionError: legacyActionError ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onClose: legacyOnClose ?? (() => {}),
+    onToggleUser: legacyOnToggleUser ?? (() => {}),
+    onRecipientEmailsChange: legacyOnRecipientEmailsChange ?? (() => {}),
+    onSubmit: legacyOnSubmit ?? (() => {}),
+  };
+
+  const {
+    open,
+    dashboardName,
+    users,
+    selectedUserIds,
+    recipientEmails,
+    loadingUsers,
+    usersError,
+    actionError,
+  } = resolvedState;
+  const { onClose, onToggleUser, onRecipientEmailsChange, onSubmit } = resolvedActions;
+
   if (!open) return null;
 
   const selectedCount = selectedUserIds.length;

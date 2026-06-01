@@ -38,44 +38,113 @@ function linkifyText(text: string): ReactNode[] {
 }
 
 interface TodoModalCommentsPanelProps {
-  currentUserId: string;
-  comments: Comment[];
-  commentsLoading: boolean;
-  commentsError: string | null;
-  commentText: string;
-  commentSubmitting: boolean;
-  editingCommentId: string | null;
-  editingCommentText: string;
-  commentActionSubmittingId: string | null;
-  commentError: string;
-  onCommentTextChange: (value: string) => void;
-  onSubmit: (event: FormEvent) => void;
-  onStartEditComment: (commentId: string, text: string) => void;
-  onCancelEditComment: () => void;
-  onEditCommentTextChange: (value: string) => void;
-  onSaveEditComment: () => void;
-  onDeleteComment: (commentId: string) => void;
+  state?: {
+    currentUserId: string;
+    comments: Comment[];
+    commentsLoading: boolean;
+    commentsError: string | null;
+    commentText: string;
+    commentSubmitting: boolean;
+    editingCommentId: string | null;
+    editingCommentText: string;
+    commentActionSubmittingId: string | null;
+    commentError: string;
+  };
+  actions?: {
+    onCommentTextChange: (value: string) => void;
+    onSubmit: (event: FormEvent) => void;
+    onStartEditComment: (commentId: string, text: string) => void;
+    onCancelEditComment: () => void;
+    onEditCommentTextChange: (value: string) => void;
+    onSaveEditComment: () => void;
+    onDeleteComment: (commentId: string) => void;
+  };
+  currentUserId?: string;
+  comments?: Comment[];
+  commentsLoading?: boolean;
+  commentsError?: string | null;
+  commentText?: string;
+  commentSubmitting?: boolean;
+  editingCommentId?: string | null;
+  editingCommentText?: string;
+  commentActionSubmittingId?: string | null;
+  commentError?: string;
+  onCommentTextChange?: (value: string) => void;
+  onSubmit?: (event: FormEvent) => void;
+  onStartEditComment?: (commentId: string, text: string) => void;
+  onCancelEditComment?: () => void;
+  onEditCommentTextChange?: (value: string) => void;
+  onSaveEditComment?: () => void;
+  onDeleteComment?: (commentId: string) => void;
 }
 
 export const TodoModalCommentsPanel = ({
-  currentUserId,
-  comments,
-  commentsLoading,
-  commentsError,
-  commentText,
-  commentSubmitting,
-  editingCommentId,
-  editingCommentText,
-  commentActionSubmittingId,
-  commentError,
-  onCommentTextChange,
-  onSubmit,
-  onStartEditComment,
-  onCancelEditComment,
-  onEditCommentTextChange,
-  onSaveEditComment,
-  onDeleteComment,
+  state,
+  actions,
+  currentUserId: legacyCurrentUserId,
+  comments: legacyComments,
+  commentsLoading: legacyCommentsLoading,
+  commentsError: legacyCommentsError,
+  commentText: legacyCommentText,
+  commentSubmitting: legacyCommentSubmitting,
+  editingCommentId: legacyEditingCommentId,
+  editingCommentText: legacyEditingCommentText,
+  commentActionSubmittingId: legacyCommentActionSubmittingId,
+  commentError: legacyCommentError,
+  onCommentTextChange: legacyOnCommentTextChange,
+  onSubmit: legacyOnSubmit,
+  onStartEditComment: legacyOnStartEditComment,
+  onCancelEditComment: legacyOnCancelEditComment,
+  onEditCommentTextChange: legacyOnEditCommentTextChange,
+  onSaveEditComment: legacyOnSaveEditComment,
+  onDeleteComment: legacyOnDeleteComment,
 }: TodoModalCommentsPanelProps) => {
+  const resolvedState = state ?? {
+    currentUserId: legacyCurrentUserId ?? '',
+    comments: legacyComments ?? [],
+    commentsLoading: legacyCommentsLoading ?? false,
+    commentsError: legacyCommentsError ?? null,
+    commentText: legacyCommentText ?? '',
+    commentSubmitting: legacyCommentSubmitting ?? false,
+    editingCommentId: legacyEditingCommentId ?? null,
+    editingCommentText: legacyEditingCommentText ?? '',
+    commentActionSubmittingId: legacyCommentActionSubmittingId ?? null,
+    commentError: legacyCommentError ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onCommentTextChange: legacyOnCommentTextChange ?? (() => {}),
+    onSubmit: legacyOnSubmit ?? (() => {}),
+    onStartEditComment: legacyOnStartEditComment ?? (() => {}),
+    onCancelEditComment: legacyOnCancelEditComment ?? (() => {}),
+    onEditCommentTextChange: legacyOnEditCommentTextChange ?? (() => {}),
+    onSaveEditComment: legacyOnSaveEditComment ?? (() => {}),
+    onDeleteComment: legacyOnDeleteComment ?? (() => {}),
+  };
+
+  const {
+    currentUserId,
+    comments,
+    commentsLoading,
+    commentsError,
+    commentText,
+    commentSubmitting,
+    editingCommentId,
+    editingCommentText,
+    commentActionSubmittingId,
+    commentError,
+  } = resolvedState;
+
+  const {
+    onCommentTextChange,
+    onSubmit,
+    onStartEditComment,
+    onCancelEditComment,
+    onEditCommentTextChange,
+    onSaveEditComment,
+    onDeleteComment,
+  } = resolvedActions;
+
   return (
     <div className="mt-8 min-h-0 w-full shrink-0 overflow-y-auto border-l border-white/10 pl-0 pr-1 md:mt-0 md:w-80 md:pl-6">
       <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>

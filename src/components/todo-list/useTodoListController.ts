@@ -1,15 +1,14 @@
-import { useState } from 'react';
+import { useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
-
-interface DragState {
-  todoId: string;
-}
-
-interface DropTarget {
-  columnId: string;
-  index: number;
-}
+import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
+import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
+import {
+  useHasTodoListStoresProvider,
+  useTodoListControllerStoreScoped,
+  useTodoListDndStoreScoped,
+} from '../../stores/todoListStoresContext';
 
 interface UseTodoListControllerArgs {
   todos: Todo[];
@@ -57,40 +56,76 @@ export const useTodoListController = ({
   deleteDashboard,
   reorderDashboards,
 }: UseTodoListControllerArgs) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createCardDashboardId, setCreateCardDashboardId] = useState<string | null>(null);
-  const [createCardColumnId, setCreateCardColumnId] = useState<string | null>(null);
-  const [isCreateDashboardModalOpen, setIsCreateDashboardModalOpen] = useState(false);
-  const [dashboardName, setDashboardName] = useState('');
-  const [columnDraft, setColumnDraft] = useState('');
-  const [dashboardColumns, setDashboardColumns] = useState<string[]>([]);
-  const [dashboardFormError, setDashboardFormError] = useState('');
-  const [dashboardActionError, setDashboardActionError] = useState('');
-  const [isEditDashboardModalOpen, setIsEditDashboardModalOpen] = useState(false);
-  const [editingDashboardId, setEditingDashboardId] = useState<string | null>(null);
-  const [editingDashboardName, setEditingDashboardName] = useState('');
-  const [editingDashboardColumns, setEditingDashboardColumns] = useState<DashboardColumn[]>([]);
-  const [editingColumnDraft, setEditingColumnDraft] = useState('');
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
-  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
-  const [editingTitle, setEditingTitle] = useState('');
-  const [editingDescription, setEditingDescription] = useState('');
-  const [modalTodo, setModalTodo] = useState<Todo | null>(null);
-  const [dashboardDragId, setDashboardDragId] = useState<string | null>(null);
-  const [dashboardDropIndex, setDashboardDropIndex] = useState<number | null>(null);
+  const hasScopedStores = useHasTodoListStoresProvider();
+  const didInitFallbackRef = useRef(false);
+
+  if (!hasScopedStores && !didInitFallbackRef.current) {
+    useTodoListControllerStore.getState().resetControllerUiState();
+    useTodoListDndStore.getState().resetDndState();
+    didInitFallbackRef.current = true;
+  }
+
+  const ui = useTodoListControllerStoreScoped(useShallow((state) => ({
+    title: state.title,
+    description: state.description,
+    isCreateModalOpen: state.isCreateModalOpen,
+    createCardDashboardId: state.createCardDashboardId,
+    createCardColumnId: state.createCardColumnId,
+    isCreateDashboardModalOpen: state.isCreateDashboardModalOpen,
+    dashboardName: state.dashboardName,
+    columnDraft: state.columnDraft,
+    dashboardColumns: state.dashboardColumns,
+    dashboardFormError: state.dashboardFormError,
+    dashboardActionError: state.dashboardActionError,
+    isEditDashboardModalOpen: state.isEditDashboardModalOpen,
+    editingDashboardId: state.editingDashboardId,
+    editingDashboardName: state.editingDashboardName,
+    editingDashboardColumns: state.editingDashboardColumns,
+    editingColumnDraft: state.editingColumnDraft,
+    editingTodoId: state.editingTodoId,
+    editingTitle: state.editingTitle,
+    editingDescription: state.editingDescription,
+    setTitle: state.setTitle,
+    setDescription: state.setDescription,
+    setIsCreateModalOpen: state.setIsCreateModalOpen,
+    setCreateCardDashboardId: state.setCreateCardDashboardId,
+    setCreateCardColumnId: state.setCreateCardColumnId,
+    setIsCreateDashboardModalOpen: state.setIsCreateDashboardModalOpen,
+    setDashboardName: state.setDashboardName,
+    setColumnDraft: state.setColumnDraft,
+    setDashboardColumns: state.setDashboardColumns,
+    setDashboardFormError: state.setDashboardFormError,
+    setDashboardActionError: state.setDashboardActionError,
+    setIsEditDashboardModalOpen: state.setIsEditDashboardModalOpen,
+    setEditingDashboardId: state.setEditingDashboardId,
+    setEditingDashboardName: state.setEditingDashboardName,
+    setEditingDashboardColumns: state.setEditingDashboardColumns,
+    setEditingColumnDraft: state.setEditingColumnDraft,
+    setEditingTodoId: state.setEditingTodoId,
+    setEditingTitle: state.setEditingTitle,
+    setEditingDescription: state.setEditingDescription,
+  })));
+
+  const dnd = useTodoListDndStoreScoped(useShallow((state) => ({
+    dragState: state.dragState,
+    dropTarget: state.dropTarget,
+    dashboardDragId: state.dashboardDragId,
+    dashboardDropIndex: state.dashboardDropIndex,
+    setDragState: state.setDragState,
+    setDropTarget: state.setDropTarget,
+    setDashboardDragId: state.setDashboardDragId,
+    setDashboardDropIndex: state.setDashboardDropIndex,
+  })));
 
   const handleAddTodo = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const normalizedTitle = title.trim();
-    const normalizedDescription = description.trim();
+    const normalizedTitle = ui.title.trim();
+    const normalizedDescription = ui.description.trim();
 
     if (!normalizedTitle) return;
 
-    const targetDashboardId = createCardDashboardId ?? activeDashboard?.id ?? null;
+    const targetDashboardId = ui.createCardDashboardId ?? activeDashboard?.id ?? null;
     if (!targetDashboardId) return;
 
     const targetDashboard = dashboards.find((dashboard) => dashboard.id === targetDashboardId);
@@ -98,8 +133,9 @@ export const useTodoListController = ({
     if (!targetDashboard || targetColumns.length === 0) return;
 
     const hasSelectedColumn =
-      createCardColumnId != null && targetColumns.some((column) => column.id === createCardColumnId);
-    const targetColumnId = hasSelectedColumn ? createCardColumnId : targetColumns[0].id;
+      ui.createCardColumnId != null && targetColumns.some((column) => column.id === ui.createCardColumnId);
+    const targetColumnId = hasSelectedColumn ? (ui.createCardColumnId ?? undefined) : targetColumns[0]?.id;
+    if (!targetColumnId) return;
 
     try {
       await addTodo(
@@ -112,11 +148,11 @@ export const useTodoListController = ({
           columnId: targetColumnId,
         }
       );
-      setTitle('');
-      setDescription('');
-      setIsCreateModalOpen(false);
-      setCreateCardDashboardId(null);
-      setCreateCardColumnId(null);
+      ui.setTitle('');
+      ui.setDescription('');
+      ui.setIsCreateModalOpen(false);
+      ui.setCreateCardDashboardId(null);
+      ui.setCreateCardColumnId(null);
     } catch (error) {
       console.error('Error adding todo:', error);
     }
@@ -185,20 +221,20 @@ export const useTodoListController = ({
   };
 
   const startEdit = (todo: Todo) => {
-    setEditingTodoId(todo.id);
-    setEditingTitle(todo.title);
-    setEditingDescription(todo.description ?? '');
+    ui.setEditingTodoId(todo.id);
+    ui.setEditingTitle(todo.title);
+    ui.setEditingDescription(todo.description ?? '');
   };
 
   const cancelEdit = () => {
-    setEditingTodoId(null);
-    setEditingTitle('');
-    setEditingDescription('');
+    ui.setEditingTodoId(null);
+    ui.setEditingTitle('');
+    ui.setEditingDescription('');
   };
 
   const handleSaveEdit = async (todoId: string) => {
-    const normalizedTitle = editingTitle.trim();
-    const normalizedDescription = editingDescription.trim();
+    const normalizedTitle = ui.editingTitle.trim();
+    const normalizedDescription = ui.editingDescription.trim();
 
     if (!normalizedTitle) {
       return;
@@ -257,29 +293,29 @@ export const useTodoListController = ({
   };
 
   const addColumnToDraft = () => {
-    const normalized = columnDraft.trim();
+    const normalized = ui.columnDraft.trim();
     if (!normalized) return;
-    setDashboardColumns((prev) => [...prev, normalized]);
-    setColumnDraft('');
+    ui.setDashboardColumns((prev) => [...prev, normalized]);
+    ui.setColumnDraft('');
   };
 
   const handleCreateDashboard = async (event: React.FormEvent) => {
     event.preventDefault();
-    setDashboardFormError('');
+    ui.setDashboardFormError('');
 
     try {
-      const extraColumn = columnDraft.trim();
-      const finalColumns = extraColumn ? [...dashboardColumns, extraColumn] : dashboardColumns;
+      const extraColumn = ui.columnDraft.trim();
+      const finalColumns = extraColumn ? [...ui.dashboardColumns, extraColumn] : ui.dashboardColumns;
       if (hasDuplicateColumnNames(finalColumns)) {
         throw new Error('Column names must be unique within a dashboard');
       }
-      await addDashboard(dashboardName, finalColumns);
-      setDashboardName('');
-      setColumnDraft('');
-      setDashboardColumns([]);
-      setIsCreateDashboardModalOpen(false);
+      await addDashboard(ui.dashboardName, finalColumns);
+      ui.setDashboardName('');
+      ui.setColumnDraft('');
+      ui.setDashboardColumns([]);
+      ui.setIsCreateDashboardModalOpen(false);
     } catch (createError) {
-      setDashboardFormError(createError instanceof Error ? createError.message : 'Failed to create dashboard');
+      ui.setDashboardFormError(createError instanceof Error ? createError.message : 'Failed to create dashboard');
     }
   };
 
@@ -287,10 +323,10 @@ export const useTodoListController = ({
     const dashboard = dashboards.find((item) => item.id === dashboardId);
     if (!dashboard) return;
 
-    setDashboardActionError('');
-    setEditingDashboardId(dashboard.id);
-    setEditingDashboardName(dashboard.name);
-    setEditingDashboardColumns(
+    ui.setDashboardActionError('');
+    ui.setEditingDashboardId(dashboard.id);
+    ui.setEditingDashboardName(dashboard.name);
+    ui.setEditingDashboardColumns(
       dashboard.columns.map((column) => ({
         id: column.id,
         name: column.name,
@@ -298,15 +334,15 @@ export const useTodoListController = ({
         isDone: column.isDone,
       }))
     );
-    setEditingColumnDraft('');
-    setIsEditDashboardModalOpen(true);
+    ui.setEditingColumnDraft('');
+    ui.setIsEditDashboardModalOpen(true);
   };
 
   const addColumnToEditDraft = () => {
-    const normalized = editingColumnDraft.trim();
+    const normalized = ui.editingColumnDraft.trim();
     if (!normalized) return;
 
-    setEditingDashboardColumns((prev) => [
+    ui.setEditingDashboardColumns((prev) => [
       ...prev,
       {
         id:
@@ -318,16 +354,16 @@ export const useTodoListController = ({
         isDone: false,
       },
     ]);
-    setEditingColumnDraft('');
+    ui.setEditingColumnDraft('');
   };
 
   const handleSaveDashboardEdit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setDashboardActionError('');
+    ui.setDashboardActionError('');
 
-    if (!editingDashboardId) return;
+    if (!ui.editingDashboardId) return;
 
-    const normalizedColumns = editingDashboardColumns
+    const normalizedColumns = ui.editingDashboardColumns
       .map((column, index) => ({
         ...column,
         name: column.name.trim(),
@@ -336,24 +372,24 @@ export const useTodoListController = ({
       .filter((column) => column.name.length > 0);
 
     if (hasDuplicateColumnNames(normalizedColumns.map((column) => column.name))) {
-      setDashboardActionError('Column names must be unique within a dashboard');
+      ui.setDashboardActionError('Column names must be unique within a dashboard');
       return;
     }
 
     try {
-      await updateDashboard(editingDashboardId, editingDashboardName, normalizedColumns);
-      setIsEditDashboardModalOpen(false);
-      setEditingDashboardId(null);
-      setEditingDashboardName('');
-      setEditingDashboardColumns([]);
-      setEditingColumnDraft('');
+      await updateDashboard(ui.editingDashboardId, ui.editingDashboardName, normalizedColumns);
+      ui.setIsEditDashboardModalOpen(false);
+      ui.setEditingDashboardId(null);
+      ui.setEditingDashboardName('');
+      ui.setEditingDashboardColumns([]);
+      ui.setEditingColumnDraft('');
     } catch (updateError) {
-      setDashboardActionError(updateError instanceof Error ? updateError.message : 'Failed to update dashboard');
+      ui.setDashboardActionError(updateError instanceof Error ? updateError.message : 'Failed to update dashboard');
     }
   };
 
   const handleDeleteDashboard = async (dashboardId: string, dashboardName: string) => {
-    setDashboardActionError('');
+    ui.setDashboardActionError('');
 
     const confirmed = window.confirm(`Delete dashboard "${dashboardName}"? Cards will be moved to another dashboard.`);
     if (!confirmed) return;
@@ -361,7 +397,7 @@ export const useTodoListController = ({
     try {
       await deleteDashboard(dashboardId);
     } catch (deleteError) {
-      setDashboardActionError(deleteError instanceof Error ? deleteError.message : 'Failed to delete dashboard');
+      ui.setDashboardActionError(deleteError instanceof Error ? deleteError.message : 'Failed to delete dashboard');
     }
   };
 
@@ -370,7 +406,7 @@ export const useTodoListController = ({
     draggedDashboardId?: string,
     reorderableDashboardIds?: string[]
   ) => {
-    const activeDragId = draggedDashboardId ?? dashboardDragId;
+    const activeDragId = draggedDashboardId ?? dnd.dashboardDragId;
     if (!activeDragId) return;
 
     const reorderableIdSet = reorderableDashboardIds ? new Set(reorderableDashboardIds) : null;
@@ -380,8 +416,8 @@ export const useTodoListController = ({
 
     const sourceIndex = reorderableDashboards.findIndex((dashboard) => dashboard.id === activeDragId);
     if (sourceIndex < 0) {
-      setDashboardDragId(null);
-      setDashboardDropIndex(null);
+      dnd.setDashboardDragId(null);
+      dnd.setDashboardDropIndex(null);
       return;
     }
 
@@ -392,62 +428,21 @@ export const useTodoListController = ({
     const insertIndex = sourceIndex < normalizedTargetIndex ? normalizedTargetIndex - 1 : normalizedTargetIndex;
     nextDashboards.splice(insertIndex, 0, movedDashboard);
 
-    setDashboardDragId(null);
-    setDashboardDropIndex(null);
+    dnd.setDashboardDragId(null);
+    dnd.setDashboardDropIndex(null);
 
     if (insertIndex === sourceIndex) return;
 
     try {
       await reorderDashboards(nextDashboards.map((dashboard) => dashboard.id));
     } catch (error) {
-      setDashboardActionError(error instanceof Error ? error.message : 'Failed to reorder dashboards');
+      ui.setDashboardActionError(error instanceof Error ? error.message : 'Failed to reorder dashboards');
     }
   };
 
   return {
-    title,
-    setTitle,
-    description,
-    setDescription,
-    isCreateModalOpen,
-    setIsCreateModalOpen,
-    createCardDashboardId,
-    setCreateCardDashboardId,
-    createCardColumnId,
-    setCreateCardColumnId,
-    isCreateDashboardModalOpen,
-    setIsCreateDashboardModalOpen,
-    dashboardName,
-    setDashboardName,
-    columnDraft,
-    setColumnDraft,
-    dashboardColumns,
-    dashboardFormError,
-    dashboardActionError,
-    isEditDashboardModalOpen,
-    setIsEditDashboardModalOpen,
-    editingDashboardId,
-    editingDashboardName,
-    setEditingDashboardName,
-    editingDashboardColumns,
-    setEditingDashboardColumns,
-    editingColumnDraft,
-    setEditingColumnDraft,
-    dragState,
-    setDragState,
-    dropTarget,
-    setDropTarget,
-    editingTodoId,
-    editingTitle,
-    setEditingTitle,
-    editingDescription,
-    setEditingDescription,
-    modalTodo,
-    setModalTodo,
-    dashboardDragId,
-    setDashboardDragId,
-    dashboardDropIndex,
-    setDashboardDropIndex,
+    ...ui,
+    ...dnd,
     handleAddTodo,
     handleMoveTodo,
     startEdit,
