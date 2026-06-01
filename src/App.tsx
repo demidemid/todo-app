@@ -99,7 +99,7 @@ function App() {
           {user ? (
             <div
               className="inline-flex items-center rounded-full border border-white/15 bg-slate-950/60 p-1"
-              role="tablist"
+              role="group"
               aria-label="Main sections"
             >
               <button
