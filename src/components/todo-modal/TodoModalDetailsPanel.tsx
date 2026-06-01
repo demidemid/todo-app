@@ -286,14 +286,14 @@ export const TodoModalDetailsPanel = ({
                   </button>
                   {isLinksFormOpen && (
                     <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
-                      <input
+                      <Input
                         type="text"
                         placeholder="Name (optional)"
                         value={linkName}
                         onChange={(event) => setLinkName(event.target.value)}
                         className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
                       />
-                      <input
+                      <Input
                         type="url"
                         placeholder="URL"
                         value={linkUrl}

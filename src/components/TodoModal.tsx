@@ -8,6 +8,7 @@ import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
 import { IconButton } from './ui/IconButton';
+import { Input } from './ui/Input';
 
 interface TodoModalProps {
   todo: Todo;
@@ -310,7 +311,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           onSubmit={handleAddComment}
         />
 
-        <input
+        <Input
           ref={fileInputRef}
           type="file"
           multiple
