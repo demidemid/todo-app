@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
-import type { Dashboard } from '../types/dashboard';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { TodoModal } from './TodoModal';
 import { DashboardSection } from './todo-list/DashboardSection';
@@ -12,6 +11,7 @@ import { useTodoListController } from './todo-list/useTodoListController';
 import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
+import { useTodoListUiStore } from '../stores/useTodoListUiStore';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -25,11 +25,18 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   const [searchParams, setSearchParams] = useSearchParams();
   const dashboardParamId = searchParams.get('dashboard');
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const [dashboardHoverId, setDashboardHoverId] = useState<string | null>(null);
-  const [shareDashboardId, setShareDashboardId] = useState<string | null>(null);
-  const [shareSelectedUserIds, setShareSelectedUserIds] = useState<string[]>([]);
-  const [shareRecipientEmails, setShareRecipientEmails] = useState('');
-  const [shareActionError, setShareActionError] = useState('');
+  const dashboardHoverId = useTodoListUiStore((state) => state.dashboardHoverId);
+  const resetUiState = useTodoListUiStore((state) => state.resetUiState);
+  const setDashboardHoverId = useTodoListUiStore((state) => state.setDashboardHoverId);
+  const shareDashboardId = useTodoListUiStore((state) => state.shareDashboardId);
+  const shareSelectedUserIds = useTodoListUiStore((state) => state.shareSelectedUserIds);
+  const shareRecipientEmails = useTodoListUiStore((state) => state.shareRecipientEmails);
+  const shareActionError = useTodoListUiStore((state) => state.shareActionError);
+  const openShareModal = useTodoListUiStore((state) => state.openShareModal);
+  const closeShareModal = useTodoListUiStore((state) => state.closeShareModal);
+  const toggleShareUser = useTodoListUiStore((state) => state.toggleShareUser);
+  const setShareRecipientEmails = useTodoListUiStore((state) => state.setShareRecipientEmails);
+  const setShareActionError = useTodoListUiStore((state) => state.setShareActionError);
 
   const {
     dashboards,
@@ -103,6 +110,10 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
     : null;
 
+  useEffect(() => {
+    resetUiState();
+  }, [resetUiState]);
+
   const updateSearch = useCallback(
     (updater: (nextParams: URLSearchParams) => void) => {
       setSearchParams((prevParams) => {
@@ -142,28 +153,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     updateSearch((nextParams) => {
       nextParams.delete('card');
     });
-  };
-
-  const openShareModal = (dashboard: Dashboard) => {
-    setShareDashboardId(dashboard.id);
-    setShareSelectedUserIds(dashboard.sharedWith ?? []);
-    setShareRecipientEmails((dashboard.sharedWithEmails ?? []).join(', '));
-    setShareActionError('');
-  };
-
-  const closeShareModal = () => {
-    setShareDashboardId(null);
-    setShareSelectedUserIds([]);
-    setShareRecipientEmails('');
-    setShareActionError('');
-  };
-
-  const toggleShareUser = (targetUserId: string) => {
-    setShareSelectedUserIds((prev) =>
-      prev.includes(targetUserId)
-        ? prev.filter((userIdItem) => userIdItem !== targetUserId)
-        : [...prev, targetUserId]
-    );
   };
 
   const handleSaveShare = async (event: React.FormEvent) => {
