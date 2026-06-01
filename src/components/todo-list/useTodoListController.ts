@@ -42,6 +42,21 @@ const hasDuplicateColumnNames = (columnNames: string[]) => {
   return false;
 };
 
+const reorderByIndex = <T,>(items: T[], sourceIndex: number, targetIndex: number): T[] => {
+  if (sourceIndex < 0 || sourceIndex >= items.length || targetIndex < 0 || targetIndex >= items.length) {
+    return items;
+  }
+
+  if (sourceIndex === targetIndex) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [movedItem] = nextItems.splice(sourceIndex, 1);
+  nextItems.splice(targetIndex, 0, movedItem);
+  return nextItems;
+};
+
 export const useTodoListController = ({
   todos,
   dashboards,
@@ -299,21 +314,40 @@ export const useTodoListController = ({
     ui.setColumnDraft('');
   };
 
+  const updateCreateDashboardColumnName = (index: number, value: string) => {
+    ui.setDashboardColumns((prev) => prev.map((column, columnIndex) => (columnIndex === index ? value : column)));
+  };
+
+  const removeCreateDashboardColumn = (index: number) => {
+    ui.setDashboardColumns((prev) => prev.filter((_, columnIndex) => columnIndex !== index));
+  };
+
+  const reorderCreateDashboardColumns = (sourceIndex: number, targetIndex: number) => {
+    ui.setDashboardColumns((prev) => reorderByIndex(prev, sourceIndex, targetIndex));
+  };
+
+  const closeCreateDashboardModal = () => {
+    ui.setDashboardName('');
+    ui.setColumnDraft('');
+    ui.setDashboardColumns([]);
+    ui.setDashboardFormError('');
+    ui.setIsCreateDashboardModalOpen(false);
+  };
+
   const handleCreateDashboard = async (event: React.FormEvent) => {
     event.preventDefault();
     ui.setDashboardFormError('');
 
     try {
       const extraColumn = ui.columnDraft.trim();
-      const finalColumns = extraColumn ? [...ui.dashboardColumns, extraColumn] : ui.dashboardColumns;
+      const finalColumns = (extraColumn ? [...ui.dashboardColumns, extraColumn] : ui.dashboardColumns)
+        .map((columnName) => columnName.trim())
+        .filter((columnName) => columnName.length > 0);
       if (hasDuplicateColumnNames(finalColumns)) {
         throw new Error('Column names must be unique within a dashboard');
       }
       await addDashboard(ui.dashboardName, finalColumns);
-      ui.setDashboardName('');
-      ui.setColumnDraft('');
-      ui.setDashboardColumns([]);
-      ui.setIsCreateDashboardModalOpen(false);
+      closeCreateDashboardModal();
     } catch (createError) {
       ui.setDashboardFormError(createError instanceof Error ? createError.message : 'Failed to create dashboard');
     }
@@ -355,6 +389,10 @@ export const useTodoListController = ({
       },
     ]);
     ui.setEditingColumnDraft('');
+  };
+
+  const reorderEditDashboardColumns = (sourceIndex: number, targetIndex: number) => {
+    ui.setEditingDashboardColumns((prev) => reorderByIndex(prev, sourceIndex, targetIndex));
   };
 
   const handleSaveDashboardEdit = async (event: React.FormEvent) => {
@@ -453,9 +491,14 @@ export const useTodoListController = ({
     handleUnarchiveTodo,
     handleDeleteTodo,
     addColumnToDraft,
+    updateCreateDashboardColumnName,
+    removeCreateDashboardColumn,
+    reorderCreateDashboardColumns,
+    closeCreateDashboardModal,
     handleCreateDashboard,
     openEditDashboard,
     addColumnToEditDraft,
+    reorderEditDashboardColumns,
     handleSaveDashboardEdit,
     handleDeleteDashboard,
     handleDashboardDrop,

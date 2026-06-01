@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type React from 'react';
 import type { DashboardColumn } from '../../types/dashboard';
 import { Button } from '../ui/Button';
@@ -17,6 +18,9 @@ interface CreateDashboardModalProps {
     onDashboardNameChange: (value: string) => void;
     onColumnDraftChange: (value: string) => void;
     onAddColumn: () => void;
+    onRemoveColumn: (index: number) => void;
+    onColumnNameChange: (index: number, value: string) => void;
+    onReorderColumn: (sourceIndex: number, targetIndex: number) => void;
     onSubmit: (event: React.FormEvent) => void;
   };
   open?: boolean;
@@ -28,6 +32,9 @@ interface CreateDashboardModalProps {
   onDashboardNameChange?: (value: string) => void;
   onColumnDraftChange?: (value: string) => void;
   onAddColumn?: () => void;
+  onRemoveColumn?: (index: number) => void;
+  onColumnNameChange?: (index: number, value: string) => void;
+  onReorderColumn?: (sourceIndex: number, targetIndex: number) => void;
   onSubmit?: (event: React.FormEvent) => void;
 }
 
@@ -67,6 +74,7 @@ interface EditDashboardModalProps {
     onAddColumn: () => void;
     onRemoveColumn: (columnId: string) => void;
     onColumnNameChange: (columnId: string, value: string) => void;
+    onReorderColumn: (sourceIndex: number, targetIndex: number) => void;
     onSubmit: (event: React.FormEvent) => void;
   };
   open?: boolean;
@@ -80,8 +88,70 @@ interface EditDashboardModalProps {
   onAddColumn?: () => void;
   onRemoveColumn?: (columnId: string) => void;
   onColumnNameChange?: (columnId: string, value: string) => void;
+  onReorderColumn?: (sourceIndex: number, targetIndex: number) => void;
   onSubmit?: (event: React.FormEvent) => void;
 }
+
+interface DashboardColumnsEditorProps {
+  columns: string[];
+  testIdPrefix: string;
+  onColumnNameChange: (index: number, value: string) => void;
+  onRemoveColumn: (index: number) => void;
+  onReorderColumn: (sourceIndex: number, targetIndex: number) => void;
+}
+
+const DashboardColumnsEditor = ({
+  columns,
+  testIdPrefix,
+  onColumnNameChange,
+  onRemoveColumn,
+  onReorderColumn,
+}: DashboardColumnsEditorProps) => {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  return (
+    <ul className="space-y-2">
+      {columns.map((columnName, index) => (
+        <li
+          key={`${testIdPrefix}-row-${index}`}
+          className={`flex gap-2 ${dragIndex === index ? 'opacity-60' : ''}`}
+          draggable
+          onDragStart={(event) => {
+            setDragIndex(index);
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/plain', String(index));
+            }
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            if (dragIndex == null || dragIndex === index) return;
+            onReorderColumn(dragIndex, index);
+            setDragIndex(null);
+          }}
+          onDragEnd={() => setDragIndex(null)}
+          data-testid={`${testIdPrefix}-row-${index}`}
+        >
+          <Input
+            type="text"
+            value={columnName}
+            onChange={(event) => onColumnNameChange(index, event.target.value)}
+            data-testid={`${testIdPrefix}-${index}`}
+          />
+          <Button type="button" variant="danger" size="sm" onClick={() => onRemoveColumn(index)}>
+            Remove
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 interface ShareTargetUser {
   id: string;
@@ -131,6 +201,9 @@ export const CreateDashboardModal = ({
   onDashboardNameChange: legacyOnDashboardNameChange,
   onColumnDraftChange: legacyOnColumnDraftChange,
   onAddColumn: legacyOnAddColumn,
+  onRemoveColumn: legacyOnRemoveColumn,
+  onColumnNameChange: legacyOnColumnNameChange,
+  onReorderColumn: legacyOnReorderColumn,
   onSubmit: legacyOnSubmit,
 }: CreateDashboardModalProps) => {
   const resolvedState = state ?? {
@@ -146,11 +219,14 @@ export const CreateDashboardModal = ({
     onDashboardNameChange: legacyOnDashboardNameChange ?? (() => {}),
     onColumnDraftChange: legacyOnColumnDraftChange ?? (() => {}),
     onAddColumn: legacyOnAddColumn ?? (() => {}),
+    onRemoveColumn: legacyOnRemoveColumn ?? (() => {}),
+    onColumnNameChange: legacyOnColumnNameChange ?? (() => {}),
+    onReorderColumn: legacyOnReorderColumn ?? (() => {}),
     onSubmit: legacyOnSubmit ?? (() => {}),
   };
 
   const { open, dashboardName, columnDraft, dashboardColumns, formError } = resolvedState;
-  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onSubmit } = resolvedActions;
+  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onRemoveColumn, onColumnNameChange, onReorderColumn, onSubmit } = resolvedActions;
 
   if (!open) return null;
 
@@ -165,7 +241,18 @@ export const CreateDashboardModal = ({
         onClick={(event) => event.stopPropagation()}
         data-testid="create-dashboard-modal"
       >
-        <h3 className="mb-4 text-lg font-semibold text-white">Create new dashboard</h3>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-white">Create new dashboard</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex size-8 items-center justify-center rounded-md border border-white/10 text-slate-300 transition hover:bg-white/10 hover:text-white"
+            aria-label="Close create dashboard modal"
+            data-testid="create-dashboard-close"
+          >
+            x
+          </button>
+        </div>
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Dashboard name</label>
         <Input
@@ -184,6 +271,7 @@ export const CreateDashboardModal = ({
             value={columnDraft}
             onChange={(event) => onColumnDraftChange(event.target.value)}
             placeholder="Backlog"
+            data-testid="create-dashboard-column-draft"
           />
           <Button type="button" variant="ghost" size="sm" onClick={onAddColumn}>
             Add
@@ -194,13 +282,13 @@ export const CreateDashboardModal = ({
           {dashboardColumns.length === 0 ? (
             <p className="text-xs text-slate-400">No columns yet. Add at least one column.</p>
           ) : (
-            <ul className="space-y-1 text-sm text-slate-200">
-              {dashboardColumns.map((columnName, index) => (
-                <li key={`${columnName}-${index}`}>
-                  {index + 1}. {columnName}
-                </li>
-              ))}
-            </ul>
+            <DashboardColumnsEditor
+              columns={dashboardColumns}
+              testIdPrefix="create-dashboard-column"
+              onColumnNameChange={onColumnNameChange}
+              onRemoveColumn={onRemoveColumn}
+              onReorderColumn={onReorderColumn}
+            />
           )}
         </div>
 
@@ -309,6 +397,7 @@ export const EditDashboardModal = ({
   onAddColumn: legacyOnAddColumn,
   onRemoveColumn: legacyOnRemoveColumn,
   onColumnNameChange: legacyOnColumnNameChange,
+  onReorderColumn: legacyOnReorderColumn,
   onSubmit: legacyOnSubmit,
 }: EditDashboardModalProps) => {
   const resolvedState = state ?? {
@@ -326,11 +415,12 @@ export const EditDashboardModal = ({
     onAddColumn: legacyOnAddColumn ?? (() => {}),
     onRemoveColumn: legacyOnRemoveColumn ?? (() => {}),
     onColumnNameChange: legacyOnColumnNameChange ?? (() => {}),
+    onReorderColumn: legacyOnReorderColumn ?? (() => {}),
     onSubmit: legacyOnSubmit ?? (() => {}),
   };
 
   const { open, dashboardName, columns, columnDraft, actionError } = resolvedState;
-  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onRemoveColumn, onColumnNameChange, onSubmit } = resolvedActions;
+  const { onClose, onDashboardNameChange, onColumnDraftChange, onAddColumn, onRemoveColumn, onColumnNameChange, onReorderColumn, onSubmit } = resolvedActions;
 
   if (!open) return null;
 
@@ -358,19 +448,21 @@ export const EditDashboardModal = ({
 
         <label className="mb-2 block text-xs uppercase tracking-wide text-slate-300">Columns</label>
         <div className="mb-3 space-y-2">
-          {columns.map((column) => (
-            <div key={column.id} className="flex gap-2">
-              <Input
-                type="text"
-                value={column.name}
-                onChange={(event) => onColumnNameChange(column.id, event.target.value)}
-                data-testid={`edit-dashboard-column-${column.id}`}
-              />
-              <Button type="button" variant="danger" size="sm" onClick={() => onRemoveColumn(column.id)}>
-                Remove
-              </Button>
-            </div>
-          ))}
+          <DashboardColumnsEditor
+            columns={columns.map((column) => column.name)}
+            testIdPrefix="edit-dashboard-column"
+            onColumnNameChange={(index, value) => {
+              const column = columns[index];
+              if (!column) return;
+              onColumnNameChange(column.id, value);
+            }}
+            onRemoveColumn={(index) => {
+              const column = columns[index];
+              if (!column) return;
+              onRemoveColumn(column.id);
+            }}
+            onReorderColumn={onReorderColumn}
+          />
         </div>
 
         <div className="mb-4 flex gap-2">
