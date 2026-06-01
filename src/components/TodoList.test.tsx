@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Dashboard, DashboardColumn } from '../types/dashboard';
@@ -135,10 +135,13 @@ const SearchParamsProbe = () => {
   return <div data-testid="location-search">{location.search}</div>;
 };
 
-const renderTodoList = (initialEntries: string[] = ['/']) => {
+const renderTodoList = (
+  initialEntries: string[] = ['/'],
+  props: Partial<ComponentProps<typeof TodoList>> = {}
+) => {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
-      <TodoList userId="user-1" />
+      <TodoList userId="user-1" {...props} />
       <SearchParamsProbe />
     </MemoryRouter>,
   );
@@ -237,6 +240,81 @@ describe('TodoList', () => {
     expect(typeof setterArg).toBe('function');
     expect(setterArg(null)).toBe('board-2');
     expect(setterArg('board-2')).toBe('board-2');
+  });
+
+  it('renders archive mode as a single card list with dashboard name on each card', () => {
+    const firstDashboard = createDashboard({ id: 'board-1', name: 'Main Board' });
+    const secondDashboard = createDashboard({ id: 'board-2', name: 'QA Board', order: 1 });
+
+    setDashboardsState([firstDashboard, secondDashboard]);
+    setTodosState([
+      createTodo({ id: 'todo-active', title: 'Active card', columnId: 'done', status: 'done', archived: false }),
+      createTodo({ id: 'todo-archived-a', title: 'Archived card A', boardId: 'board-1', archived: true }),
+      createTodo({ id: 'todo-archived-b', title: 'Archived card B', boardId: 'board-2', archived: true }),
+    ]);
+
+    renderTodoList(['/'], { viewMode: 'archive' });
+
+    expect(screen.getByTestId('archive-view')).toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-board-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('archive-card-todo-archived-a')).toBeInTheDocument();
+    expect(screen.getByTestId('archive-card-todo-archived-b')).toBeInTheDocument();
+    expect(screen.queryByTestId('archive-card-todo-active')).not.toBeInTheDocument();
+    expect(screen.getByText('Main Board')).toBeInTheDocument();
+    expect(screen.getByText('QA Board')).toBeInTheDocument();
+  });
+
+  it('archives card from ellipsis menu', async () => {
+    const user = userEvent.setup();
+
+    setTodosState([
+      createTodo({ id: 't-archive', title: 'Archive me', archived: false }),
+    ]);
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('card-menu-trigger-t-archive'));
+    await user.click(screen.getByTestId('card-menu-archive'));
+
+    await waitFor(() => {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('t-archive', { archived: true });
+    });
+  });
+
+  it('unarchives card from archive ellipsis menu without opening modal', async () => {
+    const user = userEvent.setup();
+
+    setTodosState([
+      createTodo({ id: 't-archived', title: 'Archived card', archived: true }),
+    ]);
+
+    renderTodoList(['/'], { viewMode: 'archive' });
+
+    await user.click(screen.getByTestId('archive-menu-trigger-t-archived'));
+    await user.click(screen.getByTestId('archive-menu-unarchive-t-archived'));
+
+    await waitFor(() => {
+      expect(mockUpdateTodo).toHaveBeenCalledWith('t-archived', { archived: false });
+    });
+    expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
+  });
+
+  it('deletes card from archive ellipsis menu without opening modal', async () => {
+    const user = userEvent.setup();
+
+    setTodosState([
+      createTodo({ id: 't-archived', title: 'Archived card', archived: true }),
+    ]);
+
+    renderTodoList(['/'], { viewMode: 'archive' });
+
+    await user.click(screen.getByTestId('archive-menu-trigger-t-archived'));
+    await user.click(screen.getByTestId('archive-menu-delete-t-archived'));
+
+    await waitFor(() => {
+      expect(mockDeleteTodo).toHaveBeenCalledWith('t-archived');
+    });
+    expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
   });
 
   it('adds a comment from card modal', async () => {

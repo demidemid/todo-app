@@ -1,17 +1,37 @@
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { useSearchParams } from 'react-router-dom'
 import { auth } from './firebase'
 import { db } from './firebase'
 import { Login } from './components/Login'
 import { TodoList } from './components/TodoList'
 import { IconButton } from './components/ui/IconButton'
 
+type AppSectionMode = 'dashboards' | 'archive'
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [authActionError, setAuthActionError] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
+
+  const setSectionMode = (nextMode: AppSectionMode) => {
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams)
+
+      if (nextMode === 'archive') {
+        nextParams.set('section', 'archive')
+        nextParams.delete('card')
+        return nextParams
+      }
+
+      nextParams.delete('section')
+      return nextParams
+    })
+  }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -67,15 +87,57 @@ function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_55%)]">
       <header className="border-b border-white/10 bg-slate-900/40 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-6">
-          <div>
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-6">
+          <div className="justify-self-start">
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
               <img src="/favicon.svg" alt="" aria-hidden="true" className="size-7 md:size-8" />
               <span>Todoozy</span>
             </h1>
           </div>
+
           {user ? (
-            <div className="flex items-center gap-3">
+            <div
+              className="inline-flex items-center rounded-full border border-white/15 bg-slate-950/60 p-1"
+              role="tablist"
+              aria-label="Main sections"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sectionMode === 'dashboards'}
+                onClick={() => setSectionMode('dashboards')}
+                className={[
+                  'rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition md:px-4',
+                  sectionMode === 'dashboards'
+                    ? 'bg-cyan-300 text-slate-900'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white',
+                ].join(' ')}
+                data-testid="section-tab-dashboards"
+              >
+                Dashboards
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sectionMode === 'archive'}
+                onClick={() => setSectionMode('archive')}
+                className={[
+                  'rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition md:px-4',
+                  sectionMode === 'archive'
+                    ? 'bg-cyan-300 text-slate-900'
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white',
+                ].join(' ')}
+                data-testid="section-tab-archive"
+              >
+                Archive
+              </button>
+            </div>
+          ) : (
+            <div aria-hidden="true" />
+          )}
+
+          {user ? (
+            <div className="flex items-center justify-self-end gap-3">
               <p className="max-w-44 truncate text-sm text-slate-200 md:max-w-64" title={user.email ?? 'Signed user'}>
                 {user.email ?? 'Signed user'}
               </p>
@@ -95,7 +157,7 @@ function App() {
               </IconButton>
             </div>
           ) : (
-            <span className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-200">
+            <span className="justify-self-end rounded-full border border-emerald-300/30 bg-emerald-300/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-200">
               Sync Ready
             </span>
           )}
@@ -109,7 +171,15 @@ function App() {
               {authActionError}
             </p>
           )}
-          {user ? <TodoList userId={user.uid} userEmail={user.email ?? undefined} /> : <Login user={user} />}
+          {user ? (
+            <TodoList
+              userId={user.uid}
+              userEmail={user.email ?? undefined}
+              viewMode={sectionMode}
+            />
+          ) : (
+            <Login user={user} />
+          )}
         </div>
       </main>
     </div>

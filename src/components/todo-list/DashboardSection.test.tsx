@@ -12,9 +12,10 @@ vi.mock('../todo-modal/RichTextEditor', () => ({
 }));
 
 vi.mock('../CardMenu', () => ({
-  CardMenu: ({ onEdit, onDelete, onClose }: { onEdit: () => void; onDelete: () => void; onClose: () => void }) => (
+  CardMenu: ({ onEdit, onArchive, onDelete, onClose }: { onEdit: () => void; onArchive: () => void; onDelete: () => void; onClose: () => void }) => (
     <div data-testid="card-menu">
       <button type="button" data-testid="mock-card-menu-edit" onClick={onEdit}>Edit</button>
+      <button type="button" data-testid="mock-card-menu-archive" onClick={onArchive}>Archive</button>
       <button type="button" data-testid="mock-card-menu-delete" onClick={onDelete}>Delete</button>
       <button type="button" data-testid="mock-card-menu-close" onClick={onClose}>Close</button>
     </div>
@@ -84,6 +85,7 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
   onToggleMenu: vi.fn(),
   onCloseMenu: vi.fn(),
   onMenuEdit: vi.fn(),
+  onMenuArchive: vi.fn(),
   onMenuDelete: vi.fn(),
 });
 
@@ -193,7 +195,7 @@ describe('DashboardSection', () => {
     expect(props.onOpenTodoModal).not.toHaveBeenCalled();
   });
 
-  it('forwards card menu edit/delete/close actions when menu is open', () => {
+  it('forwards card menu edit/archive/delete/close actions when menu is open', () => {
     const props = createProps();
     props.menuOpenId = 'todo-1';
     render(<DashboardSection {...props} />);
@@ -203,11 +205,13 @@ describe('DashboardSection', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
 
     fireEvent.click(screen.getByTestId('mock-card-menu-edit'));
+    fireEvent.click(screen.getByTestId('mock-card-menu-archive'));
     fireEvent.click(screen.getByTestId('mock-card-menu-delete'));
     fireEvent.click(screen.getByTestId('mock-card-menu-close'));
 
-    expect(props.onCloseMenu).toHaveBeenCalledTimes(3);
+    expect(props.onCloseMenu).toHaveBeenCalledTimes(4);
     expect(props.onMenuEdit).toHaveBeenCalledWith(todo);
+    expect(props.onMenuArchive).toHaveBeenCalledWith('todo-1');
     expect(props.onMenuDelete).toHaveBeenCalledWith('todo-1');
   });
 

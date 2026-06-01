@@ -98,6 +98,7 @@ interface DashboardSectionProps {
   onToggleMenu: (todoId: string) => void;
   onCloseMenu: () => void;
   onMenuEdit: (todo: Todo) => void;
+  onMenuArchive: (todoId: string) => void;
   onMenuDelete: (todoId: string) => void;
 }
 
@@ -139,6 +140,7 @@ export const DashboardSection = ({
   onToggleMenu,
   onCloseMenu,
   onMenuEdit,
+  onMenuArchive,
   onMenuDelete,
 }: DashboardSectionProps) => {
   const [isDashboardActionsOpen, setIsDashboardActionsOpen] = useState(false);
@@ -528,6 +530,10 @@ export const DashboardSection = ({
                                     onEdit={() => {
                                       onCloseMenu();
                                       onMenuEdit(todo);
+                                    }}
+                                    onArchive={() => {
+                                      onCloseMenu();
+                                      onMenuArchive(todo.id);
                                     }}
                                     onDelete={() => {
                                       onCloseMenu();

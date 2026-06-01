@@ -5,6 +5,7 @@ import { CardMenu } from './CardMenu';
 
 describe('CardMenu', () => {
   const onEdit = vi.fn();
+  const onArchive = vi.fn();
   const onDelete = vi.fn();
   const onClose = vi.fn();
   const anchorId = 'todo-1';
@@ -22,6 +23,7 @@ describe('CardMenu', () => {
     render(
       <CardMenu
         onEdit={onEdit}
+        onArchive={onArchive}
         onDelete={onDelete}
         onClose={onClose}
         anchorRef={anchorRef}
@@ -39,6 +41,7 @@ describe('CardMenu', () => {
     render(
       <CardMenu
         onEdit={onEdit}
+        onArchive={onArchive}
         onDelete={onDelete}
         onClose={onClose}
         anchorRef={anchorRef}
@@ -52,10 +55,29 @@ describe('CardMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('calls archive and closes when Archive is clicked', () => {
+    render(
+      <CardMenu
+        onEdit={onEdit}
+        onArchive={onArchive}
+        onDelete={onDelete}
+        onClose={onClose}
+        anchorRef={anchorRef}
+        anchorId={anchorId}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('card-menu-archive'));
+
+    expect(onArchive).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('shows hint on delete action', () => {
     render(
       <CardMenu
         onEdit={onEdit}
+        onArchive={onArchive}
         onDelete={onDelete}
         onClose={onClose}
         anchorRef={anchorRef}
@@ -70,6 +92,7 @@ describe('CardMenu', () => {
     render(
       <CardMenu
         onEdit={onEdit}
+        onArchive={onArchive}
         onDelete={onDelete}
         onClose={onClose}
         anchorRef={anchorRef}
@@ -93,6 +116,7 @@ describe('CardMenu', () => {
     render(
       <CardMenu
         onEdit={onEdit}
+        onArchive={onArchive}
         onDelete={onDelete}
         onClose={onClose}
         anchorRef={anchorRef}
@@ -103,5 +127,26 @@ describe('CardMenu', () => {
     fireEvent.mouseDown(document.body);
 
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stops click propagation so parent card click is not triggered', () => {
+    const parentClick = vi.fn();
+
+    render(
+      <div onClick={parentClick}>
+        <CardMenu
+          onEdit={onEdit}
+          onArchive={onArchive}
+          onDelete={onDelete}
+          onClose={onClose}
+          anchorRef={anchorRef}
+          anchorId={anchorId}
+        />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByTestId('card-menu-archive'));
+
+    expect(parentClick).not.toHaveBeenCalled();
   });
 });

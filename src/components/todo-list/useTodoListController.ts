@@ -238,6 +238,26 @@ export const useTodoListController = ({
     }
   };
 
+  const handleArchiveTodo = async (id: string) => {
+    try {
+      await updateTodo(id, {
+        archived: true,
+      });
+    } catch (error) {
+      console.error('Error archiving todo:', error);
+    }
+  };
+
+  const handleUnarchiveTodo = async (id: string) => {
+    try {
+      await updateTodo(id, {
+        archived: false,
+      });
+    } catch (error) {
+      console.error('Error unarchiving todo:', error);
+    }
+  };
+
   const addColumnToDraft = () => {
     const normalized = columnDraft.trim();
     if (!normalized) return;
@@ -439,6 +459,8 @@ export const useTodoListController = ({
     cancelEdit,
     handleSaveEdit,
     handleEditKeyDown,
+    handleArchiveTodo,
+    handleUnarchiveTodo,
     handleDeleteTodo,
     addColumnToDraft,
     handleCreateDashboard,

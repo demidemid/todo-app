@@ -200,6 +200,7 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
         {
           ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
           id: item.id,
+          archived: typeof data.archived === 'boolean' ? data.archived : false,
           status,
           boardId,
           columnId,

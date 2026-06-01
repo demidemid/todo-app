@@ -42,6 +42,7 @@ service cloud.firestore {
           'userId',
           'title',
           'description',
+          'archived',
           'status',
           'boardId',
           'columnId',
@@ -56,6 +57,7 @@ service cloud.firestore {
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
+        && (!('archived' in data) || data.archived is bool)
         && isNonEmptyString(data.status)
         && isNonEmptyString(data.boardId)
         && isNonEmptyString(data.columnId)
@@ -83,6 +85,7 @@ service cloud.firestore {
           'userId',
           'title',
           'description',
+          'archived',
           'status',
           'boardId',
           'columnId',
@@ -97,6 +100,7 @@ service cloud.firestore {
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
+        && (!('archived' in data) || data.archived is bool)
         && isNonEmptyString(data.status)
         && isNonEmptyString(data.boardId)
         && isNonEmptyString(data.columnId)
@@ -172,10 +176,11 @@ service cloud.firestore {
         && ('boardId' in nextData)
         && ('boardId' in currentData)
         && nextData.boardId == currentData.boardId
-        && nextData.diff(currentData).changedKeys().hasOnly(['comments', 'files', 'links', 'updatedAt'])
+        && nextData.diff(currentData).changedKeys().hasOnly(['comments', 'files', 'links', 'archived', 'updatedAt'])
         && (!('comments' in nextData) || nextData.comments is list)
         && (!('files' in nextData) || nextData.files is list)
         && (!('links' in nextData) || nextData.links is list)
+        && (!('archived' in nextData) || nextData.archived is bool)
         && ('updatedAt' in nextData)
         && nextData.updatedAt is timestamp;
     }

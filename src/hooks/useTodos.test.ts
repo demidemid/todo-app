@@ -111,6 +111,7 @@ describe('useTodos', () => {
             userId: 'user-1',
             title: 'Valid item',
             description: 'desc',
+            archived: true,
             status: 'in_progress',
             boardId: 'board-1',
             columnId: 'in_progress',
@@ -136,6 +137,7 @@ describe('useTodos', () => {
     expect(result.current.todos).toHaveLength(1);
     expect(result.current.todos[0]).toMatchObject({
       id: 'todo-1',
+      archived: true,
       status: 'in_progress',
       columnId: 'in_progress',
       boardId: 'board-1',
@@ -263,6 +265,7 @@ describe('useTodos', () => {
         status: 'todo',
       })
     );
+    expect(payload).not.toHaveProperty('archived');
   });
 
   it('addTodo keeps status and column aligned for done column', async () => {
