@@ -492,8 +492,8 @@ describe('TodoList', () => {
 
     await clickDashboardAction(user, 'edit');
 
-    const firstColumn = screen.getByTestId('edit-dashboard-column-todo');
-    const secondColumn = screen.getByTestId('edit-dashboard-column-in_progress');
+    const firstColumn = screen.getByTestId('edit-dashboard-column-0');
+    const secondColumn = screen.getByTestId('edit-dashboard-column-1');
     await user.clear(firstColumn);
     await user.type(firstColumn, 'Same');
     await user.clear(secondColumn);

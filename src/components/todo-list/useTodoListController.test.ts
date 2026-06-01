@@ -150,6 +150,80 @@ describe('useTodoListController', () => {
     expect(result.current.isCreateDashboardModalOpen).toBe(false);
   });
 
+  it('closes create dashboard modal and clears entered data', () => {
+    const { args } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setIsCreateDashboardModalOpen(true);
+      result.current.setDashboardName('Platform');
+      result.current.setColumnDraft('Backlog');
+      result.current.setDashboardColumns(['Backlog', 'Done']);
+      result.current.setDashboardFormError('Name already exists');
+    });
+
+    act(() => {
+      result.current.closeCreateDashboardModal();
+    });
+
+    expect(result.current.isCreateDashboardModalOpen).toBe(false);
+    expect(result.current.dashboardName).toBe('');
+    expect(result.current.columnDraft).toBe('');
+    expect(result.current.dashboardColumns).toEqual([]);
+    expect(result.current.dashboardFormError).toBe('');
+  });
+
+  it('renames and removes columns in create dashboard draft list', () => {
+    const { args } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setDashboardColumns(['Backlog', 'Done']);
+    });
+
+    act(() => {
+      result.current.updateCreateDashboardColumnName(0, 'To do');
+    });
+
+    expect(result.current.dashboardColumns).toEqual(['To do', 'Done']);
+
+    act(() => {
+      result.current.removeCreateDashboardColumn(1);
+    });
+
+    expect(result.current.dashboardColumns).toEqual(['To do']);
+  });
+
+  it('reorders create dashboard draft columns', () => {
+    const { args } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setDashboardColumns(['Backlog', 'In progress', 'Done']);
+    });
+
+    act(() => {
+      result.current.reorderCreateDashboardColumns(0, 2);
+    });
+
+    expect(result.current.dashboardColumns).toEqual(['In progress', 'Done', 'Backlog']);
+  });
+
+  it('reorders edit dashboard columns', () => {
+    const { args } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.openEditDashboard('board-a');
+    });
+
+    act(() => {
+      result.current.reorderEditDashboardColumns(0, 1);
+    });
+
+    expect(result.current.editingDashboardColumns.map((column) => column.id)).toEqual(['done', 'todo']);
+  });
+
   it('does not delete dashboard when confirmation is cancelled', async () => {
     const { args, mocks } = createArgs();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);

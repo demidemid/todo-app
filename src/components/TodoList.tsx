@@ -222,10 +222,13 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           formError: controller.dashboardFormError,
         }}
         actions={{
-          onClose: () => controller.setIsCreateDashboardModalOpen(false),
+          onClose: controller.closeCreateDashboardModal,
           onDashboardNameChange: controller.setDashboardName,
           onColumnDraftChange: controller.setColumnDraft,
           onAddColumn: controller.addColumnToDraft,
+          onRemoveColumn: controller.removeCreateDashboardColumn,
+          onColumnNameChange: controller.updateCreateDashboardColumnName,
+          onReorderColumn: controller.reorderCreateDashboardColumns,
           onSubmit: controller.handleCreateDashboard,
         }}
       />
@@ -268,6 +271,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               prev.map((item) => (item.id === columnId ? { ...item, name: value } : item))
             );
           },
+          onReorderColumn: controller.reorderEditDashboardColumns,
           onSubmit: controller.handleSaveDashboardEdit,
         }}
       />
