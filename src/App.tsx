@@ -17,6 +17,7 @@ function App() {
   const [authActionError, setAuthActionError] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
+  const logoSrc = `${import.meta.env.BASE_URL}favicon.svg`
 
   const setSectionMode = (nextMode: AppSectionMode) => {
     setSearchParams((prevParams) => {
@@ -90,7 +91,7 @@ function App() {
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-6">
           <div className="justify-self-start">
             <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-              <img src="/favicon.svg" alt="" aria-hidden="true" className="size-7 md:size-8" />
+              <img src={logoSrc} alt="" aria-hidden="true" className="size-7 md:size-8" />
               <span>Todoozy</span>
             </h1>
           </div>
