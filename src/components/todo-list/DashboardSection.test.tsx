@@ -11,17 +11,6 @@ vi.mock('../todo-modal/RichTextEditor', () => ({
   ),
 }));
 
-vi.mock('../CardMenu', () => ({
-  CardMenu: ({ onEdit, onArchive, onDelete, onClose }: { onEdit: () => void; onArchive: () => void; onDelete: () => void; onClose: () => void }) => (
-    <div data-testid="card-menu">
-      <button type="button" data-testid="mock-card-menu-edit" onClick={onEdit}>Edit</button>
-      <button type="button" data-testid="mock-card-menu-archive" onClick={onArchive}>Archive</button>
-      <button type="button" data-testid="mock-card-menu-delete" onClick={onDelete}>Delete</button>
-      <button type="button" data-testid="mock-card-menu-close" onClick={onClose}>Close</button>
-    </div>
-  ),
-}));
-
 const dashboard: Dashboard = {
   id: 'board-1',
   userId: 'user-1',
@@ -60,8 +49,6 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
   editingTodoId: null,
   editingTitle: 'Task title',
   editingDescription: '<p>Task description</p>',
-  menuOpenId: null,
-  menuButtonRefs: { current: {} },
   dragState: null,
   dropTarget: null,
   sectionRef: vi.fn(),
@@ -82,8 +69,6 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
   onEditTitleChange: vi.fn(),
   onEditDescriptionChange: vi.fn(),
   onEditKeyDown: vi.fn(),
-  onToggleMenu: vi.fn(),
-  onCloseMenu: vi.fn(),
   onMenuEdit: vi.fn(),
   onMenuArchive: vi.fn(),
   onMenuDelete: vi.fn(),
@@ -160,7 +145,7 @@ describe('DashboardSection', () => {
     expect(props.onSetDropTarget).toHaveBeenCalledWith(null);
   });
 
-  it('opens todo modal when card is clicked and not editing, and toggles card menu', () => {
+  it('opens todo modal when card is clicked and not editing, and opens card menu trigger', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);
 
@@ -172,7 +157,7 @@ describe('DashboardSection', () => {
     expect(props.onSetDragState).toHaveBeenCalledWith({ todoId: 'todo-1' });
     expect(props.onSetDragState).toHaveBeenCalledWith(null);
     expect(props.onOpenTodoModal).toHaveBeenCalledWith(todo);
-    expect(props.onToggleMenu).toHaveBeenCalledWith('todo-1');
+    expect(screen.getByTestId('card-menu-trigger-todo-1')).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('renders edit mode and forwards edit field, save, and cancel actions', () => {
@@ -195,21 +180,18 @@ describe('DashboardSection', () => {
     expect(props.onOpenTodoModal).not.toHaveBeenCalled();
   });
 
-  it('forwards card menu edit/archive/delete/close actions when menu is open', () => {
+  it('forwards card menu edit/archive/delete actions', () => {
     const props = createProps();
-    props.menuOpenId = 'todo-1';
     render(<DashboardSection {...props} />);
 
-    const trigger = screen.getByTestId('card-menu-trigger-todo-1');
-    expect(trigger).toHaveClass('bg-cyan-300/15');
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
 
-    fireEvent.click(screen.getByTestId('mock-card-menu-edit'));
-    fireEvent.click(screen.getByTestId('mock-card-menu-archive'));
-    fireEvent.click(screen.getByTestId('mock-card-menu-delete'));
-    fireEvent.click(screen.getByTestId('mock-card-menu-close'));
+    fireEvent.click(screen.getByTestId('card-menu-edit'));
+    fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
+    fireEvent.click(screen.getByTestId('card-menu-archive'));
+    fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
+    fireEvent.click(screen.getByTestId('card-menu-delete'));
 
-    expect(props.onCloseMenu).toHaveBeenCalledTimes(4);
     expect(props.onMenuEdit).toHaveBeenCalledWith(todo);
     expect(props.onMenuArchive).toHaveBeenCalledWith('todo-1');
     expect(props.onMenuDelete).toHaveBeenCalledWith('todo-1');

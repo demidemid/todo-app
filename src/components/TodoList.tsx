@@ -9,7 +9,7 @@ import { DashboardSection } from './todo-list/DashboardSection';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
-import { Button } from './ui/Button';
+import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
 
@@ -30,9 +30,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   const [shareSelectedUserIds, setShareSelectedUserIds] = useState<string[]>([]);
   const [shareRecipientEmails, setShareRecipientEmails] = useState('');
   const [shareActionError, setShareActionError] = useState('');
-  const [archiveMenuOpenId, setArchiveMenuOpenId] = useState<string | null>(null);
-  const archiveMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const archiveMenuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const {
     dashboards,
@@ -133,36 +130,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
       prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId
     );
   }, [dashboardParamId, dashboards, setActiveDashboardId, updateSearch]);
-
-  useEffect(() => {
-    if (!archiveMenuOpenId) return;
-
-    const handleOutsidePointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) return;
-
-      const menu = archiveMenuRefs.current[archiveMenuOpenId];
-      const trigger = archiveMenuButtonRefs.current[archiveMenuOpenId];
-      if ((menu && menu.contains(event.target)) || (trigger && trigger.contains(event.target))) {
-        return;
-      }
-
-      setArchiveMenuOpenId(null);
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setArchiveMenuOpenId(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsidePointer);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [archiveMenuOpenId]);
 
   const openTodoByLink = (todoId: string, dashboardId: string) => {
     updateSearch((nextParams) => {
@@ -408,8 +375,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               editingTodoId={controller.editingTodoId}
               editingTitle={controller.editingTitle}
               editingDescription={controller.editingDescription}
-              menuOpenId={controller.menuOpenId}
-              menuButtonRefs={controller.menuButtonRefs}
               dragState={controller.dragState}
               dropTarget={controller.dropTarget}
               canManageDashboard={dashboard.userId === userId}
@@ -490,8 +455,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               onEditTitleChange={controller.setEditingTitle}
               onEditDescriptionChange={controller.setEditingDescription}
               onEditKeyDown={controller.handleEditKeyDown}
-              onToggleMenu={(todoId) => controller.setMenuOpenId(controller.menuOpenId === todoId ? null : todoId)}
-              onCloseMenu={() => controller.setMenuOpenId(null)}
               onMenuEdit={(todo) => controller.startEdit(todo)}
               onMenuArchive={(todoId) => void controller.handleArchiveTodo(todoId)}
               onMenuDelete={(todoId) => void controller.handleDeleteTodo(todoId)}
@@ -523,75 +486,34 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-semibold text-slate-100">{todo.title}</p>
-                    <div
-                      className="relative"
-                      onMouseDown={(event) => event.stopPropagation()}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <IconButton
-                        label="Open archive card actions"
-                        variant="neutral"
-                        size="sm"
-                        data-testid={`archive-menu-trigger-${todo.id}`}
-                        aria-haspopup="menu"
-                        aria-expanded={archiveMenuOpenId === todo.id}
-                        ref={(element) => {
-                          archiveMenuButtonRefs.current[todo.id] = element;
-                        }}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setArchiveMenuOpenId((prev) => (prev === todo.id ? null : todo.id));
-                        }}
-                      >
-                        <svg width="18" height="18" fill="none" viewBox="0 0 20 20" aria-hidden="true">
-                          <circle cx="10" cy="4" r="1.5" fill="currentColor" />
-                          <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-                          <circle cx="10" cy="16" r="1.5" fill="currentColor" />
-                        </svg>
-                      </IconButton>
-
-                      {archiveMenuOpenId === todo.id && (
-                        <div
-                          ref={(element) => {
-                            archiveMenuRefs.current[todo.id] = element;
-                          }}
-                          className="absolute right-0 top-8 z-20 w-36 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
-                          data-testid={`archive-menu-${todo.id}`}
-                          role="menu"
-                        >
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="flex w-full items-center justify-start rounded-none border-x-0 border-b border-t-0 px-3 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
-                            data-testid={`archive-menu-unarchive-${todo.id}`}
-                            startIcon={<RotateCcw size={14} aria-hidden="true" />}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setArchiveMenuOpenId(null);
-                              void controller.handleUnarchiveTodo(todo.id);
-                            }}
-                          >
-                            Return to board
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="flex w-full items-center justify-start rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-3 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
-                            data-testid={`archive-menu-delete-${todo.id}`}
-                            startIcon={<Trash2 size={14} aria-hidden="true" />}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setArchiveMenuOpenId(null);
-                              void controller.handleDeleteTodo(todo.id);
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    <EllipsisMenu
+                      triggerLabel="Open archive card actions"
+                      triggerTestId={`archive-menu-trigger-${todo.id}`}
+                      menuTestId={`archive-menu-${todo.id}`}
+                      menuClassName="w-40"
+                      stopPropagation
+                      items={[
+                        {
+                          id: 'unarchive',
+                          label: 'Return to board',
+                          icon: <RotateCcw size={14} aria-hidden="true" />,
+                          testId: `archive-menu-unarchive-${todo.id}`,
+                          onSelect: () => {
+                            void controller.handleUnarchiveTodo(todo.id);
+                          },
+                        },
+                        {
+                          id: 'delete',
+                          label: 'Delete',
+                          icon: <Trash2 size={14} aria-hidden="true" />,
+                          testId: `archive-menu-delete-${todo.id}`,
+                          variant: 'danger',
+                          onSelect: () => {
+                            void controller.handleDeleteTodo(todo.id);
+                          },
+                        },
+                      ]}
+                    />
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-3 text-xs">
                     <p className="text-slate-400">Updated {todo.updatedAt.toLocaleString()}</p>
