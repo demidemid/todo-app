@@ -22,6 +22,7 @@ export interface Todo {
   id: string;
   title: string;
   description?: string;
+  archived?: boolean;
   status: TodoStatus;
   boardId: string;
   columnId: string;

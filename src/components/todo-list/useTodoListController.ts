@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 
@@ -79,10 +79,8 @@ export const useTodoListController = ({
   const [editingTitle, setEditingTitle] = useState('');
   const [editingDescription, setEditingDescription] = useState('');
   const [modalTodo, setModalTodo] = useState<Todo | null>(null);
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [dashboardDragId, setDashboardDragId] = useState<string | null>(null);
   const [dashboardDropIndex, setDashboardDropIndex] = useState<number | null>(null);
-  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const handleAddTodo = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -235,6 +233,26 @@ export const useTodoListController = ({
       await deleteTodo(id);
     } catch (error) {
       console.error('Error deleting todo:', error);
+    }
+  };
+
+  const handleArchiveTodo = async (id: string) => {
+    try {
+      await updateTodo(id, {
+        archived: true,
+      });
+    } catch (error) {
+      console.error('Error archiving todo:', error);
+    }
+  };
+
+  const handleUnarchiveTodo = async (id: string) => {
+    try {
+      await updateTodo(id, {
+        archived: false,
+      });
+    } catch (error) {
+      console.error('Error unarchiving todo:', error);
     }
   };
 
@@ -426,19 +444,18 @@ export const useTodoListController = ({
     setEditingDescription,
     modalTodo,
     setModalTodo,
-    menuOpenId,
-    setMenuOpenId,
     dashboardDragId,
     setDashboardDragId,
     dashboardDropIndex,
     setDashboardDropIndex,
-    menuButtonRefs,
     handleAddTodo,
     handleMoveTodo,
     startEdit,
     cancelEdit,
     handleSaveEdit,
     handleEditKeyDown,
+    handleArchiveTodo,
+    handleUnarchiveTodo,
     handleDeleteTodo,
     addColumnToDraft,
     handleCreateDashboard,

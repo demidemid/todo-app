@@ -15,7 +15,7 @@ export const useTodoListBoardData = ({ todos, activeDashboard }: UseTodoListBoar
   const todosForActiveBoard = useMemo(() => {
     if (!activeDashboard) return [];
 
-    return todos.filter((todo) => todo.boardId === activeDashboard.id);
+    return todos.filter((todo) => todo.boardId === activeDashboard.id && !todo.archived);
   }, [activeDashboard, todos]);
 
   const groupedTodos = useMemo(() => {

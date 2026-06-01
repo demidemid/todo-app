@@ -1,12 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { CardMenu } from '../CardMenu';
+import React from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { Button } from '../ui/Button';
+import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
-import { MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
+import { Archive, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 
 const extensionFromFileName = (fileName: string): string => {
@@ -72,8 +72,6 @@ interface DashboardSectionProps {
   editingTodoId: string | null;
   editingTitle: string;
   editingDescription: string;
-  menuOpenId: string | null;
-  menuButtonRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
   dragState: DragState | null;
   dropTarget: DropTarget | null;
   onToggle: (dashboardId: string) => void;
@@ -95,9 +93,8 @@ interface DashboardSectionProps {
   onEditTitleChange: (value: string) => void;
   onEditDescriptionChange: (value: string) => void;
   onEditKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => void;
-  onToggleMenu: (todoId: string) => void;
-  onCloseMenu: () => void;
   onMenuEdit: (todo: Todo) => void;
+  onMenuArchive: (todoId: string) => void;
   onMenuDelete: (todoId: string) => void;
 }
 
@@ -113,8 +110,6 @@ export const DashboardSection = ({
   editingTodoId,
   editingTitle,
   editingDescription,
-  menuOpenId,
-  menuButtonRefs,
   dragState,
   dropTarget,
   onToggle,
@@ -136,40 +131,11 @@ export const DashboardSection = ({
   onEditTitleChange,
   onEditDescriptionChange,
   onEditKeyDown,
-  onToggleMenu,
-  onCloseMenu,
   onMenuEdit,
+  onMenuArchive,
   onMenuDelete,
 }: DashboardSectionProps) => {
-  const [isDashboardActionsOpen, setIsDashboardActionsOpen] = useState(false);
-  const dashboardActionsRef = useRef<HTMLDivElement | null>(null);
   const toggleDashboard = () => onToggle(dashboard.id);
-
-  useEffect(() => {
-    if (!isDashboardActionsOpen) return;
-
-    const handleOutsidePointer = (event: MouseEvent) => {
-      if (!dashboardActionsRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !dashboardActionsRef.current.contains(target)) {
-        setIsDashboardActionsOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsDashboardActionsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsidePointer);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isDashboardActionsOpen]);
 
   const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -234,82 +200,39 @@ export const DashboardSection = ({
         </div>
 
         {canManageDashboard && (
-          <div className="relative flex items-center" ref={dashboardActionsRef}>
-            <IconButton
-              variant="neutral"
-              label="Open dashboard actions"
-              data-testid={`dashboard-actions-trigger-${dashboard.id}`}
-              aria-haspopup="menu"
-              aria-expanded={isDashboardActionsOpen}
-              className={isDashboardActionsOpen ? 'border-cyan-300/40 bg-cyan-300/15 text-cyan-100' : ''}
-              onClick={(event) => {
-                event.stopPropagation();
-                setIsDashboardActionsOpen((prev) => !prev);
-              }}
-            >
-              <svg width="20" height="20" fill="none" viewBox="0 0 20 20" aria-hidden="true">
-                <circle cx="10" cy="4" r="1.5" fill="currentColor" />
-                <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-                <circle cx="10" cy="16" r="1.5" fill="currentColor" />
-              </svg>
-            </IconButton>
-
-            {isDashboardActionsOpen && (
-              <div
-                className="absolute right-0 top-10 z-50 w-40 rounded-lg border border-white/10 bg-slate-900 shadow-lg"
-                data-testid={`dashboard-actions-menu-${dashboard.id}`}
-                role="menu"
-                aria-label={`Dashboard actions for ${dashboard.name}`}
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setIsDashboardActionsOpen(false);
-                    onOpenShareDashboard?.(dashboard.id);
-                  }}
-                  data-testid={`share-dashboard-button-${dashboard.id}`}
-                >
-                  <Share2 size={14} aria-hidden="true" />
-                  <span>Share</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b border-t-0 px-4 py-2 text-left text-sm font-normal text-slate-100 hover:bg-cyan-400/10"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setIsDashboardActionsOpen(false);
-                    onOpenEditDashboard(dashboard.id);
-                  }}
-                  data-testid={`edit-dashboard-button-${dashboard.id}`}
-                >
-                  <Pencil size={14} aria-hidden="true" />
-                  <span>Edit</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="flex w-full items-center justify-start gap-2 rounded-none border-x-0 border-b-0 border-t border-rose-400/10 px-4 py-2 text-left text-sm font-normal text-rose-200 hover:bg-rose-400/10"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setIsDashboardActionsOpen(false);
-                    onDeleteDashboard(dashboard.id, dashboard.name);
-                  }}
-                  data-testid={`delete-dashboard-button-${dashboard.id}`}
-                  disabled={dashboardsLength <= 1}
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                  <span>Delete</span>
-                </Button>
-              </div>
-            )}
-          </div>
+          <EllipsisMenu
+            triggerLabel="Open dashboard actions"
+            triggerTestId={`dashboard-actions-trigger-${dashboard.id}`}
+            menuTestId={`dashboard-actions-menu-${dashboard.id}`}
+            menuAriaLabel={`Dashboard actions for ${dashboard.name}`}
+            menuClassName="w-40"
+            stopPropagation
+            items={[
+              {
+                id: 'share',
+                label: 'Share',
+                icon: <Share2 size={14} aria-hidden="true" />,
+                onSelect: () => onOpenShareDashboard?.(dashboard.id),
+                testId: `share-dashboard-button-${dashboard.id}`,
+              },
+              {
+                id: 'edit',
+                label: 'Edit',
+                icon: <Pencil size={14} aria-hidden="true" />,
+                onSelect: () => onOpenEditDashboard(dashboard.id),
+                testId: `edit-dashboard-button-${dashboard.id}`,
+              },
+              {
+                id: 'delete',
+                label: 'Delete',
+                icon: <Trash2 size={14} aria-hidden="true" />,
+                onSelect: () => onDeleteDashboard(dashboard.id, dashboard.name),
+                testId: `delete-dashboard-button-${dashboard.id}`,
+                variant: 'danger',
+                disabled: dashboardsLength <= 1,
+              },
+            ]}
+          />
         )}
 
       </div>
@@ -497,46 +420,37 @@ export const DashboardSection = ({
                                   </ul>
                                 )}
                               </div>
-                              <div className="relative flex items-center gap-2">
-                                <IconButton
-                                  variant="neutral"
-                                  size="sm"
-                                  label="Open menu"
-                                  className={menuOpenId === todo.id ? 'border-cyan-300/40 bg-cyan-300/15 text-cyan-100' : ''}
-                                  data-testid={`card-menu-trigger-${todo.id}`}
-                                  aria-haspopup="menu"
-                                  aria-expanded={menuOpenId === todo.id}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onToggleMenu(todo.id);
-                                  }}
-                                  ref={(element) => {
-                                    menuButtonRefs.current[todo.id] = element;
-                                    if (element && menuOpenId === todo.id) element.focus();
-                                  }}
-                                >
-                                  <svg width="20" height="20" fill="none" viewBox="0 0 20 20" aria-hidden="true">
-                                    <circle cx="10" cy="4" r="1.5" fill="currentColor" />
-                                    <circle cx="10" cy="10" r="1.5" fill="currentColor" />
-                                    <circle cx="10" cy="16" r="1.5" fill="currentColor" />
-                                  </svg>
-                                </IconButton>
-                                {menuOpenId === todo.id && (
-                                  <CardMenu
-                                    anchorRef={menuButtonRefs}
-                                    anchorId={todo.id}
-                                    onEdit={() => {
-                                      onCloseMenu();
-                                      onMenuEdit(todo);
-                                    }}
-                                    onDelete={() => {
-                                      onCloseMenu();
-                                      onMenuDelete(todo.id);
-                                    }}
-                                    onClose={onCloseMenu}
-                                  />
-                                )}
-                              </div>
+                              <EllipsisMenu
+                                triggerLabel={`Open actions for ${todo.title}`}
+                                triggerTestId={`card-menu-trigger-${todo.id}`}
+                                menuTestId="card-menu"
+                                menuClassName="w-32"
+                                stopPropagation
+                                items={[
+                                  {
+                                    id: 'edit',
+                                    label: 'Edit',
+                                    icon: <Pencil size={14} aria-hidden="true" />,
+                                    onSelect: () => onMenuEdit(todo),
+                                    testId: 'card-menu-edit',
+                                  },
+                                  {
+                                    id: 'archive',
+                                    label: 'Archive',
+                                    icon: <Archive size={14} aria-hidden="true" />,
+                                    onSelect: () => onMenuArchive(todo.id),
+                                    testId: 'card-menu-archive',
+                                  },
+                                  {
+                                    id: 'delete',
+                                    label: 'Delete',
+                                    icon: <Trash2 size={14} aria-hidden="true" />,
+                                    onSelect: () => onMenuDelete(todo.id),
+                                    testId: 'card-menu-delete',
+                                    variant: 'danger',
+                                  },
+                                ]}
+                              />
                               <div className="pointer-events-none absolute bottom-2 left-3 inline-flex items-center gap-1 text-[11px] font-medium text-white">
                                 <MessageCircle size={12} className="text-white" aria-hidden="true" />
                                 <span>{todo.comments?.length ?? 0}</span>

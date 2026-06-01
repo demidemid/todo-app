@@ -24,6 +24,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Enable Corepack
         run: |
           corepack enable
@@ -37,6 +43,9 @@ jobs:
 
       - name: Lint
         run: yarn lint
+
+      - name: Firestore Rules Tests
+        run: yarn test:rules
 
       - name: Test
         if: github.event_name != 'pull_request'

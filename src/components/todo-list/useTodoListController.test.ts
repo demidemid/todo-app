@@ -301,6 +301,28 @@ describe('useTodoListController', () => {
     expect(mocks.reorderDashboards).not.toHaveBeenCalled();
   });
 
+  it('archives todo by setting archived flag', async () => {
+    const { args, mocks } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleArchiveTodo('t-1');
+    });
+
+    expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: true });
+  });
+
+  it('unarchives todo by clearing archived flag', async () => {
+    const { args, mocks } = createArgs();
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleUnarchiveTodo('t-1');
+    });
+
+    expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: false });
+  });
+
   it('skips reorder when dashboard is dropped to the same effective index', async () => {
     const { args, mocks } = createArgs();
     const { result } = renderHook(() => useTodoListController(args));
