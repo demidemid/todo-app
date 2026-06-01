@@ -116,6 +116,7 @@ describe('useComments', () => {
           userEmail: 'author@example.com',
           text: 'hello',
         }),
+        updatedAt: expect.any(Object),
       }
     );
   });
@@ -149,6 +150,7 @@ describe('useComments', () => {
             text: 'updated text',
           }),
         ],
+        updatedAt: expect.any(Object),
       })
     );
   });
@@ -162,7 +164,7 @@ describe('useComments', () => {
     const transaction = await mockRunTransaction.mock.results[0].value;
     expect(transaction.update).toHaveBeenCalledWith(
       { path: 'todos/todo-1' },
-      expect.objectContaining({ comments: [] })
+      expect.objectContaining({ comments: [], updatedAt: expect.any(Object) })
     );
   });
 

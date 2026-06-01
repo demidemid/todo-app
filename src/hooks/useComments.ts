@@ -68,6 +68,7 @@ export const useComments = (todoId: string | null) => {
   const addComment = async (userId: string, text: string, userEmail?: string) => {
     if (!todoId) throw new Error('No todoId');
     const todoRef = doc(db, 'todos', todoId);
+    const now = Timestamp.now();
     const commentId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -79,8 +80,9 @@ export const useComments = (todoId: string | null) => {
         userId,
         userEmail,
         text,
-        createdAt: Timestamp.now(),
+        createdAt: now,
       }),
+      updatedAt: now,
     });
   };
 
@@ -107,14 +109,16 @@ export const useComments = (todoId: string | null) => {
       }
 
       const nextComments = [...rawComments];
+      const now = Timestamp.now();
       nextComments[targetIndex] = {
         ...(rawComments[targetIndex] as Record<string, unknown>),
         text,
-        updatedAt: Timestamp.now(),
+        updatedAt: now,
       };
 
       transaction.update(todoRef, {
         comments: nextComments,
+        updatedAt: now,
       });
     });
   };
@@ -142,9 +146,11 @@ export const useComments = (todoId: string | null) => {
       }
 
       const nextComments = rawComments.filter((_, index) => index !== targetIndex);
+      const now = Timestamp.now();
 
       transaction.update(todoRef, {
         comments: nextComments,
+        updatedAt: now,
       });
     });
   };
