@@ -227,6 +227,58 @@ describeRules('firestore rules', () => {
     )
   })
 
+  it('allows a shared member to move a todo they did not create across columns', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        status: 'in_progress',
+        columnId: 'in_progress',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows a shared member to create checklist on a todo they did not create', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        checklist: {
+          title: 'check list',
+          items: [
+            {
+              id: 'item-1',
+              title: 'item',
+              checked: false,
+            },
+          ],
+        },
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows a shared member to edit checklist items on a todo they did not create', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        checklist: {
+          title: 'check list',
+          items: [
+            {
+              id: 'item-1',
+              title: 'edited item',
+              checked: true,
+            },
+          ],
+        },
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
   it('rejects shared member changing title while uploading files to another users todo', async () => {
     const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
 

@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, serverTimestamp, setDoc, type FirestoreError } from 'firebase/firestore'
 import { useSearchParams } from 'react-router-dom'
 import { auth } from './firebase'
 import { db } from './firebase'
 import { AppHeader, type AppSectionMode } from './components/AppHeader'
 import { Login } from './components/Login'
 import { TodoList } from './components/TodoList'
+
+const isFirestorePermissionDenied = (error: unknown): error is FirestoreError => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as FirestoreError).code === 'permission-denied'
+  )
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
@@ -45,7 +54,10 @@ function App() {
           }
         ).catch((profileError) => {
           if (profileError instanceof Error && profileError.message.includes('ERR_BLOCKED_BY_CLIENT')) {
-            console.warn('Firestore request was blocked by a browser extension or privacy filter.')
+            return
+          }
+
+          if (isFirestorePermissionDenied(profileError)) {
             return
           }
 

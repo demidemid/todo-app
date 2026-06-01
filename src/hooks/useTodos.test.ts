@@ -149,6 +149,7 @@ describe('useTodos', () => {
   });
 
   it('maps permission-denied snapshot errors to user-friendly message', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { result } = renderHook(() => useTodos('user-1'));
 
     act(() => {
@@ -160,6 +161,9 @@ describe('useTodos', () => {
         'Access denied by Firestore rules. Verify your Firestore Security Rules for authenticated users.'
       );
     });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('maps Cloud Firestore API disabled errors with project id', async () => {
@@ -179,6 +183,7 @@ describe('useTodos', () => {
   });
 
   it('treats permission-denied from shared board subscription as non-fatal', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-shared', userId: 'owner-2' }]));
 
     act(() => {
@@ -191,9 +196,12 @@ describe('useTodos', () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.todos).toEqual([]);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('treats permission-denied from owner board chunk subscription as non-fatal', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-owned', userId: 'user-1' }]));
 
     act(() => {
@@ -206,6 +214,8 @@ describe('useTodos', () => {
 
     expect(result.current.error).toBeNull();
     expect(result.current.todos).toEqual([]);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('sets timeout error when snapshot does not respond', async () => {

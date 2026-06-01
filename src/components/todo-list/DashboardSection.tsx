@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
+import { normalizeTodoChecklist } from '../../utils/todoChecklist';
 import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { Input } from '../ui/Input';
@@ -49,6 +50,24 @@ const normalizeSafeUrl = (rawUrl: string): string | null => {
   } catch {
     return null;
   }
+};
+
+const getChecklistBadgePalette = (closedItems: number, totalItems: number): string => {
+  if (totalItems <= 0) {
+    return 'border-rose-300/30 bg-rose-300/15 text-rose-100';
+  }
+
+  const percent = (closedItems / totalItems) * 100;
+
+  if (percent < 25) {
+    return 'border-rose-300/30 bg-rose-300/15 text-rose-100';
+  }
+
+  if (percent < 75) {
+    return 'border-amber-300/35 bg-amber-300/15 text-amber-100';
+  }
+
+  return 'border-emerald-300/35 bg-emerald-300/15 text-emerald-100';
 };
 
 interface DragState {
@@ -491,6 +510,29 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+                                {(() => {
+                                  const checklist = normalizeTodoChecklist(todo.checklist);
+                                  if (!checklist) return null;
+
+                                  const checklistTitle = checklist.title;
+                                  const totalItems = checklist.items.length;
+                                  const closedItems = checklist.items.filter((item) => item.checked).length;
+                                  const checklistBadgePalette = getChecklistBadgePalette(closedItems, totalItems);
+
+                                  return (
+                                    <div
+                                      className={`mt-2 inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${checklistBadgePalette}`}
+                                      data-testid={`card-checklist-badge-${todo.id}`}
+                                    >
+                                      <span className="truncate" data-testid={`card-checklist-title-${todo.id}`}>
+                                        {checklistTitle}
+                                      </span>
+                                      <span className="shrink-0" data-testid={`card-checklist-progress-${todo.id}`}>
+                                        {closedItems}/{totalItems}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
                                 {/* Меню/кнопка (оставляем как есть) */}
                                 {Array.isArray(todo.files) && todo.files.length > 0 && (
                                   <ul className="mt-1 space-y-0.5">

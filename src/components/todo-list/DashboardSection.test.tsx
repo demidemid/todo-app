@@ -289,4 +289,105 @@ describe('DashboardSection', () => {
     expect(screen.getByRole('link', { name: 'Safe Link' })).toHaveAttribute('href', 'https://example.com/safe');
     expect(screen.queryByRole('link', { name: 'Bad Link' })).not.toBeInTheDocument();
   });
+
+  it('renders checklist badge with title and closed/total progress on card', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          checklist: {
+            title: 'Release checklist',
+            items: [
+              { id: 'i-1', title: 'One', checked: true },
+              { id: 'i-2', title: 'Two', checked: false },
+              { id: 'i-3', title: 'Three', checked: true },
+              { id: 'i-4', title: 'Four', checked: false },
+            ],
+          },
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-checklist-title-todo-1')).toHaveTextContent('Release checklist');
+    expect(screen.getByTestId('card-checklist-progress-todo-1')).toHaveTextContent('2/4');
+  });
+
+  it('uses red checklist badge below 25 percent completion', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          checklist: {
+            title: 'Checklist',
+            items: [
+              { id: 'i-1', title: 'One', checked: false },
+              { id: 'i-2', title: 'Two', checked: false },
+              { id: 'i-3', title: 'Three', checked: false },
+              { id: 'i-4', title: 'Four', checked: false },
+            ],
+          },
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-checklist-badge-todo-1')).toHaveClass('bg-rose-300/15');
+  });
+
+  it('uses yellow checklist badge for 25 to 75 percent completion', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          checklist: {
+            title: 'Checklist',
+            items: [
+              { id: 'i-1', title: 'One', checked: true },
+              { id: 'i-2', title: 'Two', checked: true },
+              { id: 'i-3', title: 'Three', checked: false },
+              { id: 'i-4', title: 'Four', checked: false },
+            ],
+          },
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-checklist-badge-todo-1')).toHaveClass('bg-amber-300/15');
+  });
+
+  it('uses green checklist badge for 75 to 100 percent completion', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          checklist: {
+            title: 'Checklist',
+            items: [
+              { id: 'i-1', title: 'One', checked: true },
+              { id: 'i-2', title: 'Two', checked: true },
+              { id: 'i-3', title: 'Three', checked: true },
+              { id: 'i-4', title: 'Four', checked: false },
+            ],
+          },
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-checklist-badge-todo-1')).toHaveClass('bg-emerald-300/15');
+  });
 });

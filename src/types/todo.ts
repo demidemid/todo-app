@@ -18,6 +18,17 @@ export interface TodoLink {
   name?: string;
 }
 
+export interface TodoChecklistItem {
+  id: string;
+  title: string;
+  checked: boolean;
+}
+
+export interface TodoChecklist {
+  title: string;
+  items: TodoChecklistItem[];
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -33,6 +44,7 @@ export interface Todo {
   comments?: Comment[];
   files?: TodoFile[];
   links?: TodoLink[];
+  checklist?: TodoChecklist;
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>;

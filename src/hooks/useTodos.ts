@@ -17,6 +17,10 @@ import type { Todo, TodoFile, TodoInput } from '../types/todo';
 
 export type AccessibleBoardInput = string | { id: string; userId?: string; readAllTodos?: boolean };
 const logTodosSubscriptionError = (source: string, error: unknown) => {
+  if (shouldSuppressFirestoreWarning(error)) {
+    return;
+  }
+
   if (isFirestoreError(error)) {
     console.warn(`[useTodos:${source}] Firestore error ${error.code}: ${error.message}`);
     return;
@@ -104,6 +108,15 @@ const isFirestoreError = (error: unknown): error is FirestoreError => {
     typeof error.code === 'string' &&
     'message' in error &&
     typeof error.message === 'string'
+  );
+};
+
+const shouldSuppressFirestoreWarning = (error: unknown): boolean => {
+  if (!isFirestoreError(error)) return false;
+
+  return (
+    error.code === 'permission-denied' ||
+    (error.code === 'unavailable' && error.message.includes('ERR_BLOCKED_BY_CLIENT'))
   );
 };
 
