@@ -52,27 +52,55 @@ const normalizeSafeUrl = (rawUrl: string): string | null => {
 
 interface TodoModalDetailsPanelProps {
   todo: Todo;
-  files: TodoFile[];
-  filesUploading: boolean;
-  deletingFileIds: string[];
-  filesError: string;
-  isEditing: boolean;
-  isEditingTitle: boolean;
-  title: string;
-  description: string;
-  saving: boolean;
-  error: string;
-  onStartEdit: () => void;
-  onCancelEdit: () => void;
-  onSave: () => void;
-  onDelete: () => void;
-  onStartEditTitle: () => void;
-  onSaveTitle: () => void;
-  onCancelEditTitle: () => void;
-  onTitleChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  onOpenFilePicker: () => void;
-  onDeleteFile: (fileId: string) => void;
+  state?: {
+    files: TodoFile[];
+    filesUploading: boolean;
+    deletingFileIds: string[];
+    filesError: string;
+    isEditing: boolean;
+    isEditingTitle: boolean;
+    title: string;
+    description: string;
+    saving: boolean;
+    error: string;
+  };
+  actions?: {
+    onStartEdit: () => void;
+    onCancelEdit: () => void;
+    onSave: () => void;
+    onDelete: () => void;
+    onStartEditTitle: () => void;
+    onSaveTitle: () => void;
+    onCancelEditTitle: () => void;
+    onTitleChange: (value: string) => void;
+    onDescriptionChange: (value: string) => void;
+    onOpenFilePicker: () => void;
+    onDeleteFile: (fileId: string) => void;
+    onDeleteLink?: (linkIndex: number) => Promise<void> | void;
+    onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
+    onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
+  };
+  files?: TodoFile[];
+  filesUploading?: boolean;
+  deletingFileIds?: string[];
+  filesError?: string;
+  isEditing?: boolean;
+  isEditingTitle?: boolean;
+  title?: string;
+  description?: string;
+  saving?: boolean;
+  error?: string;
+  onStartEdit?: () => void;
+  onCancelEdit?: () => void;
+  onSave?: () => void;
+  onDelete?: () => void;
+  onStartEditTitle?: () => void;
+  onSaveTitle?: () => void;
+  onCancelEditTitle?: () => void;
+  onTitleChange?: (value: string) => void;
+  onDescriptionChange?: (value: string) => void;
+  onOpenFilePicker?: () => void;
+  onDeleteFile?: (fileId: string) => void;
   onDeleteLink?: (linkIndex: number) => Promise<void> | void;
   onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
   columns?: { id: string; name: string }[];
@@ -81,32 +109,94 @@ interface TodoModalDetailsPanelProps {
 
 export const TodoModalDetailsPanel = ({
   todo,
+  state,
+  actions,
   columns = [],
-  onMoveToNextStatus,
-  files,
-  filesUploading,
-  deletingFileIds,
-  filesError,
-  isEditing,
-  isEditingTitle,
-  title,
-  description,
-  saving,
-  error,
-  onStartEdit,
-  onCancelEdit,
-  onSave,
-  onDelete,
-  onStartEditTitle,
-  onSaveTitle,
-  onCancelEditTitle,
-  onTitleChange,
-  onDescriptionChange,
-  onOpenFilePicker,
-  onDeleteFile,
-  onDeleteLink,
-  onAddLink,
+  onMoveToNextStatus: legacyOnMoveToNextStatus,
+  files: legacyFiles,
+  filesUploading: legacyFilesUploading,
+  deletingFileIds: legacyDeletingFileIds,
+  filesError: legacyFilesError,
+  isEditing: legacyIsEditing,
+  isEditingTitle: legacyIsEditingTitle,
+  title: legacyTitle,
+  description: legacyDescription,
+  saving: legacySaving,
+  error: legacyError,
+  onStartEdit: legacyOnStartEdit,
+  onCancelEdit: legacyOnCancelEdit,
+  onSave: legacyOnSave,
+  onDelete: legacyOnDelete,
+  onStartEditTitle: legacyOnStartEditTitle,
+  onSaveTitle: legacyOnSaveTitle,
+  onCancelEditTitle: legacyOnCancelEditTitle,
+  onTitleChange: legacyOnTitleChange,
+  onDescriptionChange: legacyOnDescriptionChange,
+  onOpenFilePicker: legacyOnOpenFilePicker,
+  onDeleteFile: legacyOnDeleteFile,
+  onDeleteLink: legacyOnDeleteLink,
+  onAddLink: legacyOnAddLink,
 }: TodoModalDetailsPanelProps) => {
+  const resolvedState = state ?? {
+    files: legacyFiles ?? [],
+    filesUploading: legacyFilesUploading ?? false,
+    deletingFileIds: legacyDeletingFileIds ?? [],
+    filesError: legacyFilesError ?? '',
+    isEditing: legacyIsEditing ?? false,
+    isEditingTitle: legacyIsEditingTitle ?? false,
+    title: legacyTitle ?? '',
+    description: legacyDescription ?? '',
+    saving: legacySaving ?? false,
+    error: legacyError ?? '',
+  };
+
+  const resolvedActions = actions ?? {
+    onStartEdit: legacyOnStartEdit ?? (() => {}),
+    onCancelEdit: legacyOnCancelEdit ?? (() => {}),
+    onSave: legacyOnSave ?? (() => {}),
+    onDelete: legacyOnDelete ?? (() => {}),
+    onStartEditTitle: legacyOnStartEditTitle ?? (() => {}),
+    onSaveTitle: legacyOnSaveTitle ?? (() => {}),
+    onCancelEditTitle: legacyOnCancelEditTitle ?? (() => {}),
+    onTitleChange: legacyOnTitleChange ?? (() => {}),
+    onDescriptionChange: legacyOnDescriptionChange ?? (() => {}),
+    onOpenFilePicker: legacyOnOpenFilePicker ?? (() => {}),
+    onDeleteFile: legacyOnDeleteFile ?? (() => {}),
+    onDeleteLink: legacyOnDeleteLink,
+    onAddLink: legacyOnAddLink,
+    onMoveToNextStatus: legacyOnMoveToNextStatus,
+  };
+
+  const {
+    files,
+    filesUploading,
+    deletingFileIds,
+    filesError,
+    isEditing,
+    isEditingTitle,
+    title,
+    description,
+    saving,
+    error,
+  } = resolvedState;
+
+  const {
+    onStartEdit,
+    onCancelEdit,
+    onSave,
+    onDelete,
+    onStartEditTitle,
+    onSaveTitle,
+    onCancelEditTitle,
+    onTitleChange,
+    onDescriptionChange,
+    onOpenFilePicker,
+    onDeleteFile,
+    onDeleteLink,
+    onAddLink,
+    onMoveToNextStatus,
+  } = resolvedActions;
+
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isLinksFormOpen, setIsLinksFormOpen] = useState(false);
   const [linkName, setLinkName] = useState('');

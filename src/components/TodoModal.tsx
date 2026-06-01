@@ -255,87 +255,95 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         </IconButton>
         <TodoModalDetailsPanel
           todo={todo}
-          files={files}
-          filesUploading={filesUploading}
-          deletingFileIds={deletingFileIds}
-          filesError={filesError}
-          isEditing={isEditing}
-          isEditingTitle={isEditingTitle}
-          title={title}
-          description={description}
-          saving={saving}
-          error={error}
-          onStartEdit={() => {
-            setIsEditing(true);
-            setIsEditingTitle(false);
+          state={{
+            files,
+            filesUploading,
+            deletingFileIds,
+            filesError,
+            isEditing,
+            isEditingTitle,
+            title,
+            description,
+            saving,
+            error,
           }}
-          onCancelEdit={handleCancelEdit}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onStartEditTitle={() => {
-            setIsEditingTitle(true);
-            setIsEditing(false);
-          }}
-          onSaveTitle={handleSaveTitle}
-          onCancelEditTitle={handleCancelEditTitle}
-          onTitleChange={setTitle}
-          onDescriptionChange={setDescription}
-          onOpenFilePicker={openFilePicker}
-          onDeleteFile={handleDeleteFile}
-          onDeleteLink={async (linkIndex) => {
-            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
-            await updateTodo(todo.id, {
-              links: currentLinks.filter((_, index) => index !== linkIndex),
-            });
-          }}
-          onAddLink={async (link) => {
-            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
-            const normalizedCurrentLinks = currentLinks
-              .map((item) => {
-                const normalizedUrl = normalizeSafeUrl(item.url);
-                if (!normalizedUrl) return null;
+          actions={{
+            onStartEdit: () => {
+              setIsEditing(true);
+              setIsEditingTitle(false);
+            },
+            onCancelEdit: handleCancelEdit,
+            onSave: handleSave,
+            onDelete: handleDelete,
+            onStartEditTitle: () => {
+              setIsEditingTitle(true);
+              setIsEditing(false);
+            },
+            onSaveTitle: handleSaveTitle,
+            onCancelEditTitle: handleCancelEditTitle,
+            onTitleChange: setTitle,
+            onDescriptionChange: setDescription,
+            onOpenFilePicker: openFilePicker,
+            onDeleteFile: handleDeleteFile,
+            onDeleteLink: async (linkIndex) => {
+              const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+              await updateTodo(todo.id, {
+                links: currentLinks.filter((_, index) => index !== linkIndex),
+              });
+            },
+            onAddLink: async (link) => {
+              const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+              const normalizedCurrentLinks = currentLinks
+                .map((item) => {
+                  const normalizedUrl = normalizeSafeUrl(item.url);
+                  if (!normalizedUrl) return null;
 
-                const trimmedName = item.name?.trim();
-                return { url: normalizedUrl, name: trimmedName || normalizedUrl };
-              })
-              .filter((item): item is { url: string; name: string } => item !== null);
+                  const trimmedName = item.name?.trim();
+                  return { url: normalizedUrl, name: trimmedName || normalizedUrl };
+                })
+                .filter((item): item is { url: string; name: string } => item !== null);
 
-            const normalizedIncomingUrl = normalizeSafeUrl(link.url);
-            if (!normalizedIncomingUrl) {
-              throw new Error('Enter a valid http/https URL');
-            }
+              const normalizedIncomingUrl = normalizeSafeUrl(link.url);
+              if (!normalizedIncomingUrl) {
+                throw new Error('Enter a valid http/https URL');
+              }
 
-            const trimmedName = link.name?.trim();
-            const nextLink = { url: normalizedIncomingUrl, name: trimmedName || normalizedIncomingUrl };
+              const trimmedName = link.name?.trim();
+              const nextLink = { url: normalizedIncomingUrl, name: trimmedName || normalizedIncomingUrl };
 
-            await updateTodo(todo.id, {
-              links: [...normalizedCurrentLinks, nextLink],
-            });
+              await updateTodo(todo.id, {
+                links: [...normalizedCurrentLinks, nextLink],
+              });
+            },
+            onMoveToNextStatus: async (todoId, nextColumnId) => {
+              await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
+            },
           }}
           columns={columns}
-          onMoveToNextStatus={async (todoId, nextColumnId) => {
-            await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
-          }}
         />
 
         <TodoModalCommentsPanel
-          currentUserId={userId}
-          comments={comments}
-          commentsLoading={commentsLoading}
-          commentsError={commentsError}
-          commentText={commentText}
-          commentSubmitting={commentSubmitting}
-          editingCommentId={editingCommentId}
-          editingCommentText={editingCommentText}
-          commentActionSubmittingId={commentActionSubmittingId}
-          commentError={commentError}
-          onCommentTextChange={setCommentText}
-          onSubmit={handleAddComment}
-          onStartEditComment={handleStartEditComment}
-          onCancelEditComment={handleCancelEditComment}
-          onEditCommentTextChange={setEditingCommentText}
-          onSaveEditComment={handleSaveEditComment}
-          onDeleteComment={handleDeleteComment}
+          state={{
+            currentUserId: userId,
+            comments,
+            commentsLoading,
+            commentsError,
+            commentText,
+            commentSubmitting,
+            editingCommentId,
+            editingCommentText,
+            commentActionSubmittingId,
+            commentError,
+          }}
+          actions={{
+            onCommentTextChange: setCommentText,
+            onSubmit: handleAddComment,
+            onStartEditComment: handleStartEditComment,
+            onCancelEditComment: handleCancelEditComment,
+            onEditCommentTextChange: setEditingCommentText,
+            onSaveEditComment: handleSaveEditComment,
+            onDeleteComment: handleDeleteComment,
+          }}
         />
 
         <Input

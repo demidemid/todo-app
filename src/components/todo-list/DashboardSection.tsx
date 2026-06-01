@@ -60,20 +60,15 @@ interface DropTarget {
   index: number;
 }
 
-interface DashboardSectionProps {
-  sectionRef?: (element: HTMLElement | null) => void;
-  dashboard: Dashboard;
-  isExpanded: boolean;
-  isDragging?: boolean;
-  isDropTarget?: boolean;
-  dashboardsLength: number;
-  columns: DashboardColumn[];
-  groupedTodos: Record<string, Todo[]>;
+interface DashboardSectionInteractionState {
   editingTodoId: string | null;
   editingTitle: string;
   editingDescription: string;
   dragState: DragState | null;
   dropTarget: DropTarget | null;
+}
+
+interface DashboardSectionActions {
   onToggle: (dashboardId: string) => void;
   onDashboardDragStart?: () => void;
   onDashboardDragEnd?: () => void;
@@ -82,7 +77,6 @@ interface DashboardSectionProps {
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
   onOpenShareDashboard?: (dashboardId: string) => void;
-  canManageDashboard?: boolean;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
   onMoveTodo: (todoId: string, targetColumnId: string, targetIndex: number) => void;
   onSetDragState: (state: DragState | null) => void;
@@ -98,6 +92,46 @@ interface DashboardSectionProps {
   onMenuDelete: (todoId: string) => void;
 }
 
+interface DashboardSectionProps {
+  sectionRef?: (element: HTMLElement | null) => void;
+  dashboard: Dashboard;
+  isExpanded: boolean;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
+  dashboardsLength: number;
+  columns: DashboardColumn[];
+  groupedTodos: Record<string, Todo[]>;
+  interactionState?: DashboardSectionInteractionState;
+  actions?: DashboardSectionActions;
+  editingTodoId?: string | null;
+  editingTitle?: string;
+  editingDescription?: string;
+  dragState?: DragState | null;
+  dropTarget?: DropTarget | null;
+  onToggle?: (dashboardId: string) => void;
+  onDashboardDragStart?: () => void;
+  onDashboardDragEnd?: () => void;
+  onDashboardDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDashboardDrop?: (event: React.DragEvent<HTMLElement>) => void;
+  onOpenEditDashboard?: (dashboardId: string) => void;
+  onDeleteDashboard?: (dashboardId: string, dashboardName: string) => void;
+  onOpenShareDashboard?: (dashboardId: string) => void;
+  canManageDashboard?: boolean;
+  onOpenCreateCard?: (dashboardId: string, columnId: string) => void;
+  onMoveTodo?: (todoId: string, targetColumnId: string, targetIndex: number) => void;
+  onSetDragState?: (state: DragState | null) => void;
+  onSetDropTarget?: (state: DropTarget | null) => void;
+  onOpenTodoModal?: (todo: Todo) => void;
+  onCancelEdit?: () => void;
+  onSaveEdit?: (todoId: string) => void;
+  onEditTitleChange?: (value: string) => void;
+  onEditDescriptionChange?: (value: string) => void;
+  onEditKeyDown?: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => void;
+  onMenuEdit?: (todo: Todo) => void;
+  onMenuArchive?: (todoId: string) => void;
+  onMenuDelete?: (todoId: string) => void;
+}
+
 export const DashboardSection = ({
   sectionRef,
   dashboard,
@@ -107,34 +141,100 @@ export const DashboardSection = ({
   dashboardsLength,
   columns,
   groupedTodos,
-  editingTodoId,
-  editingTitle,
-  editingDescription,
-  dragState,
-  dropTarget,
-  onToggle,
-  onDashboardDragStart,
-  onDashboardDragEnd,
-  onDashboardDragOver,
-  onDashboardDrop,
-  onOpenEditDashboard,
-  onDeleteDashboard,
-  onOpenShareDashboard,
+  interactionState,
+  actions,
+  editingTodoId: legacyEditingTodoId,
+  editingTitle: legacyEditingTitle,
+  editingDescription: legacyEditingDescription,
+  dragState: legacyDragState,
+  dropTarget: legacyDropTarget,
+  onToggle: legacyOnToggle,
+  onDashboardDragStart: legacyOnDashboardDragStart,
+  onDashboardDragEnd: legacyOnDashboardDragEnd,
+  onDashboardDragOver: legacyOnDashboardDragOver,
+  onDashboardDrop: legacyOnDashboardDrop,
+  onOpenEditDashboard: legacyOnOpenEditDashboard,
+  onDeleteDashboard: legacyOnDeleteDashboard,
+  onOpenShareDashboard: legacyOnOpenShareDashboard,
   canManageDashboard = true,
-  onOpenCreateCard,
-  onMoveTodo,
-  onSetDragState,
-  onSetDropTarget,
-  onOpenTodoModal,
-  onCancelEdit,
-  onSaveEdit,
-  onEditTitleChange,
-  onEditDescriptionChange,
-  onEditKeyDown,
-  onMenuEdit,
-  onMenuArchive,
-  onMenuDelete,
+  onOpenCreateCard: legacyOnOpenCreateCard,
+  onMoveTodo: legacyOnMoveTodo,
+  onSetDragState: legacyOnSetDragState,
+  onSetDropTarget: legacyOnSetDropTarget,
+  onOpenTodoModal: legacyOnOpenTodoModal,
+  onCancelEdit: legacyOnCancelEdit,
+  onSaveEdit: legacyOnSaveEdit,
+  onEditTitleChange: legacyOnEditTitleChange,
+  onEditDescriptionChange: legacyOnEditDescriptionChange,
+  onEditKeyDown: legacyOnEditKeyDown,
+  onMenuEdit: legacyOnMenuEdit,
+  onMenuArchive: legacyOnMenuArchive,
+  onMenuDelete: legacyOnMenuDelete,
 }: DashboardSectionProps) => {
+  const resolvedState: DashboardSectionInteractionState = interactionState ?? {
+    editingTodoId: legacyEditingTodoId ?? null,
+    editingTitle: legacyEditingTitle ?? '',
+    editingDescription: legacyEditingDescription ?? '',
+    dragState: legacyDragState ?? null,
+    dropTarget: legacyDropTarget ?? null,
+  };
+
+  const resolvedActions: DashboardSectionActions = actions ?? {
+    onToggle: legacyOnToggle ?? (() => {}),
+    onDashboardDragStart: legacyOnDashboardDragStart,
+    onDashboardDragEnd: legacyOnDashboardDragEnd,
+    onDashboardDragOver: legacyOnDashboardDragOver,
+    onDashboardDrop: legacyOnDashboardDrop,
+    onOpenEditDashboard: legacyOnOpenEditDashboard ?? (() => {}),
+    onDeleteDashboard: legacyOnDeleteDashboard ?? (() => {}),
+    onOpenShareDashboard: legacyOnOpenShareDashboard,
+    onOpenCreateCard: legacyOnOpenCreateCard ?? (() => {}),
+    onMoveTodo: legacyOnMoveTodo ?? (() => {}),
+    onSetDragState: legacyOnSetDragState ?? (() => {}),
+    onSetDropTarget: legacyOnSetDropTarget ?? (() => {}),
+    onOpenTodoModal: legacyOnOpenTodoModal ?? (() => {}),
+    onCancelEdit: legacyOnCancelEdit ?? (() => {}),
+    onSaveEdit: legacyOnSaveEdit ?? (() => {}),
+    onEditTitleChange: legacyOnEditTitleChange ?? (() => {}),
+    onEditDescriptionChange: legacyOnEditDescriptionChange ?? (() => {}),
+    onEditKeyDown: legacyOnEditKeyDown ?? (() => {}),
+    onMenuEdit: legacyOnMenuEdit ?? (() => {}),
+    onMenuArchive: legacyOnMenuArchive ?? (() => {}),
+    onMenuDelete: legacyOnMenuDelete ?? (() => {}),
+  };
+
+  const {
+    editingTodoId,
+    editingTitle,
+    editingDescription,
+    dragState,
+    dropTarget,
+  } = resolvedState;
+
+  const {
+    onToggle,
+    onDashboardDragStart,
+    onDashboardDragEnd,
+    onDashboardDragOver,
+    onDashboardDrop,
+    onOpenEditDashboard,
+    onDeleteDashboard,
+    onOpenShareDashboard,
+    onOpenCreateCard,
+    onMoveTodo,
+    onSetDragState,
+    onSetDropTarget,
+    onOpenTodoModal,
+    onCancelEdit,
+    onSaveEdit,
+    onEditTitleChange,
+    onEditDescriptionChange,
+    onEditKeyDown,
+    onMenuEdit,
+    onMenuArchive,
+    onMenuDelete,
+  } = resolvedActions;
+
   const toggleDashboard = () => onToggle(dashboard.id);
 
   const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
