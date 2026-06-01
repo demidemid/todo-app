@@ -4,6 +4,7 @@ const variantClassNames = {
   neutral: 'text-slate-400 hover:bg-slate-800 hover:text-slate-100',
   primary: 'text-cyan-200/85 hover:border-cyan-300/35 hover:bg-cyan-300/[0.12] hover:text-cyan-100',
   danger: 'text-rose-200/80 hover:border-rose-300/35 hover:bg-rose-400/[0.12] hover:text-rose-100',
+  link: 'border-transparent bg-transparent text-slate-400 hover:bg-transparent hover:text-slate-100 focus:ring-0',
 } as const;
 
 const sizeClassNames = {

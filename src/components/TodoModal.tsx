@@ -65,6 +65,14 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     commentSubmitting,
     commentError,
     handleAddComment,
+    editingCommentId,
+    editingCommentText,
+    setEditingCommentText,
+    commentActionSubmittingId,
+    handleStartEditComment,
+    handleCancelEditComment,
+    handleSaveEditComment,
+    handleDeleteComment,
   } = useTodoModalController({
     todo,
     userId,
@@ -301,14 +309,23 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         />
 
         <TodoModalCommentsPanel
+          currentUserId={userId}
           comments={comments}
           commentsLoading={commentsLoading}
           commentsError={commentsError}
           commentText={commentText}
           commentSubmitting={commentSubmitting}
+          editingCommentId={editingCommentId}
+          editingCommentText={editingCommentText}
+          commentActionSubmittingId={commentActionSubmittingId}
           commentError={commentError}
           onCommentTextChange={setCommentText}
           onSubmit={handleAddComment}
+          onStartEditComment={handleStartEditComment}
+          onCancelEditComment={handleCancelEditComment}
+          onEditCommentTextChange={setEditingCommentText}
+          onSaveEditComment={handleSaveEditComment}
+          onDeleteComment={handleDeleteComment}
         />
 
         <Input

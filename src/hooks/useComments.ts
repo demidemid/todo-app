@@ -3,6 +3,7 @@ import {
   arrayUnion,
   doc,
   onSnapshot,
+  runTransaction,
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
@@ -46,6 +47,7 @@ export const useComments = (todoId: string | null) => {
               userEmail: typeof record.userEmail === 'string' ? record.userEmail : undefined,
               text: typeof record.text === 'string' ? record.text : '',
               createdAt: parseTimestamp(record.createdAt),
+              updatedAt: 'updatedAt' in record ? parseTimestamp((record as { updatedAt?: unknown }).updatedAt) : undefined,
             };
           });
 
@@ -82,13 +84,78 @@ export const useComments = (todoId: string | null) => {
     });
   };
 
+  const updateComment = async (commentId: string, userId: string, text: string) => {
+    if (!todoId) throw new Error('No todoId');
+    const todoRef = doc(db, 'todos', todoId);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(todoRef);
+      if (!snapshot.exists()) throw new Error('Todo not found');
+
+      const data = snapshot.data();
+      const rawComments = Array.isArray(data.comments) ? data.comments : [];
+      const targetIndex = rawComments.findIndex((item) => {
+        const record = item as { id?: unknown };
+        return typeof record.id === 'string' && record.id === commentId;
+      });
+
+      if (targetIndex < 0) throw new Error('Comment not found');
+
+      const targetRecord = rawComments[targetIndex] as { userId?: unknown };
+      if (typeof targetRecord.userId !== 'string' || targetRecord.userId !== userId) {
+        throw new Error('Permission denied');
+      }
+
+      const nextComments = [...rawComments];
+      nextComments[targetIndex] = {
+        ...(rawComments[targetIndex] as Record<string, unknown>),
+        text,
+        updatedAt: Timestamp.now(),
+      };
+
+      transaction.update(todoRef, {
+        comments: nextComments,
+      });
+    });
+  };
+
+  const deleteComment = async (commentId: string, userId: string) => {
+    if (!todoId) throw new Error('No todoId');
+    const todoRef = doc(db, 'todos', todoId);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(todoRef);
+      if (!snapshot.exists()) throw new Error('Todo not found');
+
+      const data = snapshot.data();
+      const rawComments = Array.isArray(data.comments) ? data.comments : [];
+      const targetIndex = rawComments.findIndex((item) => {
+        const record = item as { id?: unknown };
+        return typeof record.id === 'string' && record.id === commentId;
+      });
+
+      if (targetIndex < 0) throw new Error('Comment not found');
+
+      const targetRecord = rawComments[targetIndex] as { userId?: unknown };
+      if (typeof targetRecord.userId !== 'string' || targetRecord.userId !== userId) {
+        throw new Error('Permission denied');
+      }
+
+      const nextComments = rawComments.filter((_, index) => index !== targetIndex);
+
+      transaction.update(todoRef, {
+        comments: nextComments,
+      });
+    });
+  };
+
   if (!todoId) {
-    return { comments: [], loading: false, error: null, addComment };
+    return { comments: [], loading: false, error: null, addComment, updateComment, deleteComment };
   }
 
   const loading = loadedTodoId !== todoId;
   const visibleComments = loadedTodoId === todoId ? comments : [];
   const visibleError = loadedTodoId === todoId ? error : null;
 
-  return { comments: visibleComments, loading, error: visibleError, addComment };
+  return { comments: visibleComments, loading, error: visibleError, addComment, updateComment, deleteComment };
 };

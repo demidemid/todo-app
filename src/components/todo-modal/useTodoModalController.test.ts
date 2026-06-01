@@ -24,15 +24,21 @@ const todo: Todo = {
 
 describe('useTodoModalController', () => {
   const addComment = vi.fn<(...args: unknown[]) => Promise<void>>();
+  const updateComment = vi.fn<(...args: unknown[]) => Promise<void>>();
+  const deleteComment = vi.fn<(...args: unknown[]) => Promise<void>>();
 
   beforeEach(() => {
     vi.clearAllMocks();
     addComment.mockResolvedValue(undefined);
+    updateComment.mockResolvedValue(undefined);
+    deleteComment.mockResolvedValue(undefined);
     mockUseComments.mockReturnValue({
       comments: [],
       loading: false,
       error: null,
       addComment,
+      updateComment,
+      deleteComment,
     });
   });
 
@@ -91,5 +97,36 @@ describe('useTodoModalController', () => {
     });
     expect(addComment).toHaveBeenCalledWith('user-1', 'Hello');
     expect(result.current.commentSubmitting).toBe(false);
+  });
+
+  it('edits own comment through updateComment and clears editing state', async () => {
+    const { result } = renderHook(() =>
+      useTodoModalController({ todo, userId: 'user-1', userEmail: 'user@example.com' })
+    );
+
+    act(() => {
+      result.current.handleStartEditComment('c-1', 'old text');
+      result.current.setEditingCommentText('  new text  ');
+    });
+
+    await act(async () => {
+      await result.current.handleSaveEditComment();
+    });
+
+    expect(updateComment).toHaveBeenCalledWith('c-1', 'user-1', 'new text');
+    expect(result.current.editingCommentId).toBeNull();
+    expect(result.current.editingCommentText).toBe('');
+  });
+
+  it('deletes own comment through deleteComment', async () => {
+    const { result } = renderHook(() =>
+      useTodoModalController({ todo, userId: 'user-1', userEmail: 'user@example.com' })
+    );
+
+    await act(async () => {
+      await result.current.handleDeleteComment('c-2');
+    });
+
+    expect(deleteComment).toHaveBeenCalledWith('c-2', 'user-1');
   });
 });

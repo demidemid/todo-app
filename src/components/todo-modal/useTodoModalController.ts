@@ -13,10 +13,20 @@ export const useTodoModalController = ({
   userId,
   userEmail,
 }: UseTodoModalControllerArgs) => {
-  const { comments, loading: commentsLoading, error: commentsError, addComment } = useComments(todo.id);
+  const {
+    comments,
+    loading: commentsLoading,
+    error: commentsError,
+    addComment,
+    updateComment,
+    deleteComment,
+  } = useComments(todo.id);
   const [commentText, setCommentText] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentError, setCommentError] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [commentActionSubmittingId, setCommentActionSubmittingId] = useState<string | null>(null);
 
   const handleAddComment = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,6 +51,56 @@ export const useTodoModalController = ({
     }
   };
 
+  const handleStartEditComment = (commentId: string, text: string) => {
+    setEditingCommentId(commentId);
+    setEditingCommentText(text);
+    setCommentError('');
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText('');
+    setCommentError('');
+  };
+
+  const handleSaveEditComment = async () => {
+    if (!editingCommentId) return;
+
+    const text = editingCommentText.trim();
+    if (!text) {
+      setCommentError('Comment cannot be empty');
+      return;
+    }
+
+    setCommentActionSubmittingId(editingCommentId);
+    setCommentError('');
+
+    try {
+      await updateComment(editingCommentId, userId, text);
+      handleCancelEditComment();
+    } catch {
+      setCommentError('Failed to update comment');
+    } finally {
+      setCommentActionSubmittingId(null);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    setCommentActionSubmittingId(commentId);
+    setCommentError('');
+
+    try {
+      await deleteComment(commentId, userId);
+      if (editingCommentId === commentId) {
+        handleCancelEditComment();
+      }
+    } catch {
+      setCommentError('Failed to delete comment');
+    } finally {
+      setCommentActionSubmittingId(null);
+    }
+  };
+
   return {
     comments,
     commentsLoading,
@@ -50,5 +110,13 @@ export const useTodoModalController = ({
     commentSubmitting,
     commentError,
     handleAddComment,
+    editingCommentId,
+    editingCommentText,
+    setEditingCommentText,
+    commentActionSubmittingId,
+    handleStartEditComment,
+    handleCancelEditComment,
+    handleSaveEditComment,
+    handleDeleteComment,
   };
 };
