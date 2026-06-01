@@ -11,9 +11,8 @@ import { useTodoListController } from './todo-list/useTodoListController';
 import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
-import { useTodoListControllerStore } from '../stores/useTodoListControllerStore';
-import { useTodoListUiStore } from '../stores/useTodoListUiStore';
-import { useTodoListDndStore } from '../stores/useTodoListDndStore';
+import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
+import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -23,24 +22,21 @@ interface TodoListProps {
   viewMode?: TodoListViewMode;
 }
 
-export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
+const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const dashboardParamId = searchParams.get('dashboard');
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  const dashboardHoverId = useTodoListUiStore((state) => state.dashboardHoverId);
-  const resetUiState = useTodoListUiStore((state) => state.resetUiState);
-  const resetControllerUiState = useTodoListControllerStore((state) => state.resetControllerUiState);
-  const resetDndState = useTodoListDndStore((state) => state.resetDndState);
-  const setDashboardHoverId = useTodoListUiStore((state) => state.setDashboardHoverId);
-  const shareDashboardId = useTodoListUiStore((state) => state.shareDashboardId);
-  const shareSelectedUserIds = useTodoListUiStore((state) => state.shareSelectedUserIds);
-  const shareRecipientEmails = useTodoListUiStore((state) => state.shareRecipientEmails);
-  const shareActionError = useTodoListUiStore((state) => state.shareActionError);
-  const openShareModal = useTodoListUiStore((state) => state.openShareModal);
-  const closeShareModal = useTodoListUiStore((state) => state.closeShareModal);
-  const toggleShareUser = useTodoListUiStore((state) => state.toggleShareUser);
-  const setShareRecipientEmails = useTodoListUiStore((state) => state.setShareRecipientEmails);
-  const setShareActionError = useTodoListUiStore((state) => state.setShareActionError);
+  const dashboardHoverId = useTodoListUiStoreScoped((state) => state.dashboardHoverId);
+  const setDashboardHoverId = useTodoListUiStoreScoped((state) => state.setDashboardHoverId);
+  const shareDashboardId = useTodoListUiStoreScoped((state) => state.shareDashboardId);
+  const shareSelectedUserIds = useTodoListUiStoreScoped((state) => state.shareSelectedUserIds);
+  const shareRecipientEmails = useTodoListUiStoreScoped((state) => state.shareRecipientEmails);
+  const shareActionError = useTodoListUiStoreScoped((state) => state.shareActionError);
+  const openShareModal = useTodoListUiStoreScoped((state) => state.openShareModal);
+  const closeShareModal = useTodoListUiStoreScoped((state) => state.closeShareModal);
+  const toggleShareUser = useTodoListUiStoreScoped((state) => state.toggleShareUser);
+  const setShareRecipientEmails = useTodoListUiStoreScoped((state) => state.setShareRecipientEmails);
+  const setShareActionError = useTodoListUiStoreScoped((state) => state.setShareActionError);
 
   const {
     dashboards,
@@ -113,12 +109,6 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   const shareDashboardTarget = shareDashboardId
     ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
     : null;
-
-  useEffect(() => {
-    resetUiState();
-    resetControllerUiState();
-    resetDndState();
-  }, [resetUiState, resetControllerUiState, resetDndState]);
 
   const updateSearch = useCallback(
     (updater: (nextParams: URLSearchParams) => void) => {
@@ -555,3 +545,9 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     </div>
   );
 };
+
+export const TodoList = (props: TodoListProps) => (
+  <TodoListStoresProvider>
+    <TodoListContent {...props} />
+  </TodoListStoresProvider>
+);

@@ -1,9 +1,14 @@
-import { useEffect } from 'react';
+import { useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
 import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
+import {
+  useHasTodoListStoresProvider,
+  useTodoListControllerStoreScoped,
+  useTodoListDndStoreScoped,
+} from '../../stores/todoListStoresContext';
 
 interface UseTodoListControllerArgs {
   todos: Todo[];
@@ -51,7 +56,16 @@ export const useTodoListController = ({
   deleteDashboard,
   reorderDashboards,
 }: UseTodoListControllerArgs) => {
-  const ui = useTodoListControllerStore(useShallow((state) => ({
+  const hasScopedStores = useHasTodoListStoresProvider();
+  const didInitFallbackRef = useRef(false);
+
+  if (!hasScopedStores && !didInitFallbackRef.current) {
+    useTodoListControllerStore.getState().resetControllerUiState();
+    useTodoListDndStore.getState().resetDndState();
+    didInitFallbackRef.current = true;
+  }
+
+  const ui = useTodoListControllerStoreScoped(useShallow((state) => ({
     title: state.title,
     description: state.description,
     isCreateModalOpen: state.isCreateModalOpen,
@@ -90,10 +104,9 @@ export const useTodoListController = ({
     setEditingTodoId: state.setEditingTodoId,
     setEditingTitle: state.setEditingTitle,
     setEditingDescription: state.setEditingDescription,
-    resetControllerUiState: state.resetControllerUiState,
   })));
 
-  const dnd = useTodoListDndStore(useShallow((state) => ({
+  const dnd = useTodoListDndStoreScoped(useShallow((state) => ({
     dragState: state.dragState,
     dropTarget: state.dropTarget,
     dashboardDragId: state.dashboardDragId,
@@ -102,16 +115,7 @@ export const useTodoListController = ({
     setDropTarget: state.setDropTarget,
     setDashboardDragId: state.setDashboardDragId,
     setDashboardDropIndex: state.setDashboardDropIndex,
-    resetDndState: state.resetDndState,
   })));
-
-  const { resetControllerUiState } = ui;
-  const { resetDndState } = dnd;
-
-  useEffect(() => {
-    resetControllerUiState();
-    resetDndState();
-  }, [resetControllerUiState, resetDndState]);
 
   const handleAddTodo = async (event: React.FormEvent) => {
     event.preventDefault();

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import type { DashboardColumn } from '../types/dashboard';
 import type { Todo } from '../types/todo';
 
@@ -44,9 +45,15 @@ type TodoListControllerSetters = {
   [K in keyof TodoListControllerState as ControllerSetterName<string & K>]: Setter<TodoListControllerState[K]>;
 };
 
-type TodoListControllerStoreState = TodoListControllerState & TodoListControllerSetters & {
+export type TodoListControllerStoreState = TodoListControllerState & TodoListControllerSetters & {
   resetControllerUiState: () => void;
 };
+
+type SetControllerStoreState = (
+  partial:
+    | Partial<TodoListControllerStoreState>
+    | ((state: TodoListControllerStoreState) => Partial<TodoListControllerStoreState>)
+) => void;
 
 const initialState: TodoListControllerState = {
   title: '',
@@ -78,7 +85,7 @@ const resolveNext = <T,>(next: SetStateAction<T>, prev: T): T => (
 const toSetterName = <K extends keyof TodoListControllerState>(key: K) =>
   (`set${String(key).charAt(0).toUpperCase()}${String(key).slice(1)}` as ControllerSetterName<string & K>);
 
-const createSetters = (set: (partial: (state: TodoListControllerStoreState) => Partial<TodoListControllerStoreState>) => void) => {
+const createSetters = (set: SetControllerStoreState) => {
   const entries = Object.keys(initialState).map((rawKey) => {
     const key = rawKey as keyof TodoListControllerState;
     const setterName = toSetterName(key);
@@ -95,10 +102,14 @@ const createSetters = (set: (partial: (state: TodoListControllerStoreState) => P
   return Object.fromEntries(entries) as TodoListControllerSetters;
 };
 
-export const useTodoListControllerStore = create<TodoListControllerStoreState>((set) => ({
+const createTodoListControllerStoreState = (set: SetControllerStoreState): TodoListControllerStoreState => ({
   ...initialState,
   resetControllerUiState: () => set({ ...initialState }),
   ...createSetters(set),
-}));
+});
+
+export const createTodoListControllerStore = () => createStore<TodoListControllerStoreState>((set) => createTodoListControllerStoreState(set));
+
+export const useTodoListControllerStore = create<TodoListControllerStoreState>((set) => createTodoListControllerStoreState(set));
 
 export const useTodoListControllerSlice = useTodoListControllerStore;

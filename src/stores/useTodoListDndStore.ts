@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 
 export interface DragState {
   todoId: string;
@@ -9,7 +10,7 @@ export interface DropTarget {
   index: number;
 }
 
-interface TodoListDndState {
+export interface TodoListDndState {
   dragState: DragState | null;
   dropTarget: DropTarget | null;
   dashboardDragId: string | null;
@@ -28,11 +29,15 @@ const initialDndState = {
   dashboardDropIndex: null,
 } as const;
 
-export const useTodoListDndStore = create<TodoListDndState>((set) => ({
+const createTodoListDndState = (set: (next: Partial<TodoListDndState>) => void): TodoListDndState => ({
   ...initialDndState,
   setDragState: (next) => set({ dragState: next }),
   setDropTarget: (next) => set({ dropTarget: next }),
   setDashboardDragId: (next) => set({ dashboardDragId: next }),
   setDashboardDropIndex: (next) => set({ dashboardDropIndex: next }),
   resetDndState: () => set({ ...initialDndState }),
-}));
+});
+
+export const createTodoListDndStore = () => createStore<TodoListDndState>((set) => createTodoListDndState(set));
+
+export const useTodoListDndStore = create<TodoListDndState>((set) => createTodoListDndState(set));

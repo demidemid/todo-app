@@ -1,7 +1,8 @@
 import { create } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 import type { Dashboard } from '../types/dashboard';
 
-interface TodoListUiState {
+export interface TodoListUiState {
   dashboardHoverId: string | null;
   shareDashboardId: string | null;
   shareSelectedUserIds: string[];
@@ -24,7 +25,7 @@ const initialState = {
   shareActionError: '',
 };
 
-export const useTodoListUiStore = create<TodoListUiState>((set) => ({
+const createTodoListUiState = (set: (next: Partial<TodoListUiState> | ((state: TodoListUiState) => Partial<TodoListUiState>)) => void): TodoListUiState => ({
   ...initialState,
   resetUiState: () => {
     set({ ...initialState });
@@ -61,4 +62,8 @@ export const useTodoListUiStore = create<TodoListUiState>((set) => ({
   setShareActionError: (error) => {
     set({ shareActionError: error });
   },
-}));
+});
+
+export const createTodoListUiStore = () => createStore<TodoListUiState>((set) => createTodoListUiState(set));
+
+export const useTodoListUiStore = create<TodoListUiState>((set) => createTodoListUiState(set));
