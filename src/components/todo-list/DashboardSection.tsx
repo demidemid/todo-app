@@ -421,7 +421,7 @@ export const DashboardSection = ({
                                 )}
                               </div>
                               <EllipsisMenu
-                                triggerLabel="Open menu"
+                                triggerLabel={`Open actions for ${todo.title}`}
                                 triggerTestId={`card-menu-trigger-${todo.id}`}
                                 menuTestId="card-menu"
                                 menuClassName="w-32"
