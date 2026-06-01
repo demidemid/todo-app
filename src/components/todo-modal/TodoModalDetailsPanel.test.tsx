@@ -76,6 +76,77 @@ describe('TodoModalDetailsPanel', () => {
     expect(props.onOpenFilePicker).toHaveBeenCalledTimes(1);
   });
 
+  it('shows checklist action in plus menu and triggers create checklist handler', () => {
+    const props = createProps();
+    props.onCreateChecklist = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-checklist'));
+
+    expect(props.onCreateChecklist).toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards checklist title/item actions from details panel controls', async () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'first item', checked: false }],
+      },
+    };
+    props.onChecklistTitleChange = vi.fn().mockResolvedValue(undefined);
+    props.onChecklistAddItem = vi.fn().mockResolvedValue(undefined);
+    props.onChecklistItemChange = vi.fn().mockResolvedValue(undefined);
+    props.onChecklistDeleteItem = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-checklist-title'));
+    fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Sprint checklist' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
+
+    fireEvent.click(screen.getByTestId('todo-checklist-add-item'));
+    fireEvent.click(screen.getByTestId('todo-checklist-toggle-item-1'));
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'edited item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter' });
+
+    fireEvent.click(screen.getByTestId('todo-checklist-delete-item-1'));
+
+    await waitFor(() => {
+      expect(props.onChecklistTitleChange).toHaveBeenCalledWith('Sprint checklist');
+      expect(props.onChecklistAddItem).toHaveBeenCalledTimes(1);
+      expect(props.onChecklistItemChange).toHaveBeenCalledWith('item-1', { checked: true });
+      expect(props.onChecklistItemChange).toHaveBeenCalledWith('item-1', { title: 'edited item' });
+      expect(props.onChecklistDeleteItem).toHaveBeenCalledWith('item-1');
+    });
+  });
+
+  it('cancels checklist item inline edit with escape', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'first item', checked: false }],
+      },
+    };
+    props.onChecklistItemChange = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'draft item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Escape' });
+
+    expect(screen.queryByTestId('todo-checklist-item-input-item-1')).not.toBeInTheDocument();
+    expect(props.onChecklistItemChange).not.toHaveBeenCalled();
+  });
+
   it('opens link form from plus menu and submits link payload', async () => {
     const props = createProps();
     props.onAddLink = vi.fn().mockResolvedValue(undefined);

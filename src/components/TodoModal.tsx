@@ -3,6 +3,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
 import { storage } from '../firebase';
+import { DEFAULT_CHECKLIST_TITLE, DEFAULT_CHECKLIST_ITEM_TITLE, normalizeTodoChecklist } from '../utils/todoChecklist';
 import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
@@ -41,11 +42,35 @@ const normalizeSafeUrl = (rawUrl: string): string | null => {
   }
 };
 
+const createChecklistItemId = () => (
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+);
+
 export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = React.useState(false);
   const [deletingFileIds, setDeletingFileIds] = React.useState<string[]>([]);
   const [filesError, setFilesError] = React.useState('');
+  const [quickActionError, setQuickActionError] = React.useState('');
+
+  const formatActionError = (actionName: string, actionError: unknown): string => {
+    const errorCode =
+      typeof actionError === 'object' && actionError !== null && 'code' in actionError
+        ? String((actionError as { code?: unknown }).code)
+        : null;
+    const errorMessage =
+      actionError instanceof Error
+        ? actionError.message
+        : typeof actionError === 'object' && actionError !== null && 'message' in actionError
+          ? String((actionError as { message?: unknown }).message)
+          : 'Unknown error';
+
+    return errorCode
+      ? `${actionName} failed (${errorCode}): ${errorMessage}`
+      : `${actionName} failed: ${errorMessage}`;
+  };
 
   React.useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -280,7 +305,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
             title,
             description,
             saving,
-            error,
+            error: error || quickActionError,
           }}
           actions={{
             onStartEdit: () => {
@@ -330,8 +355,101 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
                 links: [...normalizedCurrentLinks, nextLink],
               });
             },
+            onCreateChecklist: async () => {
+              const existingChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (existingChecklist) return;
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  title: DEFAULT_CHECKLIST_TITLE,
+                  items: [
+                    {
+                      id: createChecklistItemId(),
+                      title: DEFAULT_CHECKLIST_ITEM_TITLE,
+                      checked: false,
+                    },
+                  ],
+                },
+              });
+            },
+            onChecklistTitleChange: async (nextTitle) => {
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  title: nextTitle.trim() || DEFAULT_CHECKLIST_TITLE,
+                },
+              });
+            },
+            onChecklistAddItem: async () => {
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              }) ?? {
+                title: DEFAULT_CHECKLIST_TITLE,
+                items: [],
+              };
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: [
+                    ...currentChecklist.items,
+                    {
+                      id: createChecklistItemId(),
+                      title: DEFAULT_CHECKLIST_ITEM_TITLE,
+                      checked: false,
+                    },
+                  ],
+                },
+              });
+            },
+            onChecklistItemChange: async (itemId, updates) => {
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: currentChecklist.items.map((item) => {
+                    if (item.id !== itemId) return item;
+
+                    return {
+                      ...item,
+                      ...(updates.title != null ? { title: updates.title.trim() || DEFAULT_CHECKLIST_ITEM_TITLE } : {}),
+                      ...(updates.checked != null ? { checked: updates.checked } : {}),
+                    };
+                  }),
+                },
+              });
+            },
+            onChecklistDeleteItem: async (itemId) => {
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: currentChecklist.items.filter((item) => item.id !== itemId),
+                },
+              });
+            },
             onMoveToNextStatus: async (todoId, nextColumnId) => {
-              await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
+              try {
+                setQuickActionError('');
+                await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
+              } catch (moveError) {
+                setQuickActionError(formatActionError('Failed to move card', moveError));
+              }
             },
           }}
           columns={columns}

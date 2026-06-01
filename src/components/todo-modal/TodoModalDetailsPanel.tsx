@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2 } from 'lucide-react';
+import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2, ListChecks } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
+import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
 
@@ -78,6 +79,11 @@ interface TodoModalDetailsPanelProps {
     onDeleteFile: (fileId: string) => void;
     onDeleteLink?: (linkIndex: number) => Promise<void> | void;
     onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
+    onCreateChecklist?: () => Promise<void> | void;
+    onChecklistTitleChange?: (title: string) => Promise<void> | void;
+    onChecklistAddItem?: () => Promise<void> | void;
+    onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+    onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   };
   files?: TodoFile[];
@@ -103,6 +109,11 @@ interface TodoModalDetailsPanelProps {
   onDeleteFile?: (fileId: string) => void;
   onDeleteLink?: (linkIndex: number) => Promise<void> | void;
   onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
+  onCreateChecklist?: () => Promise<void> | void;
+  onChecklistTitleChange?: (title: string) => Promise<void> | void;
+  onChecklistAddItem?: () => Promise<void> | void;
+  onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+  onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
 }
@@ -136,6 +147,11 @@ export const TodoModalDetailsPanel = ({
   onDeleteFile: legacyOnDeleteFile,
   onDeleteLink: legacyOnDeleteLink,
   onAddLink: legacyOnAddLink,
+  onCreateChecklist: legacyOnCreateChecklist,
+  onChecklistTitleChange: legacyOnChecklistTitleChange,
+  onChecklistAddItem: legacyOnChecklistAddItem,
+  onChecklistItemChange: legacyOnChecklistItemChange,
+  onChecklistDeleteItem: legacyOnChecklistDeleteItem,
 }: TodoModalDetailsPanelProps) => {
   const resolvedState = state ?? {
     files: legacyFiles ?? [],
@@ -164,6 +180,11 @@ export const TodoModalDetailsPanel = ({
     onDeleteFile: legacyOnDeleteFile ?? (() => {}),
     onDeleteLink: legacyOnDeleteLink,
     onAddLink: legacyOnAddLink,
+    onCreateChecklist: legacyOnCreateChecklist,
+    onChecklistTitleChange: legacyOnChecklistTitleChange,
+    onChecklistAddItem: legacyOnChecklistAddItem,
+    onChecklistItemChange: legacyOnChecklistItemChange,
+    onChecklistDeleteItem: legacyOnChecklistDeleteItem,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
   };
 
@@ -194,6 +215,11 @@ export const TodoModalDetailsPanel = ({
     onDeleteFile,
     onDeleteLink,
     onAddLink,
+    onCreateChecklist,
+    onChecklistTitleChange,
+    onChecklistAddItem,
+    onChecklistItemChange,
+    onChecklistDeleteItem,
     onMoveToNextStatus,
   } = resolvedActions;
 
@@ -345,7 +371,7 @@ export const TodoModalDetailsPanel = ({
               </IconButton>
               {isActionMenuOpen && (
                 <div
-                  className="absolute left-0 top-12 z-10 min-w-60 rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
+                  className="absolute left-0 top-12 z-10 min-w-60 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
                   data-testid="todo-actions-menu"
                   role="menu"
                 >
@@ -373,6 +399,19 @@ export const TodoModalDetailsPanel = ({
                   >
                     <Link2 size={16} />
                     Links
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
+                    role="menuitem"
+                    data-testid="todo-actions-checklist"
+                    onClick={() => {
+                      void onCreateChecklist?.();
+                      setIsActionMenuOpen(false);
+                    }}
+                  >
+                    <ListChecks size={16} />
+                    Checklist
                   </button>
                   {isLinksFormOpen && (
                     <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
@@ -454,6 +493,14 @@ export const TodoModalDetailsPanel = ({
             </span>
           </div>
         )}
+
+        <TodoChecklistSection
+          checklist={todo.checklist}
+          onChecklistTitleChange={onChecklistTitleChange}
+          onChecklistAddItem={onChecklistAddItem}
+          onChecklistItemChange={onChecklistItemChange}
+          onChecklistDeleteItem={onChecklistDeleteItem}
+        />
 
         {isEditing ? (
           <>
