@@ -20,6 +20,8 @@ interface TodoModalProps {
   columns?: { id: string; name: string }[];
 }
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 const normalizeSafeUrl = (rawUrl: string): string | null => {
   const trimmed = rawUrl.trim();
   if (!trimmed) return null;
@@ -65,6 +67,14 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     commentSubmitting,
     commentError,
     handleAddComment,
+    editingCommentId,
+    editingCommentText,
+    setEditingCommentText,
+    commentActionSubmittingId,
+    handleStartEditComment,
+    handleCancelEditComment,
+    handleSaveEditComment,
+    handleDeleteComment,
   } = useTodoModalController({
     todo,
     userId,
@@ -119,6 +129,14 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
     if (selectedFiles.length === 0) return;
+
+    const oversizedFiles = selectedFiles.filter((file) => file.size > MAX_FILE_SIZE_BYTES);
+    if (oversizedFiles.length > 0) {
+      const oversizedNames = oversizedFiles.map((file) => file.name).join(', ');
+      setFilesError(`Each file must be 5 MB or less. Too large: ${oversizedNames}`);
+      event.target.value = '';
+      return;
+    }
 
     setFilesUploading(true);
     setFilesError('');
@@ -301,14 +319,23 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
         />
 
         <TodoModalCommentsPanel
+          currentUserId={userId}
           comments={comments}
           commentsLoading={commentsLoading}
           commentsError={commentsError}
           commentText={commentText}
           commentSubmitting={commentSubmitting}
+          editingCommentId={editingCommentId}
+          editingCommentText={editingCommentText}
+          commentActionSubmittingId={commentActionSubmittingId}
           commentError={commentError}
           onCommentTextChange={setCommentText}
           onSubmit={handleAddComment}
+          onStartEditComment={handleStartEditComment}
+          onCancelEditComment={handleCancelEditComment}
+          onEditCommentTextChange={setEditingCommentText}
+          onSaveEditComment={handleSaveEditComment}
+          onDeleteComment={handleDeleteComment}
         />
 
         <Input

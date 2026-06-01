@@ -3,6 +3,7 @@ import {
   arrayUnion,
   doc,
   onSnapshot,
+  runTransaction,
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
@@ -46,6 +47,7 @@ export const useComments = (todoId: string | null) => {
               userEmail: typeof record.userEmail === 'string' ? record.userEmail : undefined,
               text: typeof record.text === 'string' ? record.text : '',
               createdAt: parseTimestamp(record.createdAt),
+              updatedAt: 'updatedAt' in record ? parseTimestamp((record as { updatedAt?: unknown }).updatedAt) : undefined,
             };
           });
 
@@ -66,6 +68,7 @@ export const useComments = (todoId: string | null) => {
   const addComment = async (userId: string, text: string, userEmail?: string) => {
     if (!todoId) throw new Error('No todoId');
     const todoRef = doc(db, 'todos', todoId);
+    const now = Timestamp.now();
     const commentId = typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -77,18 +80,88 @@ export const useComments = (todoId: string | null) => {
         userId,
         userEmail,
         text,
-        createdAt: Timestamp.now(),
+        createdAt: now,
       }),
+      updatedAt: now,
+    });
+  };
+
+  const updateComment = async (commentId: string, userId: string, text: string) => {
+    if (!todoId) throw new Error('No todoId');
+    const todoRef = doc(db, 'todos', todoId);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(todoRef);
+      if (!snapshot.exists()) throw new Error('Todo not found');
+
+      const data = snapshot.data();
+      const rawComments = Array.isArray(data.comments) ? data.comments : [];
+      const targetIndex = rawComments.findIndex((item) => {
+        const record = item as { id?: unknown };
+        return typeof record.id === 'string' && record.id === commentId;
+      });
+
+      if (targetIndex < 0) throw new Error('Comment not found');
+
+      const targetRecord = rawComments[targetIndex] as { userId?: unknown };
+      if (typeof targetRecord.userId !== 'string' || targetRecord.userId !== userId) {
+        throw new Error('Permission denied');
+      }
+
+      const nextComments = [...rawComments];
+      const now = Timestamp.now();
+      nextComments[targetIndex] = {
+        ...(rawComments[targetIndex] as Record<string, unknown>),
+        text,
+        updatedAt: now,
+      };
+
+      transaction.update(todoRef, {
+        comments: nextComments,
+        updatedAt: now,
+      });
+    });
+  };
+
+  const deleteComment = async (commentId: string, userId: string) => {
+    if (!todoId) throw new Error('No todoId');
+    const todoRef = doc(db, 'todos', todoId);
+
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(todoRef);
+      if (!snapshot.exists()) throw new Error('Todo not found');
+
+      const data = snapshot.data();
+      const rawComments = Array.isArray(data.comments) ? data.comments : [];
+      const targetIndex = rawComments.findIndex((item) => {
+        const record = item as { id?: unknown };
+        return typeof record.id === 'string' && record.id === commentId;
+      });
+
+      if (targetIndex < 0) throw new Error('Comment not found');
+
+      const targetRecord = rawComments[targetIndex] as { userId?: unknown };
+      if (typeof targetRecord.userId !== 'string' || targetRecord.userId !== userId) {
+        throw new Error('Permission denied');
+      }
+
+      const nextComments = rawComments.filter((_, index) => index !== targetIndex);
+      const now = Timestamp.now();
+
+      transaction.update(todoRef, {
+        comments: nextComments,
+        updatedAt: now,
+      });
     });
   };
 
   if (!todoId) {
-    return { comments: [], loading: false, error: null, addComment };
+    return { comments: [], loading: false, error: null, addComment, updateComment, deleteComment };
   }
 
   const loading = loadedTodoId !== todoId;
   const visibleComments = loadedTodoId === todoId ? comments : [];
   const visibleError = loadedTodoId === todoId ? error : null;
 
-  return { comments: visibleComments, loading, error: visibleError, addComment };
+  return { comments: visibleComments, loading, error: visibleError, addComment, updateComment, deleteComment };
 };

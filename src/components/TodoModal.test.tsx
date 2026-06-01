@@ -514,6 +514,31 @@ describe('TodoModal', () => {
     });
   });
 
+  it('rejects files larger than 5 MB before upload starts', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const largeFile = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.bin', {
+      type: 'application/octet-stream',
+    });
+    const input = screen.getByTestId('todo-file-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [largeFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Each file must be 5 MB or less/)).toBeInTheDocument();
+    });
+    expect(mockUploadBytes).not.toHaveBeenCalled();
+    expect(updateTodo).not.toHaveBeenCalled();
+  });
+
   it('deletes file from storage and removes metadata entry', async () => {
     const todoWithFile: Todo = {
       ...todo,
