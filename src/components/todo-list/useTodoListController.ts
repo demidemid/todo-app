@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
-import { useTodoListControllerSlice } from '../../stores/useTodoListControllerStore';
+import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
+import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
 
 interface UseTodoListControllerArgs {
   todos: Todo[];
@@ -49,12 +51,67 @@ export const useTodoListController = ({
   deleteDashboard,
   reorderDashboards,
 }: UseTodoListControllerArgs) => {
-  const ui = useTodoListControllerSlice();
+  const ui = useTodoListControllerStore(useShallow((state) => ({
+    title: state.title,
+    description: state.description,
+    isCreateModalOpen: state.isCreateModalOpen,
+    createCardDashboardId: state.createCardDashboardId,
+    createCardColumnId: state.createCardColumnId,
+    isCreateDashboardModalOpen: state.isCreateDashboardModalOpen,
+    dashboardName: state.dashboardName,
+    columnDraft: state.columnDraft,
+    dashboardColumns: state.dashboardColumns,
+    dashboardFormError: state.dashboardFormError,
+    dashboardActionError: state.dashboardActionError,
+    isEditDashboardModalOpen: state.isEditDashboardModalOpen,
+    editingDashboardId: state.editingDashboardId,
+    editingDashboardName: state.editingDashboardName,
+    editingDashboardColumns: state.editingDashboardColumns,
+    editingColumnDraft: state.editingColumnDraft,
+    editingTodoId: state.editingTodoId,
+    editingTitle: state.editingTitle,
+    editingDescription: state.editingDescription,
+    setTitle: state.setTitle,
+    setDescription: state.setDescription,
+    setIsCreateModalOpen: state.setIsCreateModalOpen,
+    setCreateCardDashboardId: state.setCreateCardDashboardId,
+    setCreateCardColumnId: state.setCreateCardColumnId,
+    setIsCreateDashboardModalOpen: state.setIsCreateDashboardModalOpen,
+    setDashboardName: state.setDashboardName,
+    setColumnDraft: state.setColumnDraft,
+    setDashboardColumns: state.setDashboardColumns,
+    setDashboardFormError: state.setDashboardFormError,
+    setDashboardActionError: state.setDashboardActionError,
+    setIsEditDashboardModalOpen: state.setIsEditDashboardModalOpen,
+    setEditingDashboardId: state.setEditingDashboardId,
+    setEditingDashboardName: state.setEditingDashboardName,
+    setEditingDashboardColumns: state.setEditingDashboardColumns,
+    setEditingColumnDraft: state.setEditingColumnDraft,
+    setEditingTodoId: state.setEditingTodoId,
+    setEditingTitle: state.setEditingTitle,
+    setEditingDescription: state.setEditingDescription,
+    resetControllerUiState: state.resetControllerUiState,
+  })));
+
+  const dnd = useTodoListDndStore(useShallow((state) => ({
+    dragState: state.dragState,
+    dropTarget: state.dropTarget,
+    dashboardDragId: state.dashboardDragId,
+    dashboardDropIndex: state.dashboardDropIndex,
+    setDragState: state.setDragState,
+    setDropTarget: state.setDropTarget,
+    setDashboardDragId: state.setDashboardDragId,
+    setDashboardDropIndex: state.setDashboardDropIndex,
+    resetDndState: state.resetDndState,
+  })));
+
   const { resetControllerUiState } = ui;
+  const { resetDndState } = dnd;
 
   useEffect(() => {
     resetControllerUiState();
-  }, [resetControllerUiState]);
+    resetDndState();
+  }, [resetControllerUiState, resetDndState]);
 
   const handleAddTodo = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -345,7 +402,7 @@ export const useTodoListController = ({
     draggedDashboardId?: string,
     reorderableDashboardIds?: string[]
   ) => {
-    const activeDragId = draggedDashboardId ?? ui.dashboardDragId;
+    const activeDragId = draggedDashboardId ?? dnd.dashboardDragId;
     if (!activeDragId) return;
 
     const reorderableIdSet = reorderableDashboardIds ? new Set(reorderableDashboardIds) : null;
@@ -355,8 +412,8 @@ export const useTodoListController = ({
 
     const sourceIndex = reorderableDashboards.findIndex((dashboard) => dashboard.id === activeDragId);
     if (sourceIndex < 0) {
-      ui.setDashboardDragId(null);
-      ui.setDashboardDropIndex(null);
+      dnd.setDashboardDragId(null);
+      dnd.setDashboardDropIndex(null);
       return;
     }
 
@@ -367,8 +424,8 @@ export const useTodoListController = ({
     const insertIndex = sourceIndex < normalizedTargetIndex ? normalizedTargetIndex - 1 : normalizedTargetIndex;
     nextDashboards.splice(insertIndex, 0, movedDashboard);
 
-    ui.setDashboardDragId(null);
-    ui.setDashboardDropIndex(null);
+    dnd.setDashboardDragId(null);
+    dnd.setDashboardDropIndex(null);
 
     if (insertIndex === sourceIndex) return;
 
@@ -381,6 +438,7 @@ export const useTodoListController = ({
 
   return {
     ...ui,
+    ...dnd,
     handleAddTodo,
     handleMoveTodo,
     startEdit,

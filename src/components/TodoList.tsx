@@ -13,6 +13,7 @@ import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
 import { useTodoListControllerStore } from '../stores/useTodoListControllerStore';
 import { useTodoListUiStore } from '../stores/useTodoListUiStore';
+import { useTodoListDndStore } from '../stores/useTodoListDndStore';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -29,6 +30,7 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   const dashboardHoverId = useTodoListUiStore((state) => state.dashboardHoverId);
   const resetUiState = useTodoListUiStore((state) => state.resetUiState);
   const resetControllerUiState = useTodoListControllerStore((state) => state.resetControllerUiState);
+  const resetDndState = useTodoListDndStore((state) => state.resetDndState);
   const setDashboardHoverId = useTodoListUiStore((state) => state.setDashboardHoverId);
   const shareDashboardId = useTodoListUiStore((state) => state.shareDashboardId);
   const shareSelectedUserIds = useTodoListUiStore((state) => state.shareSelectedUserIds);
@@ -115,7 +117,8 @@ export const TodoList = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   useEffect(() => {
     resetUiState();
     resetControllerUiState();
-  }, [resetUiState, resetControllerUiState]);
+    resetDndState();
+  }, [resetUiState, resetControllerUiState, resetDndState]);
 
   const updateSearch = useCallback(
     (updater: (nextParams: URLSearchParams) => void) => {

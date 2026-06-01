@@ -32,14 +32,10 @@ interface TodoListControllerState {
   editingDashboardName: string;
   editingDashboardColumns: DashboardColumn[];
   editingColumnDraft: string;
-  dragState: DragState | null;
-  dropTarget: DropTarget | null;
   editingTodoId: string | null;
   editingTitle: string;
   editingDescription: string;
   modalTodo: Todo | null;
-  dashboardDragId: string | null;
-  dashboardDropIndex: number | null;
 }
 
 type ControllerSetterName<K extends string> = `set${Capitalize<K>}`;
@@ -69,14 +65,10 @@ const initialState: TodoListControllerState = {
   editingDashboardName: '',
   editingDashboardColumns: [],
   editingColumnDraft: '',
-  dragState: null,
-  dropTarget: null,
   editingTodoId: null,
   editingTitle: '',
   editingDescription: '',
   modalTodo: null,
-  dashboardDragId: null,
-  dashboardDropIndex: null,
 };
 
 const resolveNext = <T,>(next: SetStateAction<T>, prev: T): T => (
