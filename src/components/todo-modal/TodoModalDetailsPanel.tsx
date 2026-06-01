@@ -31,6 +31,25 @@ const FileTypeIcon = ({ fileName }: { fileName: string }) => {
   return <FaFile className="shrink-0 text-slate-300" aria-hidden="true" />;
 };
 
+const normalizeSafeUrl = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+  const candidate = hasScheme ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 interface TodoModalDetailsPanelProps {
   todo: Todo;
   files: TodoFile[];
@@ -129,11 +148,11 @@ export const TodoModalDetailsPanel = ({
   }, [isActionMenuOpen]);
 
   const handleAddLink = async () => {
-    const url = linkUrl.trim();
+    const url = normalizeSafeUrl(linkUrl);
     const name = linkName.trim();
 
     if (!url) {
-      setLinkError('URL is required');
+      setLinkError('Enter a valid http/https URL');
       return;
     }
 
@@ -397,27 +416,34 @@ export const TodoModalDetailsPanel = ({
                 <div className="mb-4 space-y-2">
                   <ul className="space-y-1">
                     {todo.links?.map((link, index) => (
-                      <li key={`${link.url}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
-                        <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
-                        >
-                          {link.name ? link.name : link.url}
-                        </a>
-                        <IconButton
-                          variant="danger"
-                          size="sm"
-                          label={`Delete link ${link.name ? link.name : link.url}`}
-                          className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
-                          onClick={() => onDeleteLink?.(index)}
-                          data-testid={`delete-link-${index}`}
-                        >
-                          <X size={12} />
-                        </IconButton>
-                      </li>
+                      (() => {
+                        const safeUrl = normalizeSafeUrl(link.url);
+                        if (!safeUrl) return null;
+
+                        return (
+                          <li key={`${safeUrl}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
+                            <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                            >
+                              {link.name ? link.name : safeUrl}
+                            </a>
+                            <IconButton
+                              variant="danger"
+                              size="sm"
+                              label={`Delete link ${link.name ? link.name : safeUrl}`}
+                              className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
+                              onClick={() => onDeleteLink?.(index)}
+                              data-testid={`delete-link-${index}`}
+                            >
+                              <X size={12} />
+                            </IconButton>
+                          </li>
+                        );
+                      })()
                     ))}
                   </ul>
                 </div>
@@ -482,27 +508,34 @@ export const TodoModalDetailsPanel = ({
                 <div className="mb-4 space-y-2">
                   <ul className="space-y-1">
                     {todo.links?.map((link, index) => (
-                      <li key={`${link.url}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
-                        <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
-                        >
-                          {link.name ? link.name : link.url}
-                        </a>
-                        <IconButton
-                          variant="danger"
-                          size="sm"
-                          label={`Delete link ${link.name ? link.name : link.url}`}
-                          className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
-                          onClick={() => onDeleteLink?.(index)}
-                          data-testid={`delete-link-${index}`}
-                        >
-                          <X size={12} />
-                        </IconButton>
-                      </li>
+                      (() => {
+                        const safeUrl = normalizeSafeUrl(link.url);
+                        if (!safeUrl) return null;
+
+                        return (
+                          <li key={`${safeUrl}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
+                            <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                            >
+                              {link.name ? link.name : safeUrl}
+                            </a>
+                            <IconButton
+                              variant="danger"
+                              size="sm"
+                              label={`Delete link ${link.name ? link.name : safeUrl}`}
+                              className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
+                              onClick={() => onDeleteLink?.(index)}
+                              data-testid={`delete-link-${index}`}
+                            >
+                              <X size={12} />
+                            </IconButton>
+                          </li>
+                        );
+                      })()
                     ))}
                   </ul>
                 </div>

@@ -19,6 +19,25 @@ interface TodoModalProps {
   columns?: { id: string; name: string }[];
 }
 
+const normalizeSafeUrl = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+  const candidate = hasScheme ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = React.useState(false);
@@ -252,12 +271,24 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           }}
           onAddLink={async (link) => {
             const currentLinks = Array.isArray(todo.links) ? todo.links : [];
-            const normalizedCurrentLinks = currentLinks.map((item) => {
-              const trimmedName = item.name?.trim();
-              return { url: item.url, name: trimmedName || item.url };
-            });
+            const normalizedCurrentLinks = currentLinks
+              .map((item) => {
+                const normalizedUrl = normalizeSafeUrl(item.url);
+                if (!normalizedUrl) return null;
+
+                const trimmedName = item.name?.trim();
+                return { url: normalizedUrl, name: trimmedName || normalizedUrl };
+              })
+              .filter((item): item is { url: string; name: string } => item !== null);
+
+            const normalizedIncomingUrl = normalizeSafeUrl(link.url);
+            if (!normalizedIncomingUrl) {
+              throw new Error('Enter a valid http/https URL');
+            }
+
             const trimmedName = link.name?.trim();
-            const nextLink = { url: link.url, name: trimmedName || link.url };
+            const nextLink = { url: normalizedIncomingUrl, name: trimmedName || normalizedIncomingUrl };
+
             await updateTodo(todo.id, {
               links: [...normalizedCurrentLinks, nextLink],
             });

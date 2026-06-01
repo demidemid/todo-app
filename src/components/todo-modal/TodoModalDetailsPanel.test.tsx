@@ -101,6 +101,26 @@ describe('TodoModalDetailsPanel', () => {
     });
   });
 
+  it('rejects unsafe URL schemes when adding link', async () => {
+    const props = createProps();
+    props.onAddLink = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-add-link'));
+
+    fireEvent.change(screen.getByPlaceholderText('URL'), {
+      target: { value: 'javascript:alert(1)' },
+    });
+    fireEvent.click(screen.getByTestId('todo-actions-add-link-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Enter a valid http/https URL')).toBeInTheDocument();
+    });
+    expect(props.onAddLink).not.toHaveBeenCalled();
+  });
+
   it('renders links block inside card details when todo has links', () => {
     const props = createProps();
     props.todo = {
@@ -120,6 +140,28 @@ describe('TodoModalDetailsPanel', () => {
       'href',
       'https://example.com/a',
     );
+  });
+
+  it('skips rendering unsafe persisted links', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      links: [
+        {
+          name: 'Safe',
+          url: 'https://example.com/safe',
+        },
+        {
+          name: 'Bad',
+          url: 'javascript:alert(1)',
+        },
+      ],
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByRole('link', { name: 'Safe' })).toHaveAttribute('href', 'https://example.com/safe');
+    expect(screen.queryByRole('link', { name: 'Bad' })).not.toBeInTheDocument();
   });
 
   it('hides description output when description is empty', () => {

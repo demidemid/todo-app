@@ -332,6 +332,38 @@ describe('TodoModal', () => {
     });
   });
 
+  it('sanitizes links on the persistence boundary and drops unsafe existing protocols', async () => {
+    const todoWithUnsafeLink: Todo = {
+      ...todo,
+      links: [{ name: 'bad', url: 'javascript:alert(1)' }],
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithUnsafeLink}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-add-link'));
+
+    fireEvent.change(screen.getByPlaceholderText('URL'), {
+      target: { value: 'example.com/safe' },
+    });
+    fireEvent.click(screen.getByTestId('todo-actions-add-link-submit'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        links: [{ name: 'https://example.com/safe', url: 'https://example.com/safe' }],
+      });
+    });
+  });
+
   it('deletes selected link by red cross and keeps remaining links', async () => {
     const todoWithLinks: Todo = {
       ...todo,
