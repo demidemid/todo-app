@@ -126,7 +126,7 @@ describe('DashboardSection', () => {
 
     expect(props.onOpenCreateCard).toHaveBeenCalledWith('board-1', 'todo');
     expect(props.onMoveTodo).not.toHaveBeenCalled();
-    expect(props.onSetDropTarget).toHaveBeenCalledWith({ columnId: 'todo', index: 0 });
+    expect(props.onSetDropTarget).not.toHaveBeenCalled();
   });
 
   it('moves todo through drop slots and end-drop zone when drag state exists', () => {

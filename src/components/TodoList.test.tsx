@@ -871,7 +871,7 @@ describe('TodoList', () => {
     expect(card).toHaveTextContent('2');
   });
 
-  it('highlights drop target on drag over', () => {
+  it('highlights target column on drag over', () => {
     mockUseTodos.mockReturnValue({
       todos: [
         {
@@ -898,11 +898,12 @@ describe('TodoList', () => {
 
     const card = screen.getByTestId('card-t-1');
     const dropEnd = screen.getByTestId('drop-done-end');
+    const doneColumn = screen.getByTestId('column-done');
 
     fireEvent.dragStart(card);
     fireEvent.dragOver(dropEnd);
 
-    expect(dropEnd.className).toContain('animate-pulse');
+    expect(doneColumn.className).toContain('border-cyan-200/70');
   });
 
   it('moves card across columns and updates status plus weights', async () => {
@@ -1164,6 +1165,47 @@ describe('TodoList', () => {
     expect(screen.getByTestId('location-search').textContent).toContain('dashboard=board-1');
 
     await user.click(screen.getByLabelText('Close'));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('location-search').textContent).toContain('dashboard=board-1');
+    expect(screen.getByTestId('location-search').textContent).not.toContain('card=t-1');
+  });
+
+  it('closes opened todo modal via Escape key', async () => {
+    const user = userEvent.setup();
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        {
+          id: 't-1',
+          userId: 'user-1',
+          title: 'Initial title',
+          description: 'Initial description',
+          status: 'todo',
+          boardId: 'board-1',
+          columnId: 'todo',
+          weight: 1000,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          updatedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    renderTodoList();
+
+    await user.click(screen.getByTestId('card-t-1'));
+    expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('location-search').textContent).toContain('card=t-1');
+
+    await user.keyboard('{Escape}');
 
     await waitFor(() => {
       expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();

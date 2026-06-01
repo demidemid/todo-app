@@ -47,6 +47,21 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
   const [deletingFileIds, setDeletingFileIds] = React.useState<string[]>([]);
   const [filesError, setFilesError] = React.useState('');
 
+  React.useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (event.defaultPrevented) return;
+
+      onClose();
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
   const files = React.useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
 
