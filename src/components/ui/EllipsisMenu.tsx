@@ -96,7 +96,7 @@ export const EllipsisMenu = ({
             className={className}
             startIcon={item.icon}
             disabled={item.disabled}
-            data-testid={item.testId}
+            data-testid={item.testId} role="menuitem"
             onClick={(event) => {
               if (stopPropagation) {
                 event.stopPropagation();
