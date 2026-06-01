@@ -250,4 +250,57 @@ describe('DashboardSection', () => {
 
     expect(props.onOpenTodoModal).not.toHaveBeenCalled();
   });
+
+  it('renders links block on card and does not open modal when link is clicked', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          links: [
+            {
+              name: 'https://example.com/link',
+              url: 'https://example.com/link',
+            },
+          ],
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    const link = screen.getByRole('link', { name: 'https://example.com/link' });
+    expect(link).toHaveAttribute('href', 'https://example.com/link');
+    fireEvent.click(link);
+
+    expect(props.onOpenTodoModal).not.toHaveBeenCalled();
+  });
+
+  it('skips rendering unsafe links from persisted data', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          links: [
+            {
+              name: 'Safe Link',
+              url: 'https://example.com/safe',
+            },
+            {
+              name: 'Bad Link',
+              url: 'javascript:alert(1)',
+            },
+          ],
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByRole('link', { name: 'Safe Link' })).toHaveAttribute('href', 'https://example.com/safe');
+    expect(screen.queryByRole('link', { name: 'Bad Link' })).not.toBeInTheDocument();
+  });
 });

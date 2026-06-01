@@ -32,6 +32,25 @@ const FileTypeIcon = ({ fileName }: { fileName: string }) => {
   return <FaFile className="shrink-0 text-slate-300" aria-hidden="true" />;
 };
 
+const normalizeSafeUrl = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+  const candidate = hasScheme ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 interface DragState {
   todoId: string;
 }
@@ -425,6 +444,7 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+                                {/* Меню/кнопка (оставляем как есть) */}
                                 {Array.isArray(todo.files) && todo.files.length > 0 && (
                                   <ul className="mt-1 space-y-0.5">
                                     {todo.files.map((file) => (
@@ -443,6 +463,36 @@ export const DashboardSection = ({
                                           </a>
                                         </div>
                                       </li>
+                                    ))}
+                                  </ul>
+                                )}
+                                {/* LINKS block — теперь всегда под меню/кнопкой */}
+                                {Array.isArray(todo.links) && todo.links.length > 0 && (
+                                  <ul className="mt-2 space-y-0.5">
+                                    {todo.links.map((link, i) => (
+                                      (() => {
+                                        const safeUrl = normalizeSafeUrl(link.url);
+                                        if (!safeUrl) return null;
+
+                                        return (
+                                          <li key={safeUrl + i} className="flex items-center gap-1.5 text-xs text-cyan-200">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-cyan-300" aria-hidden="true">
+                                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                              <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20" stroke="currentColor" strokeWidth="2" />
+                                            </svg>
+                                            <a
+                                              href={safeUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              onClick={e => e.stopPropagation()}
+                                              className="truncate max-w-30 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                                              title={safeUrl}
+                                            >
+                                              {link.name ? link.name : safeUrl}
+                                            </a>
+                                          </li>
+                                        );
+                                      })()
                                     ))}
                                   </ul>
                                 )}

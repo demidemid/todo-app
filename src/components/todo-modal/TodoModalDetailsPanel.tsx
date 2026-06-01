@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Check, Trash2, X, Plus, ArrowRight } from 'lucide-react';
+import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2 } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
@@ -31,6 +31,25 @@ const FileTypeIcon = ({ fileName }: { fileName: string }) => {
   return <FaFile className="shrink-0 text-slate-300" aria-hidden="true" />;
 };
 
+const normalizeSafeUrl = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+  const candidate = hasScheme ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
+
 interface TodoModalDetailsPanelProps {
   todo: Todo;
   files: TodoFile[];
@@ -54,6 +73,8 @@ interface TodoModalDetailsPanelProps {
   onDescriptionChange: (value: string) => void;
   onOpenFilePicker: () => void;
   onDeleteFile: (fileId: string) => void;
+  onDeleteLink?: (linkIndex: number) => Promise<void> | void;
+  onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
 }
@@ -83,8 +104,15 @@ export const TodoModalDetailsPanel = ({
   onDescriptionChange,
   onOpenFilePicker,
   onDeleteFile,
+  onDeleteLink,
+  onAddLink,
 }: TodoModalDetailsPanelProps) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isLinksFormOpen, setIsLinksFormOpen] = useState(false);
+  const [linkName, setLinkName] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkError, setLinkError] = useState('');
+  const [linkSaving, setLinkSaving] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -113,7 +141,48 @@ export const TodoModalDetailsPanel = ({
     };
   }, [isActionMenuOpen]);
 
+  useEffect(() => {
+    if (isActionMenuOpen) return;
+    setIsLinksFormOpen(false);
+    setLinkError('');
+  }, [isActionMenuOpen]);
+
+  const handleAddLink = async () => {
+    const url = normalizeSafeUrl(linkUrl);
+    const name = linkName.trim();
+
+    if (!url) {
+      setLinkError('Enter a valid http/https URL');
+      return;
+    }
+
+    if (!onAddLink) {
+      setLinkError('Link handler is not available');
+      return;
+    }
+
+    setLinkSaving(true);
+    setLinkError('');
+
+    try {
+      await onAddLink({
+        url,
+        name: name || undefined,
+      });
+      setLinkName('');
+      setLinkUrl('');
+      setIsLinksFormOpen(false);
+      setIsActionMenuOpen(false);
+    } catch (addLinkError) {
+      const message = addLinkError instanceof Error ? addLinkError.message : 'Failed to add link';
+      setLinkError(message);
+    } finally {
+      setLinkSaving(false);
+    }
+  };
+
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
+  const shouldShowLinksSection = Array.isArray(todo.links) && todo.links.length > 0;
 
   return (
     <div className="min-h-0 min-w-0 flex flex-1 flex-col">
@@ -186,13 +255,13 @@ export const TodoModalDetailsPanel = ({
               </IconButton>
               {isActionMenuOpen && (
                 <div
-                  className="absolute left-0 top-12 z-10 min-w-[160px] rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
+                  className="absolute left-0 top-12 z-10 min-w-60 rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
                   data-testid="todo-actions-menu"
                   role="menu"
                 >
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
+                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
                     role="menuitem"
                     onClick={() => {
                       setIsActionMenuOpen(false);
@@ -200,10 +269,55 @@ export const TodoModalDetailsPanel = ({
                     }}
                   >
                     <Plus size={16} />
-                    Добавить файл
+                    Add files
                   </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
+                    role="menuitem"
+                    data-testid="todo-actions-add-link"
+                    onClick={() => {
+                      setIsLinksFormOpen((prev) => !prev);
+                      setLinkError('');
+                    }}
+                  >
+                    <Link2 size={16} />
+                    Links
+                  </button>
+                  {isLinksFormOpen && (
+                    <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
+                      <Input
+                        type="text"
+                        placeholder="Name (optional)"
+                        value={linkName}
+                        onChange={(event) => setLinkName(event.target.value)}
+                        className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
+                      />
+                      <Input
+                        type="url"
+                        placeholder="URL"
+                        value={linkUrl}
+                        onChange={(event) => setLinkUrl(event.target.value)}
+                        className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
+                      />
+                      {linkError && <p className="mb-2 text-xs text-rose-300">{linkError}</p>}
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          void handleAddLink();
+                        }}
+                        disabled={linkSaving}
+                        data-testid="todo-actions-add-link-submit"
+                      >
+                        {linkSaving ? 'Adding...' : 'Add link'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
+            </div>
               {/* Кнопка перевода на следующий статус по центру */}
               {columns.length > 1 && (() => {
                 const idx = columns.findIndex((c) => c.id === todo.columnId);
@@ -223,7 +337,6 @@ export const TodoModalDetailsPanel = ({
                   </button>
                 );
               })()}
-            </div>
             <IconButton
               variant="danger"
               label="Delete card"
@@ -297,6 +410,46 @@ export const TodoModalDetailsPanel = ({
               </>
             )}
 
+            {shouldShowLinksSection && (
+              <>
+                <div className="mb-2 text-xs uppercase tracking-wide text-slate-300">Links</div>
+                <div className="mb-4 space-y-2">
+                  <ul className="space-y-1">
+                    {todo.links?.map((link, index) => (
+                      (() => {
+                        const safeUrl = normalizeSafeUrl(link.url);
+                        if (!safeUrl) return null;
+
+                        return (
+                          <li key={`${safeUrl}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
+                            <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                            >
+                              {link.name ? link.name : safeUrl}
+                            </a>
+                            <IconButton
+                              variant="danger"
+                              size="sm"
+                              label={`Delete link ${link.name ? link.name : safeUrl}`}
+                              className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
+                              onClick={() => onDeleteLink?.(index)}
+                              data-testid={`delete-link-${index}`}
+                            >
+                              <X size={12} />
+                            </IconButton>
+                          </li>
+                        );
+                      })()
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+
             <div className="mb-2 text-xs uppercase tracking-wide text-slate-300">Description</div>
             <RichTextEditor
               value={description}
@@ -345,6 +498,46 @@ export const TodoModalDetailsPanel = ({
                   {filesUploading && <p className="text-xs text-slate-400">Uploading files...</p>}
                   {deletingFileIds.length > 0 && <p className="text-xs text-slate-400">Removing file...</p>}
                   {filesError && <p className="text-xs text-rose-300">{filesError}</p>}
+                </div>
+              </>
+            )}
+
+            {shouldShowLinksSection && (
+              <>
+                <div className="mb-2 text-xs uppercase tracking-wide text-slate-300">Links</div>
+                <div className="mb-4 space-y-2">
+                  <ul className="space-y-1">
+                    {todo.links?.map((link, index) => (
+                      (() => {
+                        const safeUrl = normalizeSafeUrl(link.url);
+                        if (!safeUrl) return null;
+
+                        return (
+                          <li key={`${safeUrl}-${index}`} className="flex items-center gap-2 text-sm text-slate-200">
+                            <Link2 size={14} className="shrink-0 text-cyan-300" aria-hidden="true" />
+                            <a
+                              href={safeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                            >
+                              {link.name ? link.name : safeUrl}
+                            </a>
+                            <IconButton
+                              variant="danger"
+                              size="sm"
+                              label={`Delete link ${link.name ? link.name : safeUrl}`}
+                              className="ml-0.5 h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
+                              onClick={() => onDeleteLink?.(index)}
+                              data-testid={`delete-link-${index}`}
+                            >
+                              <X size={12} />
+                            </IconButton>
+                          </li>
+                        );
+                      })()
+                    ))}
+                  </ul>
                 </div>
               </>
             )}

@@ -8,6 +8,7 @@ import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
 import { IconButton } from './ui/IconButton';
+import { Input } from './ui/Input';
 
 interface TodoModalProps {
   todo: Todo;
@@ -18,6 +19,25 @@ interface TodoModalProps {
   deleteTodo: (id: string) => Promise<void>;
   columns?: { id: string; name: string }[];
 }
+
+const normalizeSafeUrl = (rawUrl: string): string | null => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return null;
+
+  const hasScheme = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed);
+  const candidate = hasScheme ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
 
 export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -244,6 +264,36 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           onDescriptionChange={setDescription}
           onOpenFilePicker={openFilePicker}
           onDeleteFile={handleDeleteFile}
+          onDeleteLink={async (linkIndex) => {
+            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+            await updateTodo(todo.id, {
+              links: currentLinks.filter((_, index) => index !== linkIndex),
+            });
+          }}
+          onAddLink={async (link) => {
+            const currentLinks = Array.isArray(todo.links) ? todo.links : [];
+            const normalizedCurrentLinks = currentLinks
+              .map((item) => {
+                const normalizedUrl = normalizeSafeUrl(item.url);
+                if (!normalizedUrl) return null;
+
+                const trimmedName = item.name?.trim();
+                return { url: normalizedUrl, name: trimmedName || normalizedUrl };
+              })
+              .filter((item): item is { url: string; name: string } => item !== null);
+
+            const normalizedIncomingUrl = normalizeSafeUrl(link.url);
+            if (!normalizedIncomingUrl) {
+              throw new Error('Enter a valid http/https URL');
+            }
+
+            const trimmedName = link.name?.trim();
+            const nextLink = { url: normalizedIncomingUrl, name: trimmedName || normalizedIncomingUrl };
+
+            await updateTodo(todo.id, {
+              links: [...normalizedCurrentLinks, nextLink],
+            });
+          }}
           columns={columns}
           onMoveToNextStatus={async (todoId, nextColumnId) => {
             await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
@@ -261,7 +311,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
           onSubmit={handleAddComment}
         />
 
-        <input
+        <Input
           ref={fileInputRef}
           type="file"
           multiple

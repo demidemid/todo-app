@@ -21,6 +21,10 @@ service cloud.firestore {
       return value is list;
     }
 
+    function isTodoLinksList(value) {
+      return value is list;
+    }
+
     function isTodoPayload(data) {
       return data.keys().hasAll([
           'entityType',
@@ -44,6 +48,7 @@ service cloud.firestore {
           'weight',
           'comments',
           'files',
+          'links',
           'createdAt',
           'updatedAt'
         ])
@@ -57,6 +62,7 @@ service cloud.firestore {
         && data.weight is number
         && (!('comments' in data) || data.comments is list)
         && (!('files' in data) || isTodoFilesList(data.files))
+        && (!('links' in data) || isTodoLinksList(data.links))
         && isTimestamp(data.createdAt)
         && isTimestamp(data.updatedAt);
     }
@@ -83,6 +89,7 @@ service cloud.firestore {
           'weight',
           'comments',
           'files',
+          'links',
           'createdAt',
           'updatedAt'
         ])
@@ -96,6 +103,7 @@ service cloud.firestore {
         && data.weight is number
         && (!('comments' in data) || data.comments is list)
         && (!('files' in data) || isTodoFilesList(data.files))
+        && (!('links' in data) || isTodoLinksList(data.links))
         && isTimestamp(data.createdAt)
         && isTimestamp(data.updatedAt);
     }
@@ -164,9 +172,10 @@ service cloud.firestore {
         && ('boardId' in nextData)
         && ('boardId' in currentData)
         && nextData.boardId == currentData.boardId
-        && nextData.diff(currentData).changedKeys().hasOnly(['comments', 'files', 'updatedAt'])
+        && nextData.diff(currentData).changedKeys().hasOnly(['comments', 'files', 'links', 'updatedAt'])
         && (!('comments' in nextData) || nextData.comments is list)
         && (!('files' in nextData) || nextData.files is list)
+        && (!('links' in nextData) || nextData.links is list)
         && ('updatedAt' in nextData)
         && nextData.updatedAt is timestamp;
     }
