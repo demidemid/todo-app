@@ -106,6 +106,9 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
 
   const modalTodoId = searchParams.get('card');
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
+  const modalColumns = modalTodo
+    ? dashboardsById.get(modalTodo.boardId)?.columns ?? []
+    : [];
   const shareDashboardTarget = shareDashboardId
     ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
     : null;
@@ -539,7 +542,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           onClose={closeTodoLink}
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}
-          columns={columns}
+          columns={modalColumns}
         />
       )}
     </div>

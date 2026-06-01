@@ -299,6 +299,17 @@ export const TodoModalDetailsPanel = ({
 
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
   const shouldShowLinksSection = Array.isArray(todo.links) && todo.links.length > 0;
+  const resolvedStatusLabel = (() => {
+    const fallback = (todo.columnId ?? todo.status).split('_').join(' ').toUpperCase();
+    const currentColumnId = todo.columnId ?? todo.status;
+    const matchedColumn = columns.find((column) => column.id === currentColumnId || column.id === todo.status);
+
+    if (!matchedColumn) {
+      return fallback;
+    }
+
+    return matchedColumn.name.toUpperCase();
+  })();
 
   return (
     <div className="min-h-0 min-w-0 flex flex-1 flex-col">
@@ -483,7 +494,7 @@ export const TodoModalDetailsPanel = ({
         {!isEditing && (
           <div className="mb-4 flex flex-col gap-2 text-xs text-slate-400">
             <span>
-              Status: <b className="text-slate-200 uppercase">{(todo.columnId ?? todo.status).split('_').join(' ').toUpperCase()}</b>
+              Status: <b className="text-slate-200 uppercase">{resolvedStatusLabel}</b>
             </span>
             <span>
               Created: {todo.createdAt instanceof Date ? todo.createdAt.toLocaleString() : String(todo.createdAt)}
