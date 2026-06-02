@@ -276,12 +276,12 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-0 backdrop-blur-sm md:p-4"
       onClick={onClose}
       data-testid="todo-modal"
     >
       <div
-        className="relative flex max-h-[90vh] w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:flex-row"
+        className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:h-[80vh] md:flex-row"
         onClick={(event) => event.stopPropagation()}
         onKeyDownCapture={handleSaveShortcut}
       >
