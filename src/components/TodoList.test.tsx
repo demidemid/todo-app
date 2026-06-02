@@ -892,6 +892,63 @@ describe('TodoList', () => {
     expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveAttribute('title', `Due date: ${toDateString(tomorrow)}`);
   });
 
+  it('renders due highlights banner above dashboard list and links task title to the task modal', async () => {
+    const user = userEvent.setup();
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const toDateString = (value: Date) => {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    setTodosState([
+      createTodo({ id: 'overdue-alert', title: 'Overdue card', dueDate: '2000-01-01', remindOneDayBefore: true }),
+      createTodo({
+        id: 'tomorrow-alert',
+        title: 'Tomorrow card',
+        dueDate: toDateString(tomorrow),
+        remindOneDayBefore: true,
+        weight: 2000,
+      }),
+    ]);
+
+    renderTodoList();
+
+    expect(screen.getByTestId('due-highlights-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('Overdue card');
+    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('is overdue');
+    expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('Tomorrow card');
+    expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('is due tomorrow');
+
+    await user.click(screen.getByTestId('due-highlight-link-tomorrow-alert'));
+
+    expect(screen.getByTestId('location-search')).toHaveTextContent('card=tomorrow-alert');
+    expect(screen.getByTestId('location-search')).toHaveTextContent('dashboard=board-1');
+  });
+
+  it('does not render due highlights banner when remindOneDayBefore is disabled', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const toDateString = (value: Date) => {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    setTodosState([
+      createTodo({ id: 'overdue-muted', title: 'Overdue muted', dueDate: '2000-01-01', remindOneDayBefore: false }),
+      createTodo({ id: 'tomorrow-muted', title: 'Tomorrow muted', dueDate: toDateString(tomorrow), remindOneDayBefore: false, weight: 2000 }),
+    ]);
+
+    renderTodoList();
+
+    expect(screen.queryByTestId('due-highlights-banner')).not.toBeInTheDocument();
+  });
+
   it('highlights overdue cards in dashboard list', () => {
     mockUseTodos.mockReturnValue({
       todos: [
