@@ -112,6 +112,11 @@ describe('useTodos', () => {
             title: 'Valid item',
             description: 'desc',
             archived: true,
+            dueDate: '2026-02-01',
+            isCompleted: false,
+            completedAt: null,
+            remindOneDayBefore: true,
+            reminderScheduledAt: '2026-01-31T09:00:00.000Z',
             status: 'in_progress',
             boardId: 'board-1',
             columnId: 'in_progress',
@@ -142,6 +147,10 @@ describe('useTodos', () => {
       columnId: 'in_progress',
       boardId: 'board-1',
       weight: 1200,
+      dueDate: '2026-02-01',
+      isCompleted: false,
+      remindOneDayBefore: true,
+      reminderScheduledAt: '2026-01-31T09:00:00.000Z',
     });
 
     expect(warnSpy).toHaveBeenCalled();
@@ -271,6 +280,11 @@ describe('useTodos', () => {
         title: 'Card',
         description: 'Desc',
         boardId: 'board-1',
+        dueDate: null,
+        isCompleted: false,
+        completedAt: null,
+        remindOneDayBefore: false,
+        reminderScheduledAt: null,
         columnId: 'todo',
         status: 'todo',
       })
@@ -333,6 +347,50 @@ describe('useTodos', () => {
       })
     );
   });
+
+    it('updateTodo persists due date and reminder fields', async () => {
+      const { result } = renderHook(() => useTodos('user-1'));
+
+      await act(async () => {
+        await result.current.updateTodo('todo-1', {
+          dueDate: '2026-06-05',
+          remindOneDayBefore: true,
+          reminderScheduledAt: '2026-06-04T09:00:00.000Z',
+        });
+      });
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        { path: 'todos/todo-1' },
+        expect.objectContaining({
+          dueDate: '2026-06-05',
+          remindOneDayBefore: true,
+          reminderScheduledAt: '2026-06-04T09:00:00.000Z',
+          updatedAt: expect.any(Object),
+        })
+      );
+    });
+
+    it('updateTodo persists clearing due date', async () => {
+      const { result } = renderHook(() => useTodos('user-1'));
+
+      await act(async () => {
+        await result.current.updateTodo('todo-1', {
+          dueDate: null,
+          remindOneDayBefore: false,
+          reminderScheduledAt: null,
+        });
+      });
+
+      expect(mockUpdateDoc).toHaveBeenCalledWith(
+        { path: 'todos/todo-1' },
+        expect.objectContaining({
+          dueDate: null,
+          remindOneDayBefore: false,
+          reminderScheduledAt: null,
+          updatedAt: expect.any(Object),
+        })
+      );
+    });
 
   it('deleteTodo removes document by id', async () => {
     const { result } = renderHook(() => useTodos('user-1'));

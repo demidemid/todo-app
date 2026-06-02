@@ -95,6 +95,21 @@ describeRules('firestore rules', () => {
       await setDoc(doc(db, 'todos', 'shared-board'), dashboardPayload())
       await setDoc(doc(db, 'todos', 'owner-todo'), todoPayload())
       await setDoc(
+        doc(db, 'todos', 'owner-legacy-todo'),
+        {
+          entityType: 'todo',
+          userId: 'owner-1',
+          title: 'Legacy owner task',
+          description: '',
+          status: 'todo',
+          columnId: 'todo',
+          weight: 10,
+          comments: [],
+          createdAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+          updatedAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+        }
+      )
+      await setDoc(
         doc(db, 'todos', 'recipient-todo'),
         todoPayload({ userId: 'recipient-1', title: 'Recipient task', weight: 2 })
       )
@@ -274,6 +289,45 @@ describeRules('firestore rules', () => {
             },
           ],
         },
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows a shared member to update due date and reminder fields on a shared todo', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        dueDate: '2026-06-05',
+        remindOneDayBefore: true,
+        reminderScheduledAt: '2026-06-04T09:00:00.000Z',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows the owner to update due date and reminder fields with a partial payload', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        dueDate: '2026-06-05',
+        remindOneDayBefore: true,
+        reminderScheduledAt: '2026-06-04T09:00:00.000Z',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows owner due date updates on legacy todos without boardId', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-legacy-todo'), {
+        dueDate: '2026-06-05',
+        remindOneDayBefore: false,
+        reminderScheduledAt: null,
         updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
       })
     )

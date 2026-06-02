@@ -22,6 +22,7 @@ const mockUseTodos = vi.fn();
 const mockUseComments = vi.fn();
 const mockUseDashboards = vi.fn();
 const mockUseUsers = vi.fn();
+const mockUseDueDateReminders = vi.fn();
 
 vi.mock('../hooks/useTodos', () => ({
   useTodos: (userId: string) => mockUseTodos(userId),
@@ -37,6 +38,10 @@ vi.mock('../hooks/useDashboards', () => ({
 
 vi.mock('../hooks/useUsers', () => ({
   useUsers: (userId: string | null) => mockUseUsers(userId),
+}));
+
+vi.mock('../hooks/useDueDateReminders', () => ({
+  useDueDateReminders: (args: unknown) => mockUseDueDateReminders(args),
 }));
 
 const createColumn = (overrides: Partial<DashboardColumn> = {}): DashboardColumn => ({
@@ -854,6 +859,61 @@ describe('TodoList', () => {
 
     const card = screen.getByTestId('card-t-1');
     expect(card).toHaveTextContent('2');
+  });
+
+  it('renders due date badges for today and tomorrow', () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const toDateString = (value: Date) => {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    mockUseTodos.mockReturnValue({
+      todos: [
+        createTodo({ id: 'due-today', title: 'Due today', dueDate: toDateString(today) }),
+        createTodo({ id: 'due-tomorrow', title: 'Due tomorrow', dueDate: toDateString(tomorrow), weight: 2000 }),
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    renderTodoList();
+
+    expect(screen.getByTestId('card-due-badge-due-today')).toHaveTextContent('Today');
+    expect(screen.getByTestId('card-due-badge-due-today')).toHaveAttribute('title', `Due date: ${toDateString(today)}`);
+    expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveTextContent('Tomorrow');
+    expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveAttribute('title', `Due date: ${toDateString(tomorrow)}`);
+  });
+
+  it('highlights overdue cards in dashboard list', () => {
+    mockUseTodos.mockReturnValue({
+      todos: [
+        createTodo({
+          id: 'overdue-card',
+          title: 'Overdue',
+          dueDate: '2000-01-01',
+          isCompleted: false,
+        }),
+      ],
+      loading: false,
+      error: null,
+      addTodo: mockAddTodo,
+      updateTodo: mockUpdateTodo,
+      deleteTodo: mockDeleteTodo,
+    });
+
+    renderTodoList();
+
+    const card = screen.getByTestId('card-overdue-card');
+    expect(card.className).toContain('border-rose-300/45');
+    expect(screen.getByTestId('card-due-badge-overdue-card')).toHaveTextContent('Overdue');
   });
 
   it('highlights target column on drag over', () => {

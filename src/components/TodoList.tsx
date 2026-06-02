@@ -11,6 +11,7 @@ import { useTodoListController } from './todo-list/useTodoListController';
 import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
+import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
 
@@ -65,6 +66,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     [dashboards, userId]
   );
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId, boardAccess);
+  useDueDateReminders({ todos, updateTodo });
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
   const dashboardsById = useMemo(
     () => new Map(dashboards.map((dashboard) => [dashboard.id, dashboard])),
