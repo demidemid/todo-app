@@ -51,6 +51,11 @@ service cloud.firestore {
           'title',
           'description',
           'archived',
+          'dueDate',
+          'isCompleted',
+          'completedAt',
+          'remindOneDayBefore',
+          'reminderScheduledAt',
           'status',
           'boardId',
           'columnId',
@@ -67,6 +72,11 @@ service cloud.firestore {
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
         && (!('archived' in data) || data.archived is bool)
+        && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
+        && (!('isCompleted' in data) || data.isCompleted is bool)
+        && (!('completedAt' in data) || data.completedAt == null || data.completedAt is string)
+        && (!('remindOneDayBefore' in data) || data.remindOneDayBefore is bool)
+        && (!('reminderScheduledAt' in data) || data.reminderScheduledAt == null || data.reminderScheduledAt is string)
         && isNonEmptyString(data.status)
         && isNonEmptyString(data.boardId)
         && isNonEmptyString(data.columnId)
@@ -96,6 +106,11 @@ service cloud.firestore {
           'title',
           'description',
           'archived',
+          'dueDate',
+          'isCompleted',
+          'completedAt',
+          'remindOneDayBefore',
+          'reminderScheduledAt',
           'status',
           'boardId',
           'columnId',
@@ -112,6 +127,11 @@ service cloud.firestore {
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
         && (!('archived' in data) || data.archived is bool)
+        && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
+        && (!('isCompleted' in data) || data.isCompleted is bool)
+        && (!('completedAt' in data) || data.completedAt == null || data.completedAt is string)
+        && (!('remindOneDayBefore' in data) || data.remindOneDayBefore is bool)
+        && (!('reminderScheduledAt' in data) || data.reminderScheduledAt == null || data.reminderScheduledAt is string)
         && isNonEmptyString(data.status)
         && isNonEmptyString(data.boardId)
         && isNonEmptyString(data.columnId)
@@ -181,6 +201,49 @@ service cloud.firestore {
         && isDashboardMember(dashboardDoc.data);
     }
 
+    function isTodoOwnerUpdate(nextData, currentData) {
+      let changedKeys = nextData.diff(currentData).changedKeys();
+
+      return ('userId' in currentData)
+        && changedKeys.hasOnly([
+          'title',
+          'description',
+          'archived',
+          'comments',
+          'files',
+          'links',
+          'checklist',
+          'dueDate',
+          'isCompleted',
+          'completedAt',
+          'remindOneDayBefore',
+          'reminderScheduledAt',
+          'status',
+          'columnId',
+          'weight',
+          'updatedAt'
+        ])
+        && (!('title' in nextData) || isNonEmptyString(nextData.title))
+        && (!('description' in nextData) || nextData.description is string)
+        && (!('archived' in nextData) || nextData.archived is bool)
+        && (!('comments' in nextData) || nextData.comments is list)
+        && (!('files' in nextData) || isTodoFilesList(nextData.files))
+        && (!('links' in nextData) || isTodoLinksList(nextData.links))
+        && (!('checklist' in nextData) || isTodoChecklist(nextData.checklist))
+        && (!('dueDate' in nextData) || nextData.dueDate == null || nextData.dueDate is string)
+        && (!('isCompleted' in nextData) || nextData.isCompleted is bool)
+        && (!('completedAt' in nextData) || nextData.completedAt == null || nextData.completedAt is string)
+        && (!('remindOneDayBefore' in nextData) || nextData.remindOneDayBefore is bool)
+        && (!('reminderScheduledAt' in nextData) || nextData.reminderScheduledAt == null || nextData.reminderScheduledAt is string)
+        && (!('status' in nextData) || isNonEmptyString(nextData.status))
+        && (!('columnId' in nextData) || isNonEmptyString(nextData.columnId))
+        && (!('weight' in nextData) || nextData.weight is number)
+        && ('updatedAt' in nextData)
+        && nextData.updatedAt is timestamp
+        && (!('userId' in nextData) || nextData.userId == currentData.userId)
+        && (!('boardId' in currentData) || !('boardId' in nextData) || nextData.boardId == currentData.boardId);
+    }
+
     function isTodoSharedCollaboratorUpdate(nextData, currentData) {
       let changedKeys = nextData.diff(currentData).changedKeys();
       let canChangeWorkflow = !changedKeys.hasAny(['status', 'columnId'])
@@ -196,13 +259,32 @@ service cloud.firestore {
         && ('boardId' in nextData)
         && ('boardId' in currentData)
         && nextData.boardId == currentData.boardId
-        && changedKeys.hasOnly(['comments', 'files', 'links', 'checklist', 'archived', 'status', 'columnId', 'updatedAt'])
+        && changedKeys.hasOnly([
+          'comments',
+          'files',
+          'links',
+          'checklist',
+          'archived',
+          'dueDate',
+          'isCompleted',
+          'completedAt',
+          'remindOneDayBefore',
+          'reminderScheduledAt',
+          'status',
+          'columnId',
+          'updatedAt'
+        ])
         && canChangeWorkflow
         && (!('comments' in nextData) || nextData.comments is list)
         && (!('files' in nextData) || nextData.files is list)
         && (!('links' in nextData) || nextData.links is list)
         && (!('checklist' in nextData) || isTodoChecklist(nextData.checklist))
         && (!('archived' in nextData) || nextData.archived is bool)
+        && (!('dueDate' in nextData) || nextData.dueDate == null || nextData.dueDate is string)
+        && (!('isCompleted' in nextData) || nextData.isCompleted is bool)
+        && (!('completedAt' in nextData) || nextData.completedAt == null || nextData.completedAt is string)
+        && (!('remindOneDayBefore' in nextData) || nextData.remindOneDayBefore is bool)
+        && (!('reminderScheduledAt' in nextData) || nextData.reminderScheduledAt == null || nextData.reminderScheduledAt is string)
         && (!('status' in nextData) || isNonEmptyString(nextData.status))
         && (!('columnId' in nextData) || isNonEmptyString(nextData.columnId))
         && ('updatedAt' in nextData)
@@ -257,9 +339,8 @@ service cloud.firestore {
             && request.resource.data.userId == resource.data.userId)
           || (((resource.data.entityType == 'todo') || !('entityType' in resource.data)) && (
             (isOwnerFromResource()
-              && isTodoLikePayload(request.resource.data)
-              && (!('entityType' in request.resource.data) || request.resource.data.entityType == resource.data.entityType)
-              && request.resource.data.userId == resource.data.userId)
+              && isTodoOwnerUpdate(request.resource.data, resource.data)
+              && (!('entityType' in request.resource.data) || request.resource.data.entityType == resource.data.entityType))
             || (
               ('boardId' in resource.data)
               && resource.data.boardId is string

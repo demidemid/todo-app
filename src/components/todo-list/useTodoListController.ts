@@ -4,6 +4,7 @@ import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
 import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
+import { resolveReminderScheduledAt } from '../../utils/dueDate';
 import {
   useHasTodoListStoresProvider,
   useTodoListControllerStoreScoped,
@@ -178,6 +179,8 @@ export const useTodoListController = ({
     if (!draggedTodo) return;
     if (!activeDashboard) return;
 
+    const targetColumns = columns;
+
     const sourceColumnId = draggedTodo.columnId;
     const sourceTodos = (groupedTodos[sourceColumnId] ?? []).filter((todo) => todo.id !== todoId);
     const targetTodos =
@@ -194,6 +197,18 @@ export const useTodoListController = ({
       boardId: activeDashboard.id,
     };
 
+    const targetColumn = targetColumns.find((column) => column.id === targetColumnId);
+    const isCompleted = Boolean(targetColumn?.isDone);
+    const completedAt = isCompleted ? new Date().toISOString() : null;
+    const reminderScheduledAt = resolveReminderScheduledAt(
+      {
+        ...draggedTodo,
+        isCompleted,
+        completedAt,
+      },
+      new Date()
+    );
+
     const nextTargetTodos = [...targetTodos];
     nextTargetTodos.splice(safeIndex, 0, movedTodo);
 
@@ -204,12 +219,21 @@ export const useTodoListController = ({
       const shouldUpdate = todo.id === movedTodo.id || todo.weight !== nextWeight || todo.columnId !== targetColumnId;
 
       if (shouldUpdate) {
+        const completionUpdates = todo.id === movedTodo.id
+          ? {
+              isCompleted,
+              completedAt,
+              reminderScheduledAt,
+            }
+          : {};
+
         updates.push(
           updateTodo(todo.id, {
             status: targetColumnId,
             columnId: targetColumnId,
             boardId: activeDashboard.id,
             weight: nextWeight,
+            ...completionUpdates,
           })
         );
       }

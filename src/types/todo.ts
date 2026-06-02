@@ -34,6 +34,11 @@ export interface Todo {
   title: string;
   description?: string;
   archived?: boolean;
+  dueDate?: string | null;
+  isCompleted?: boolean;
+  completedAt?: string | null;
+  remindOneDayBefore?: boolean;
+  reminderScheduledAt?: string | null;
   status: TodoStatus;
   boardId: string;
   columnId: string;

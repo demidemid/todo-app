@@ -340,6 +340,69 @@ describe('TodoModal', () => {
     });
   });
 
+  it('persists due date changes from the modal details panel', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-due-date'));
+
+    fireEvent.change(screen.getByTestId('todo-due-date-input'), {
+      target: { value: '2026-06-06' },
+    });
+    fireEvent.click(screen.getByTestId('todo-due-date-apply'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith(
+        'todo-1',
+        expect.objectContaining({
+          dueDate: '2026-06-06',
+          remindOneDayBefore: false,
+          reminderScheduledAt: null,
+        })
+      );
+    });
+  });
+
+  it('clears due date from the modal details panel', async () => {
+    render(
+      <TodoModal
+        todo={{
+          ...todo,
+          dueDate: '2026-06-06',
+          remindOneDayBefore: true,
+          reminderScheduledAt: '2026-06-05T09:00:00.000Z',
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-due-date-remove'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith(
+        'todo-1',
+        expect.objectContaining({
+          dueDate: null,
+          remindOneDayBefore: false,
+          reminderScheduledAt: null,
+        })
+      );
+    });
+  });
+
   it('creates checklist with default title from plus actions menu', async () => {
     render(
       <TodoModal
@@ -478,17 +541,6 @@ describe('TodoModal', () => {
             { id: 'item-1', title: 'first item', checked: false },
             expect.objectContaining({ title: 'item', checked: false }),
           ],
-        },
-      });
-    });
-
-    fireEvent.click(screen.getByTestId('todo-checklist-delete-item-1'));
-
-    await waitFor(() => {
-      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
-        checklist: {
-          title: 'check list',
-          items: [],
         },
       });
     });

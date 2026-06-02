@@ -2,6 +2,7 @@ import React from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
+import { getDueDateState } from '../../utils/dueDate';
 import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { Input } from '../ui/Input';
@@ -426,7 +427,18 @@ export const DashboardSection = ({
                   </div>
 
                   <div className="space-y-2">
-                    {columnTodos.map((todo, index) => (
+                    {columnTodos.map((todo, index) => {
+                      const dueState = getDueDateState(todo, new Date());
+                      const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
+                      const dueLabel = dueState === 'due_today'
+                        ? 'Today'
+                        : dueState === 'due_tomorrow'
+                          ? 'Tomorrow'
+                          : dueState === 'overdue'
+                            ? 'Overdue'
+                            : null;
+
+                      return (
                       <div
                         key={todo.id}
                         data-testid={`drop-${column.id}-${index}`}
@@ -460,7 +472,9 @@ export const DashboardSection = ({
                           onClick={() => {
                             if (editingTodoId !== todo.id) onOpenTodoModal(todo);
                           }}
-                          className={`relative rounded-lg border border-white/10 bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
+                          className={`relative rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
+                            dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
+                          } ${
                             editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
                           }`}
                         >
@@ -509,6 +523,19 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+                                {dueLabel && (
+                                  <span
+                                    className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                                      dueState === 'overdue'
+                                        ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
+                                        : 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                                    }`}
+                                    data-testid={`card-due-badge-${todo.id}`}
+                                    title={dueDateHint}
+                                  >
+                                    {dueLabel}
+                                  </span>
+                                )}
                                 {(() => {
                                   const checklist = normalizeTodoChecklist(todo.checklist);
                                   if (!checklist) return null;
@@ -617,7 +644,8 @@ export const DashboardSection = ({
                           )}
                         </article>
                       </div>
-                    ))}
+                      );
+                    })}
 
                     <div
                       data-testid={`drop-${column.id}-end`}

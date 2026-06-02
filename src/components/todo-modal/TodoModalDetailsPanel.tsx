@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2, ListChecks } from 'lucide-react';
+import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
+import { getDueDateState } from '../../utils/dueDate';
 import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
@@ -84,6 +85,8 @@ interface TodoModalDetailsPanelProps {
     onChecklistAddItem?: () => Promise<void> | void;
     onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
     onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+    onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
+    onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   };
   files?: TodoFile[];
@@ -114,6 +117,8 @@ interface TodoModalDetailsPanelProps {
   onChecklistAddItem?: () => Promise<void> | void;
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+  onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
+  onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
 }
@@ -152,6 +157,8 @@ export const TodoModalDetailsPanel = ({
   onChecklistAddItem: legacyOnChecklistAddItem,
   onChecklistItemChange: legacyOnChecklistItemChange,
   onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+  onDueDateChange: legacyOnDueDateChange,
+  onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
 }: TodoModalDetailsPanelProps) => {
   const resolvedState = state ?? {
     files: legacyFiles ?? [],
@@ -185,6 +192,8 @@ export const TodoModalDetailsPanel = ({
     onChecklistAddItem: legacyOnChecklistAddItem,
     onChecklistItemChange: legacyOnChecklistItemChange,
     onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+    onDueDateChange: legacyOnDueDateChange,
+    onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
   };
 
@@ -220,11 +229,15 @@ export const TodoModalDetailsPanel = ({
     onChecklistAddItem,
     onChecklistItemChange,
     onChecklistDeleteItem,
+    onDueDateChange,
+    onRemindOneDayBeforeChange,
     onMoveToNextStatus,
   } = resolvedActions;
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isLinksFormOpen, setIsLinksFormOpen] = useState(false);
+  const [isDueDateFormOpen, setIsDueDateFormOpen] = useState(false);
+  const [dueDateDraft, setDueDateDraft] = useState('');
   const [linkName, setLinkName] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
@@ -260,8 +273,26 @@ export const TodoModalDetailsPanel = ({
   useEffect(() => {
     if (isActionMenuOpen) return;
     setIsLinksFormOpen(false);
+    setIsDueDateFormOpen(false);
     setLinkError('');
   }, [isActionMenuOpen]);
+
+  useEffect(() => {
+    setDueDateDraft(todo.dueDate ?? '');
+  }, [todo.dueDate]);
+
+  const dueDateState = getDueDateState(todo, new Date());
+  const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
+  const dueStateLabel = dueDateState === 'due_today'
+    ? 'Today'
+    : dueDateState === 'due_tomorrow'
+      ? 'Tomorrow'
+      : dueDateState === 'overdue'
+        ? 'Overdue'
+        : null;
+  const dueStateClassName = dueDateState === 'overdue'
+    ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
+    : 'border-amber-300/35 bg-amber-300/15 text-amber-100';
 
   const handleAddLink = async () => {
     const url = normalizeSafeUrl(linkUrl);
@@ -295,6 +326,13 @@ export const TodoModalDetailsPanel = ({
     } finally {
       setLinkSaving(false);
     }
+  };
+
+  const handleClearDueDate = () => {
+    setDueDateDraft('');
+    setIsDueDateFormOpen(false);
+    setIsActionMenuOpen(false);
+    void onDueDateChange?.(null);
   };
 
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
@@ -424,6 +462,78 @@ export const TodoModalDetailsPanel = ({
                     <ListChecks size={16} />
                     Checklist
                   </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
+                    role="menuitem"
+                    data-testid="todo-actions-due-date"
+                    onClick={() => {
+                      setIsDueDateFormOpen((prev) => !prev);
+                      setDueDateDraft(todo.dueDate ?? '');
+                    }}
+                  >
+                    <CalendarDays size={16} />
+                    Due date
+                  </button>
+                  {isDueDateFormOpen && (
+                    <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
+                      <label className="mb-1 block text-xs text-slate-300">Due date</label>
+                      <Input
+                        type="date"
+                        value={dueDateDraft}
+                        onChange={(event) => {
+                          setDueDateDraft(event.target.value.trim());
+                        }}
+                        data-testid="todo-due-date-input"
+                        className="mb-2 w-full"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mb-2 w-full"
+                        onClick={() => {
+                          const nextValue = dueDateDraft.trim() || null;
+                          if (nextValue === (todo.dueDate ?? null)) {
+                            setIsDueDateFormOpen(false);
+                            setIsActionMenuOpen(false);
+                            return;
+                          }
+
+                          void onDueDateChange?.(nextValue);
+                          setIsDueDateFormOpen(false);
+                          setIsActionMenuOpen(false);
+                        }}
+                        data-testid="todo-due-date-apply"
+                      >
+                        OK
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mb-2 w-full"
+                        onClick={handleClearDueDate}
+                        data-testid="todo-due-date-clear"
+                      >
+                        Clear due date
+                      </Button>
+                      {todo.dueDate && (
+                        <label className="flex items-center gap-2 text-xs text-slate-200" data-testid="todo-remind-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={todo.remindOneDayBefore ?? false}
+                            onChange={(event) => {
+                              void onRemindOneDayBeforeChange?.(event.target.checked);
+                            }}
+                            className="size-4 accent-cyan-400"
+                            data-testid="todo-remind-checkbox"
+                          />
+                          <Bell size={14} />
+                          Remind 1 day before
+                        </label>
+                      )}
+                    </div>
+                  )}
                   {isLinksFormOpen && (
                     <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
                       <Input
@@ -496,6 +606,28 @@ export const TodoModalDetailsPanel = ({
             <span>
               Status: <b className="text-slate-200 uppercase">{resolvedStatusLabel}</b>
             </span>
+            {todo.dueDate && (
+              <span className="inline-flex w-fit items-center gap-1" title={dueDateHint} data-testid="todo-due-date-metadata">
+                <span>Due date:</span>{' '}
+                {dueStateLabel ? (
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${dueStateClassName}`}>
+                    {dueStateLabel}
+                  </span>
+                ) : (
+                  <b className="text-slate-200">{todo.dueDate}</b>
+                )}
+                <IconButton
+                  variant="neutral"
+                  size="sm"
+                  label="Remove due date"
+                  className="ml-1 h-6! w-6! rounded-full! p-0! text-slate-300 hover:text-white"
+                  onClick={handleClearDueDate}
+                  data-testid="todo-due-date-remove"
+                >
+                  <X size={12} />
+                </IconButton>
+              </span>
+            )}
             <span>
               Created: {todo.createdAt instanceof Date ? todo.createdAt.toLocaleString() : String(todo.createdAt)}
             </span>
