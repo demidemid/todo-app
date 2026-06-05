@@ -84,6 +84,15 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
 
   const dueHighlights = useMemo(() => {
     const now = new Date();
+    type HighlightDueState = 'overdue' | 'due_today' | 'due_tomorrow';
+    type DueHighlightEntry = {
+      todo: typeof todos[number];
+      dashboardName: string;
+      dueText: string;
+      dueState: HighlightDueState;
+      rank: number;
+      sortDate: string;
+    };
     const rankByState = (state: ReturnType<typeof getDueDateState>) => {
       if (state === 'overdue') return 0;
       if (state === 'due_today') return 1;
@@ -99,36 +108,34 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           && Boolean(todo.remindOneDayBefore)
           && !(todo.isCompleted ?? todo.status === 'done')
       )
+      .map((todo) => ({
+        todo,
+        dueState: getDueDateState(todo, now),
+      }))
+      .filter((entry): entry is { todo: typeof todos[number]; dueState: HighlightDueState } => (
+        entry.dueState === 'overdue' || entry.dueState === 'due_today' || entry.dueState === 'due_tomorrow'
+      ))
       .map((todo) => {
-        const dueState = getDueDateState(todo, now);
-        if (dueState === 'without_due_date' || dueState === 'none') return null;
-
-        const dashboardName = dashboardsById.get(todo.boardId)?.name ?? 'Unknown dashboard';
+        const dashboardName = dashboardsById.get(todo.todo.boardId)?.name ?? 'Unknown dashboard';
+        const dueState = todo.dueState;
         const dueText = dueState === 'overdue'
           ? 'is overdue'
           : dueState === 'due_today'
             ? 'is due today'
             : dueState === 'due_tomorrow'
               ? 'is due tomorrow'
-              : `is due on ${todo.dueDate}`;
+              : 'is due';
 
         return {
-          todo,
+          todo: todo.todo,
           dashboardName,
           dueText,
           dueState,
           rank: rankByState(dueState),
-          sortDate: todo.dueDate ?? '9999-99-99',
+          sortDate: todo.todo.dueDate ?? '9999-99-99',
         };
       })
-      .filter((entry): entry is {
-        todo: typeof todos[number];
-        dashboardName: string;
-        dueText: string;
-        dueState: ReturnType<typeof getDueDateState>;
-        rank: number;
-        sortDate: string;
-      } => entry !== null)
+      .filter((entry): entry is DueHighlightEntry => entry !== null)
       .sort((a, b) => {
         if (a.rank !== b.rank) return a.rank - b.rank;
         return a.sortDate.localeCompare(b.sortDate);
