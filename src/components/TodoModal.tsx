@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type FC, type ChangeEvent } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -50,7 +50,7 @@ const createChecklistItemId = () => (
     : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
-export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
+export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = useState(false);
   const [deletingFileIds, setDeletingFileIds] = useState<string[]>([]);
@@ -74,9 +74,26 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       : `${actionName} failed: ${errorMessage}`;
   };
 
+
   useHotkey('escape', () => {
     onClose();
   }, { skipIfDefaultPrevented: true });
+
+  useEffect(() => {
+    const handleEscape = (event: Event) => {
+      if (!(event instanceof KeyboardEvent)) return;
+      if (event.key !== 'Escape') return;
+      if (event.defaultPrevented) return;
+
+      onClose();
+    };
+
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
 
   const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
@@ -135,7 +152,11 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     deleteTodo,
   });
 
-  useHotkey('mod+s', (event) => {
+]
+  const handleSaveShortcut = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
+
+
     if (isEditingTitle) {
       event.preventDefault();
       event.stopPropagation();
@@ -155,7 +176,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     fileInputRef.current?.click();
   };
 
-  const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
     if (selectedFiles.length === 0) return;
 
