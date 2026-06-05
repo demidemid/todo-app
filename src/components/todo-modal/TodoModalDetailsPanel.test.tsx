@@ -42,6 +42,8 @@ const createProps = (): TodoModalDetailsPanelProps => ({
   onOpenFilePicker: vi.fn(),
   onDeleteFile: vi.fn(),
   onDeleteLink: vi.fn(),
+  onDueDateChange: vi.fn(),
+  onRemindOneDayBeforeChange: vi.fn(),
 });
 
 describe('TodoModalDetailsPanel', () => {
@@ -186,6 +188,113 @@ describe('TodoModalDetailsPanel', () => {
         url: 'https://example.com/ref',
       });
     });
+  });
+
+  it('opens due date controls from plus menu and supports set/clear date plus reminder toggle', async () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: '2026-06-05',
+      remindOneDayBefore: true,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-due-date'));
+
+    const dueInput = screen.getByTestId('todo-due-date-input');
+    fireEvent.change(dueInput, { target: { value: '2026-06-06' } });
+    expect(props.onDueDateChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('todo-due-date-apply'));
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-due-date'));
+
+    const remindCheckbox = screen.getByTestId('todo-remind-checkbox');
+    fireEvent.click(remindCheckbox);
+    fireEvent.click(screen.getByTestId('todo-due-date-clear'));
+
+    await waitFor(() => {
+      expect(props.onDueDateChange).toHaveBeenCalledWith('2026-06-06');
+      expect(props.onRemindOneDayBeforeChange).toHaveBeenCalledWith(false);
+      expect(props.onDueDateChange).toHaveBeenCalledWith(null);
+    });
+  });
+
+  it('hides reminder toggle when due date is not set', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: null,
+      remindOneDayBefore: false,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-due-date'));
+
+    expect(screen.queryByTestId('todo-remind-checkbox-row')).not.toBeInTheDocument();
+  });
+
+  it('renders overdue due-state badge in metadata', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: '2000-01-01',
+      isCompleted: false,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveTextContent('Due date: Overdue');
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveAttribute('title', 'Due date: 2000-01-01');
+  });
+
+  it('hides exact due date text when a due-state badge is shown and exposes it as a hint', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: tomorrowDate,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveTextContent('Due date: Tomorrow');
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveAttribute('title', `Due date: ${tomorrowDate}`);
+    expect(screen.queryByText(tomorrowDate)).not.toBeInTheDocument();
+  });
+
+  it('removes due date from the metadata row', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: '2026-06-03',
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-due-date-remove'));
+
+    expect(props.onDueDateChange).toHaveBeenCalledWith(null);
+  });
+
+  it('hides the due date row entirely when due date is not set', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: null,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.queryByTestId('todo-due-date-metadata')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('todo-due-date-remove')).not.toBeInTheDocument();
   });
 
   it('rejects unsafe URL schemes when adding link', async () => {

@@ -76,6 +76,47 @@ const parseStatus = (status: unknown, completed?: unknown): string => {
   return 'todo';
 };
 
+const parseLocalDateString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+
+  const parsed = new Date(year, monthIndex, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== monthIndex ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return trimmed;
+};
+
+const parseIsoString = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
+};
+
 const parseWeight = (weight: unknown, createdAt?: unknown): number => {
   if (typeof weight === 'number' && Number.isFinite(weight)) {
     return weight;
@@ -175,6 +216,11 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
           : typeof data.status === 'string' && data.status.length > 0
             ? data.status
             : status;
+      const isCompleted = typeof data.isCompleted === 'boolean' ? data.isCompleted : status === 'done';
+      const completedAt = parseIsoString(data.completedAt);
+      const dueDate = parseLocalDateString(data.dueDate);
+      const remindOneDayBefore = typeof data.remindOneDayBefore === 'boolean' ? data.remindOneDayBefore : false;
+      const reminderScheduledAt = parseIsoString(data.reminderScheduledAt);
 
       if (!boardId) {
         console.warn('Skipping todo without boardId; waiting for legacy migration.', { id: item.id });
@@ -214,6 +260,11 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
           ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
           id: item.id,
           archived: typeof data.archived === 'boolean' ? data.archived : false,
+          dueDate,
+          isCompleted,
+          completedAt,
+          remindOneDayBefore,
+          reminderScheduledAt,
           status,
           boardId,
           columnId,
@@ -408,6 +459,11 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
       entityType: 'todo',
       ...todo,
       userId,
+      dueDate: null,
+      isCompleted: false,
+      completedAt: null,
+      remindOneDayBefore: false,
+      reminderScheduledAt: null,
       status: columnId,
       boardId,
       columnId,

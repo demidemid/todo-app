@@ -8,9 +8,11 @@ import { DashboardSection } from './todo-list/DashboardSection';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
+import { getDueDateState } from '../utils/dueDate';
 import { EllipsisMenu } from './ui/EllipsisMenu';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
+import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
 
@@ -65,6 +67,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     [dashboards, userId]
   );
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId, boardAccess);
+  useDueDateReminders({ todos, updateTodo });
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
   const dashboardsById = useMemo(
     () => new Map(dashboards.map((dashboard) => [dashboard.id, dashboard])),
@@ -78,6 +81,67 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
         .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
     [todos]
   );
+
+  const dueHighlights = useMemo(() => {
+    const now = new Date();
+    type HighlightDueState = 'overdue' | 'due_today' | 'due_tomorrow';
+    type DueHighlightEntry = {
+      todo: typeof todos[number];
+      dashboardName: string;
+      dueText: string;
+      dueState: HighlightDueState;
+      rank: number;
+      sortDate: string;
+    };
+    const rankByState = (state: ReturnType<typeof getDueDateState>) => {
+      if (state === 'overdue') return 0;
+      if (state === 'due_today') return 1;
+      if (state === 'due_tomorrow') return 2;
+      return 3;
+    };
+
+    return todos
+      .filter(
+        (todo) =>
+          !todo.archived
+          && Boolean(todo.dueDate)
+          && Boolean(todo.remindOneDayBefore)
+          && !(todo.isCompleted ?? todo.status === 'done')
+      )
+      .map((todo) => ({
+        todo,
+        dueState: getDueDateState(todo, now),
+      }))
+      .filter((entry): entry is { todo: typeof todos[number]; dueState: HighlightDueState } => (
+        entry.dueState === 'overdue' || entry.dueState === 'due_today' || entry.dueState === 'due_tomorrow'
+      ))
+      .map((todo) => {
+        const dashboardName = dashboardsById.get(todo.todo.boardId)?.name ?? 'Unknown dashboard';
+        const dueState = todo.dueState;
+        const dueText = dueState === 'overdue'
+          ? `was due on ${todo.todo.dueDate}`
+          : dueState === 'due_today'
+            ? 'is due today'
+            : dueState === 'due_tomorrow'
+              ? 'is due tomorrow'
+              : 'is due';
+
+        return {
+          todo: todo.todo,
+          dashboardName,
+          dueText,
+          dueState,
+          rank: rankByState(dueState),
+          sortDate: todo.todo.dueDate ?? '9999-99-99',
+        };
+      })
+      .filter((entry): entry is DueHighlightEntry => entry !== null)
+      .sort((a, b) => {
+        if (a.rank !== b.rank) return a.rank - b.rank;
+        return a.sortDate.localeCompare(b.sortDate);
+      })
+      .slice(0, 8);
+  }, [dashboardsById, todos]);
 
   const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
   const manageableDashboardIds = useMemo(
@@ -362,6 +426,38 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
             }, 0);
           }}
         >
+          {dueHighlights.length > 0 && (
+            <section
+              className="mb-3 rounded-xl border border-amber-300/30 bg-amber-400/10 p-3 text-sm text-amber-100"
+              data-testid="due-highlights-banner"
+            >
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-200/90">Due Alerts</p>
+              <ul className="space-y-1.5">
+                {dueHighlights.map(({ todo, dashboardName, dueText, dueState }) => (
+                  <li
+                    key={todo.id}
+                    className={dueState === 'overdue' ? 'rounded-md bg-rose-500/20 px-2 py-1 text-rose-100' : undefined}
+                    data-testid={`due-highlight-${todo.id}`}
+                  >
+                    <button
+                      type="button"
+                      className={dueState === 'overdue'
+                        ? 'mr-1 underline decoration-rose-200/70 underline-offset-2 hover:text-rose-50'
+                        : 'mr-1 underline decoration-amber-200/70 underline-offset-2 hover:text-amber-50'}
+                      onClick={() => openTodoByLink(todo.id, todo.boardId)}
+                      data-testid={`due-highlight-link-${todo.id}`}
+                    >
+                      {todo.title}
+                    </button>
+                    <span>in dashboard </span>
+                    <span className={dueState === 'overdue' ? 'font-semibold text-rose-50' : 'font-semibold text-amber-50'}>{dashboardName}</span>
+                    <span> {dueText}.</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {dashboards.map((dashboard, index) => (
             <DashboardSection
               key={dashboard.id}

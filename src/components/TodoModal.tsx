@@ -4,6 +4,7 @@ import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
 import { storage } from '../firebase';
 import { DEFAULT_CHECKLIST_TITLE, DEFAULT_CHECKLIST_ITEM_TITLE, normalizeTodoChecklist } from '../utils/todoChecklist';
+import { resolveReminderScheduledAt } from '../utils/dueDate';
 import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
@@ -18,7 +19,7 @@ interface TodoModalProps {
   onClose: () => void;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
-  columns?: { id: string; name: string }[];
+  columns?: { id: string; name: string; isDone?: boolean }[];
 }
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -275,12 +276,12 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-0 backdrop-blur-sm md:p-4"
       onClick={onClose}
       data-testid="todo-modal"
     >
       <div
-        className="relative flex max-h-[90vh] w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:flex-row"
+        className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:h-[80vh] md:flex-row"
         onClick={(event) => event.stopPropagation()}
         onKeyDownCapture={handleSaveShortcut}
       >
@@ -443,10 +444,76 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
                 },
               });
             },
+            onDueDateChange: async (dueDate) => {
+              const nextRemindOneDayBefore = dueDate ? (todo.remindOneDayBefore ?? false) : false;
+              const isCompleted = todo.isCompleted ?? todo.status === 'done';
+              const completedAt = todo.completedAt ?? null;
+              const reminderScheduledAt = resolveReminderScheduledAt(
+                {
+                  ...todo,
+                  dueDate,
+                  remindOneDayBefore: nextRemindOneDayBefore,
+                  isCompleted,
+                  completedAt,
+                },
+                new Date()
+              );
+
+              await updateTodo(todo.id, {
+                dueDate,
+                remindOneDayBefore: nextRemindOneDayBefore,
+                reminderScheduledAt,
+              });
+            },
+            onRemindOneDayBeforeChange: async (enabled) => {
+              if (!todo.dueDate) {
+                await updateTodo(todo.id, {
+                  remindOneDayBefore: false,
+                  reminderScheduledAt: null,
+                });
+                return;
+              }
+
+              const isCompleted = todo.isCompleted ?? todo.status === 'done';
+              const completedAt = todo.completedAt ?? null;
+              const reminderScheduledAt = resolveReminderScheduledAt(
+                {
+                  ...todo,
+                  remindOneDayBefore: enabled,
+                  isCompleted,
+                  completedAt,
+                },
+                new Date()
+              );
+
+              await updateTodo(todo.id, {
+                remindOneDayBefore: enabled,
+                reminderScheduledAt,
+              });
+            },
             onMoveToNextStatus: async (todoId, nextColumnId) => {
               try {
                 setQuickActionError('');
-                await updateTodo(todoId, { columnId: nextColumnId, status: nextColumnId });
+                const nextColumn = (columns ?? []).find((column) => column.id === nextColumnId);
+                const isCompleted = Boolean(nextColumn?.isDone);
+                const completedAt = isCompleted ? new Date().toISOString() : null;
+                const reminderScheduledAt = resolveReminderScheduledAt(
+                  {
+                    ...todo,
+                    status: nextColumnId,
+                    isCompleted,
+                    completedAt,
+                  },
+                  new Date()
+                );
+
+                await updateTodo(todoId, {
+                  columnId: nextColumnId,
+                  status: nextColumnId,
+                  isCompleted,
+                  completedAt,
+                  reminderScheduledAt,
+                });
               } catch (moveError) {
                 setQuickActionError(formatActionError('Failed to move card', moveError));
               }
