@@ -116,6 +116,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           todo,
           dashboardName,
           dueText,
+          dueState,
           rank: rankByState(dueState),
           sortDate: todo.dueDate ?? '9999-99-99',
         };
@@ -124,6 +125,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
         todo: typeof todos[number];
         dashboardName: string;
         dueText: string;
+        dueState: ReturnType<typeof getDueDateState>;
         rank: number;
         sortDate: string;
       } => entry !== null)
@@ -424,18 +426,24 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
             >
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-200/90">Due Alerts</p>
               <ul className="space-y-1.5">
-                {dueHighlights.map(({ todo, dashboardName, dueText }) => (
-                  <li key={todo.id} data-testid={`due-highlight-${todo.id}`}>
+                {dueHighlights.map(({ todo, dashboardName, dueText, dueState }) => (
+                  <li
+                    key={todo.id}
+                    className={dueState === 'overdue' ? 'rounded-md bg-rose-500/20 px-2 py-1 text-rose-100' : undefined}
+                    data-testid={`due-highlight-${todo.id}`}
+                  >
                     <button
                       type="button"
-                      className="mr-1 underline decoration-amber-200/70 underline-offset-2 hover:text-amber-50"
+                      className={dueState === 'overdue'
+                        ? 'mr-1 underline decoration-rose-200/70 underline-offset-2 hover:text-rose-50'
+                        : 'mr-1 underline decoration-amber-200/70 underline-offset-2 hover:text-amber-50'}
                       onClick={() => openTodoByLink(todo.id, todo.boardId)}
                       data-testid={`due-highlight-link-${todo.id}`}
                     >
                       {todo.title}
                     </button>
                     <span>in dashboard </span>
-                    <span className="font-semibold text-amber-50">{dashboardName}</span>
+                    <span className={dueState === 'overdue' ? 'font-semibold text-rose-50' : 'font-semibold text-amber-50'}>{dashboardName}</span>
                     <span> {dueText}.</span>
                   </li>
                 ))}

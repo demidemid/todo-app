@@ -920,8 +920,12 @@ describe('TodoList', () => {
     expect(screen.getByTestId('due-highlights-banner')).toBeInTheDocument();
     expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('Overdue card');
     expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('is overdue');
+    expect(screen.getByTestId('due-highlight-overdue-alert').className).toContain('bg-rose-500/20');
     expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('Tomorrow card');
     expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('is due tomorrow');
+
+    const dueRows = screen.getByTestId('due-highlights-banner').querySelectorAll('li');
+    expect(dueRows.item(0)).toHaveAttribute('data-testid', 'due-highlight-overdue-alert');
 
     await user.click(screen.getByTestId('due-highlight-link-tomorrow-alert'));
 

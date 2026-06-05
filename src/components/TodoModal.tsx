@@ -431,6 +431,19 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
                 },
               });
             },
+            onChecklistDeleteItem: async (itemId) => {
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: currentChecklist.items.filter((item) => item.id !== itemId),
+                },
+              });
+            },
             onDueDateChange: async (dueDate) => {
               const nextRemindOneDayBefore = dueDate ? (todo.remindOneDayBefore ?? false) : false;
               const isCompleted = todo.isCompleted ?? todo.status === 'done';
