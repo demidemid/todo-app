@@ -919,7 +919,7 @@ describe('TodoList', () => {
 
     expect(screen.getByTestId('due-highlights-banner')).toBeInTheDocument();
     expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('Overdue card');
-    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('is overdue');
+    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('was due on 2000-01-01');
     expect(screen.getByTestId('due-highlight-overdue-alert').className).toContain('bg-rose-500/20');
     expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('Tomorrow card');
     expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('is due tomorrow');

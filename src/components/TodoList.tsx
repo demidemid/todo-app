@@ -119,7 +119,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
         const dashboardName = dashboardsById.get(todo.todo.boardId)?.name ?? 'Unknown dashboard';
         const dueState = todo.dueState;
         const dueText = dueState === 'overdue'
-          ? 'is overdue'
+          ? `was due on ${todo.todo.dueDate}`
           : dueState === 'due_today'
             ? 'is due today'
             : dueState === 'due_tomorrow'
