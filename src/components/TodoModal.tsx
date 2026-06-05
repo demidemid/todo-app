@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type FC, type ChangeEvent } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -49,12 +49,12 @@ const createChecklistItemId = () => (
     : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
-export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [filesUploading, setFilesUploading] = React.useState(false);
-  const [deletingFileIds, setDeletingFileIds] = React.useState<string[]>([]);
-  const [filesError, setFilesError] = React.useState('');
-  const [quickActionError, setQuickActionError] = React.useState('');
+export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [filesUploading, setFilesUploading] = useState(false);
+  const [deletingFileIds, setDeletingFileIds] = useState<string[]>([]);
+  const [filesError, setFilesError] = useState('');
+  const [quickActionError, setQuickActionError] = useState('');
 
   const formatActionError = (actionName: string, actionError: unknown): string => {
     const errorCode =
@@ -73,8 +73,9 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       : `${actionName} failed: ${errorMessage}`;
   };
 
-  React.useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
+  useEffect(() => {
+    const handleEscape = (event: Event) => {
+      if (!(event instanceof KeyboardEvent)) return;
       if (event.key !== 'Escape') return;
       if (event.defaultPrevented) return;
 
@@ -88,7 +89,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     };
   }, [onClose]);
 
-  const files = React.useMemo<TodoFile[]>(() => {
+  const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
 
     return todo.files
@@ -145,7 +146,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     deleteTodo,
   });
 
-  const handleSaveShortcut = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleSaveShortcut = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
 
     if (isEditingTitle) {
@@ -167,7 +168,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     fileInputRef.current?.click();
   };
 
-  const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? []);
     if (selectedFiles.length === 0) return;
 
