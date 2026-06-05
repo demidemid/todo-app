@@ -253,17 +253,21 @@ describe('TodoModalDetailsPanel', () => {
   });
 
   it('hides exact due date text when a due-state badge is shown and exposes it as a hint', () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
     const props = createProps();
     props.todo = {
       ...todo,
-      dueDate: '2026-06-03',
+      dueDate: tomorrowDate,
     };
 
     render(<TodoModalDetailsPanel {...props} />);
 
     expect(screen.getByTestId('todo-due-date-metadata')).toHaveTextContent('Due date: Tomorrow');
-    expect(screen.getByTestId('todo-due-date-metadata')).toHaveAttribute('title', 'Due date: 2026-06-03');
-    expect(screen.queryByText('2026-06-03')).not.toBeInTheDocument();
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveAttribute('title', `Due date: ${tomorrowDate}`);
+    expect(screen.queryByText(tomorrowDate)).not.toBeInTheDocument();
   });
 
   it('removes due date from the metadata row', () => {
