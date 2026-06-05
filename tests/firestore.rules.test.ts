@@ -320,6 +320,19 @@ describeRules('firestore rules', () => {
     )
   })
 
+  it('allows the owner to reassign a todo to another accessible dashboard', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        boardId: 'shared-board',
+        columnId: 'todo',
+        status: 'todo',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
   it('allows owner due date updates on legacy todos without boardId', async () => {
     const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
 

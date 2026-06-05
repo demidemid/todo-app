@@ -203,6 +203,10 @@ service cloud.firestore {
 
     function isTodoOwnerUpdate(nextData, currentData) {
       let changedKeys = nextData.diff(currentData).changedKeys();
+      let canChangeBoard = !('boardId' in nextData) || (
+        isNonEmptyString(nextData.boardId)
+        && canAccessDashboard(nextData.boardId)
+      );
 
       return ('userId' in currentData)
         && changedKeys.hasOnly([
@@ -220,6 +224,7 @@ service cloud.firestore {
           'reminderScheduledAt',
           'status',
           'columnId',
+          'boardId',
           'weight',
           'updatedAt'
         ])
@@ -241,7 +246,7 @@ service cloud.firestore {
         && ('updatedAt' in nextData)
         && nextData.updatedAt is timestamp
         && (!('userId' in nextData) || nextData.userId == currentData.userId)
-        && (!('boardId' in currentData) || !('boardId' in nextData) || nextData.boardId == currentData.boardId);
+        && canChangeBoard;
     }
 
     function isTodoSharedCollaboratorUpdate(nextData, currentData) {
