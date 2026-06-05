@@ -19,5 +19,16 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "MemberExpression[object.name='React'][property.name=/^use[A-Z]/]",
+          message:
+            'Do not use hooks via React.use*. Import hooks directly, e.g. useEffect from react.',
+        },
+      ],
+    },
   },
 ])
