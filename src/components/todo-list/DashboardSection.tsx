@@ -10,6 +10,7 @@ import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
 import { Archive, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
+import { useHotkeyHandler } from '../../hooks/useHotkey';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -256,11 +257,19 @@ export const DashboardSection = ({
 
   const toggleDashboard = () => onToggle(dashboard.id);
 
+  const handleHeaderEnter = useHotkeyHandler('enter', (event) => {
+    event.preventDefault();
+    toggleDashboard();
+  });
+
+  const handleHeaderSpace = useHotkeyHandler('space', (event) => {
+    event.preventDefault();
+    toggleDashboard();
+  });
+
   const handleHeaderKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      toggleDashboard();
-    }
+    handleHeaderEnter(event);
+    handleHeaderSpace(event);
   };
 
   const resolveCardDropIndex = (

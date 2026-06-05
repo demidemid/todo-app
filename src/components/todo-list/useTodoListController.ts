@@ -10,6 +10,7 @@ import {
   useTodoListControllerStoreScoped,
   useTodoListDndStoreScoped,
 } from '../../stores/todoListStoresContext';
+import { isHotkeyPressed } from '../../hooks/useHotkey';
 
 interface UseTodoListControllerArgs {
   todos: Todo[];
@@ -291,13 +292,13 @@ export const useTodoListController = ({
   };
 
   const handleEditKeyDown = (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => {
-    if (event.key === 'Escape') {
+    if (isHotkeyPressed('escape', event)) {
       event.preventDefault();
       cancelEdit();
       return;
     }
 
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+    if (isHotkeyPressed('mod+enter', event)) {
       event.preventDefault();
       void handleSaveEdit(todoId);
     }

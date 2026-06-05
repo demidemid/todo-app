@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
+import { useHotkey } from '../../hooks/useHotkey';
 
 export interface EllipsisMenuItem {
   id: string;
@@ -36,6 +37,10 @@ export const EllipsisMenu = ({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  useHotkey('escape', () => {
+    setOpen(false);
+  }, { enabled: open });
+
   useEffect(() => {
     if (!open) return;
 
@@ -46,18 +51,10 @@ export const EllipsisMenu = ({
       }
     };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-
     document.addEventListener('mousedown', handleOutsidePointer);
-    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mousedown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [open]);
 

@@ -15,6 +15,7 @@ import { useTodos } from '../hooks/useTodos.ts';
 import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
+import { isHotkeyPressed } from '../hooks/useHotkey';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -580,7 +581,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
                   key={todo.id}
                   onClick={() => openTodoByLink(todo.id, todo.boardId)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
+                    if (isHotkeyPressed('enter', event) || isHotkeyPressed('space', event)) {
                       event.preventDefault();
                       openTodoByLink(todo.id, todo.boardId);
                     }

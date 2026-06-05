@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -11,6 +11,7 @@ import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
 import { IconButton } from './ui/IconButton';
 import { Input } from './ui/Input';
+import { useHotkey } from '../hooks/useHotkey';
 
 interface TodoModalProps {
   todo: Todo;
@@ -50,11 +51,11 @@ const createChecklistItemId = () => (
 );
 
 export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [filesUploading, setFilesUploading] = React.useState(false);
-  const [deletingFileIds, setDeletingFileIds] = React.useState<string[]>([]);
-  const [filesError, setFilesError] = React.useState('');
-  const [quickActionError, setQuickActionError] = React.useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [filesUploading, setFilesUploading] = useState(false);
+  const [deletingFileIds, setDeletingFileIds] = useState<string[]>([]);
+  const [filesError, setFilesError] = useState('');
+  const [quickActionError, setQuickActionError] = useState('');
 
   const formatActionError = (actionName: string, actionError: unknown): string => {
     const errorCode =
@@ -73,22 +74,11 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       : `${actionName} failed: ${errorMessage}`;
   };
 
-  React.useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (event.defaultPrevented) return;
+  useHotkey('escape', () => {
+    onClose();
+  }, { skipIfDefaultPrevented: true });
 
-      onClose();
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
-
-  const files = React.useMemo<TodoFile[]>(() => {
+  const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
 
     return todo.files
@@ -145,9 +135,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
     deleteTodo,
   });
 
-  const handleSaveShortcut = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
-
+  useHotkey('mod+s', (event) => {
     if (isEditingTitle) {
       event.preventDefault();
       event.stopPropagation();
@@ -160,7 +148,7 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       event.stopPropagation();
       void handleSave();
     }
-  };
+  }, { enabled: isEditingTitle || isEditing });
 
   const openFilePicker = () => {
     if (filesUploading) return;
@@ -283,7 +271,6 @@ export const TodoModal: React.FC<TodoModalProps> = ({ todo, userId, userEmail, o
       <div
         className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:h-[80vh] md:flex-row"
         onClick={(event) => event.stopPropagation()}
-        onKeyDownCapture={handleSaveShortcut}
       >
         <IconButton
           variant="neutral"

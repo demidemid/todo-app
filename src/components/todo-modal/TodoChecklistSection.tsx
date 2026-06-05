@@ -4,6 +4,7 @@ import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
+import { useHotkeyHandler } from '../../hooks/useHotkey';
 
 interface TodoChecklistSectionProps {
   checklist: Todo['checklist'];
@@ -59,6 +60,37 @@ export const TodoChecklistSection = ({
     cancelChecklistItemEdit();
   };
 
+  const handleChecklistTitleEnter = useHotkeyHandler('enter', (event) => {
+    event.preventDefault();
+    void saveChecklistTitle();
+  });
+
+  const handleChecklistTitleEscape = useHotkeyHandler('escape', (event) => {
+    event.preventDefault();
+    setChecklistTitleDraft(checklist?.title ?? '');
+    setIsEditingChecklistTitle(false);
+  });
+
+  const handleChecklistTitleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    handleChecklistTitleEnter(event);
+    handleChecklistTitleEscape(event);
+  };
+
+  const handleChecklistItemEnter = useHotkeyHandler('enter', (event) => {
+    event.preventDefault();
+    void saveChecklistItemTitle();
+  });
+
+  const handleChecklistItemEscape = useHotkeyHandler('escape', (event) => {
+    event.preventDefault();
+    cancelChecklistItemEdit();
+  });
+
+  const handleChecklistItemKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    handleChecklistItemEnter(event);
+    handleChecklistItemEscape(event);
+  };
+
   if (!checklist) return null;
 
   return (
@@ -74,17 +106,7 @@ export const TodoChecklistSection = ({
             onBlur={() => {
               void saveChecklistTitle();
             }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                void saveChecklistTitle();
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault();
-                setChecklistTitleDraft(checklist.title);
-                setIsEditingChecklistTitle(false);
-              }
-            }}
+            onKeyDown={handleChecklistTitleKeyDown}
             data-testid="todo-checklist-title-input"
           />
         ) : (
@@ -135,17 +157,7 @@ export const TodoChecklistSection = ({
                   onChange={(event) => setChecklistItemTitleDraft(event.target.value)}
                   className="h-8 flex-1"
                   autoFocus
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      void saveChecklistItemTitle();
-                    }
-
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      cancelChecklistItemEdit();
-                    }
-                  }}
+                  onKeyDown={handleChecklistItemKeyDown}
                   data-testid={`todo-checklist-item-input-${item.id}`}
                 />
                 <IconButton

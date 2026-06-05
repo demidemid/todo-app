@@ -9,6 +9,7 @@ import { getDueDateState } from '../../utils/dueDate';
 import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
+import { useHotkey, useHotkeyHandler } from '../../hooks/useHotkey';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -244,6 +245,10 @@ export const TodoModalDetailsPanel = ({
   const [linkSaving, setLinkSaving] = useState(false);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
 
+  useHotkey('escape', () => {
+    setIsActionMenuOpen(false);
+  }, { enabled: isActionMenuOpen });
+
   useEffect(() => {
     if (!isActionMenuOpen) return;
 
@@ -255,18 +260,10 @@ export const TodoModalDetailsPanel = ({
       }
     };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsActionMenuOpen(false);
-      }
-    };
-
     document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleEscape);
     };
   }, [isActionMenuOpen]);
 
@@ -293,6 +290,20 @@ export const TodoModalDetailsPanel = ({
   const dueStateClassName = dueDateState === 'overdue'
     ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
     : 'border-amber-300/35 bg-amber-300/15 text-amber-100';
+
+  const handleTitleEnter = useHotkeyHandler('enter', (event) => {
+    event.preventDefault();
+    onSaveTitle();
+  }, { enabled: isEditingTitle });
+
+  const handleTitleEscape = useHotkeyHandler('escape', () => {
+    onCancelEditTitle();
+  }, { enabled: isEditingTitle });
+
+  const handleTitleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    handleTitleEnter(event);
+    handleTitleEscape(event);
+  };
 
   const handleAddLink = async () => {
     const url = normalizeSafeUrl(linkUrl);
@@ -362,10 +373,7 @@ export const TodoModalDetailsPanel = ({
               className="flex-1"
               autoFocus
               disabled={saving}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') { event.preventDefault(); onSaveTitle(); }
-                if (event.key === 'Escape') onCancelEditTitle();
-              }}
+              onKeyDown={handleTitleKeyDown}
             />
             <IconButton variant="primary" size="md" label="Save title" disabled={saving} onClick={onSaveTitle}>
               <Check size={16} />
