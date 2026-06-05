@@ -41,8 +41,8 @@ export const useDueDateReminders = ({ todos, updateTodo }: UseDueDateRemindersAr
 
         void (async () => {
           try {
-            sendReminder(todo);
             await updateTodo(todo.id, { reminderScheduledAt: null });
+            sendReminder(todo);
           } finally {
             processingIdsRef.current.delete(todo.id);
           }
