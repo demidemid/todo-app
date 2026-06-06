@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_CHECKLIST_ITEM_TITLE, DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist } from './todoChecklist';
+import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist } from './todoChecklist';
 
 describe('normalizeTodoChecklist', () => {
   it('returns null only for non-object checklist payloads', () => {
@@ -24,7 +24,7 @@ describe('normalizeTodoChecklist', () => {
     });
   });
 
-  it('normalizes checklist title and item titles with defaults', () => {
+  it('normalizes checklist title and keeps empty checklist item titles', () => {
     const result = normalizeTodoChecklist({
       title: '   ',
       items: [
@@ -35,7 +35,7 @@ describe('normalizeTodoChecklist', () => {
     expect(result).toEqual({
       title: DEFAULT_CHECKLIST_TITLE,
       items: [
-        { id: 'item-1', title: DEFAULT_CHECKLIST_ITEM_TITLE, checked: false },
+        { id: 'item-1', title: '', checked: false },
       ],
     });
   });

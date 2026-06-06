@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
@@ -27,6 +27,9 @@ export const TodoChecklistSection = ({
   const [checklistTitleDraft, setChecklistTitleDraft] = useState('');
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [checklistItemTitleDraft, setChecklistItemTitleDraft] = useState('');
+  const [focusNewChecklistItem, setFocusNewChecklistItem] = useState(false);
+  const checklistItems = useMemo(() => checklist?.items ?? [], [checklist]);
+  const previousChecklistItemIdsRef = useRef<string[]>(checklistItems.map((item) => item.id));
 
   const saveChecklistTitle = async () => {
     if (!onChecklistTitleChange || !checklist) {
@@ -91,6 +94,36 @@ export const TodoChecklistSection = ({
     handleChecklistItemEscape(event);
   };
 
+  useEffect(() => {
+    const currentItemIds = checklistItems.map((item) => item.id);
+
+    if (focusNewChecklistItem && checklist) {
+      const previousItemIds = new Set(previousChecklistItemIdsRef.current);
+      const newItem = checklistItems.find((item) => !previousItemIds.has(item.id));
+
+      if (newItem) {
+        startChecklistItemEdit(newItem.id, newItem.title);
+        setFocusNewChecklistItem(false);
+      }
+    }
+
+    previousChecklistItemIdsRef.current = currentItemIds;
+  }, [checklist, checklistItems, focusNewChecklistItem]);
+
+  const handleAddChecklistItem = async () => {
+    if (!onChecklistAddItem) {
+      return;
+    }
+
+    setFocusNewChecklistItem(true);
+
+    try {
+      await onChecklistAddItem();
+    } catch {
+      setFocusNewChecklistItem(false);
+    }
+  };
+
   if (!checklist) return null;
 
   return (
@@ -129,7 +162,7 @@ export const TodoChecklistSection = ({
           label="Add checklist item"
           className="h-7! w-7! rounded-full! p-0!"
           onClick={() => {
-            void onChecklistAddItem?.();
+            void handleAddChecklistItem();
           }}
           data-testid="todo-checklist-add-item"
         >

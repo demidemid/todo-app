@@ -1,7 +1,6 @@
 import type { Todo, TodoChecklist, TodoChecklistItem } from '../types/todo';
 
 export const DEFAULT_CHECKLIST_TITLE = 'check list';
-export const DEFAULT_CHECKLIST_ITEM_TITLE = 'item';
 
 export const normalizeTodoChecklist = (
   checklist: Todo['checklist'],
@@ -26,7 +25,7 @@ export const normalizeTodoChecklist = (
 
         return {
           id: itemId,
-          title: title || DEFAULT_CHECKLIST_ITEM_TITLE,
+          title,
           checked: Boolean(item.checked),
         };
       })

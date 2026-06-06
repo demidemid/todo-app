@@ -485,7 +485,7 @@ describe('TodoModal', () => {
           title: 'check list',
           items: [
             expect.objectContaining({
-              title: 'item',
+              title: '',
               checked: false,
             }),
           ],
@@ -600,14 +600,14 @@ describe('TodoModal', () => {
           title: 'check list',
           items: [
             { id: 'item-1', title: 'first item', checked: false },
-            expect.objectContaining({ title: 'item', checked: false }),
+            expect.objectContaining({ title: '', checked: false }),
           ],
         },
       });
     });
   });
 
-  it('falls back to default names when checklist and item titles are saved empty', async () => {
+  it('falls back to default checklist name and keeps checklist item title empty when saved empty', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
       checklist: {
@@ -648,10 +648,77 @@ describe('TodoModal', () => {
       expect(updateTodo).toHaveBeenCalledWith('todo-1', {
         checklist: {
           title: 'My checklist',
-          items: [{ id: 'item-1', title: 'item', checked: false }],
+          items: [{ id: 'item-1', title: '', checked: false }],
         },
       });
     });
+  });
+
+  it('focuses new checklist item input and keeps it empty after adding item', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'first item', checked: false }],
+      },
+    };
+
+    const { rerender } = render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-add-item'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [
+            { id: 'item-1', title: 'first item', checked: false },
+            expect.objectContaining({ title: '', checked: false }),
+          ],
+        },
+      });
+    });
+
+    const updateCall = updateTodo.mock.calls.find(([, payload]) => {
+      const updates = payload as Partial<Todo> | undefined;
+      return Array.isArray(updates?.checklist?.items) && updates.checklist.items.length === 2;
+    });
+    const addedItemId = (updateCall?.[1] as Partial<Todo> | undefined)?.checklist?.items?.[1]?.id;
+
+    expect(typeof addedItemId).toBe('string');
+
+    rerender(
+      <TodoModal
+        todo={{
+          ...todoWithChecklist,
+          checklist: {
+            title: 'check list',
+            items: [
+              { id: 'item-1', title: 'first item', checked: false },
+              { id: String(addedItemId), title: '', checked: false },
+            ],
+          },
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const newItemInput = await screen.findByTestId(`todo-checklist-item-input-${String(addedItemId)}`);
+    expect(newItemInput).toHaveFocus();
+    expect(newItemInput).toHaveValue('');
   });
 
   it('adds link with explicit name from plus actions menu', async () => {
