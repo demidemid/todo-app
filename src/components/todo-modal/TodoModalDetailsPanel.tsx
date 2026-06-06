@@ -85,6 +85,7 @@ interface TodoModalDetailsPanelProps {
     onChecklistTitleChange?: (title: string) => Promise<void> | void;
     onChecklistAddItem?: () => Promise<void> | void;
     onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+    onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
     onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
     onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
@@ -117,6 +118,7 @@ interface TodoModalDetailsPanelProps {
   onChecklistTitleChange?: (title: string) => Promise<void> | void;
   onChecklistAddItem?: () => Promise<void> | void;
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+  onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
   onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
   onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
@@ -157,6 +159,7 @@ export const TodoModalDetailsPanel = ({
   onChecklistTitleChange: legacyOnChecklistTitleChange,
   onChecklistAddItem: legacyOnChecklistAddItem,
   onChecklistItemChange: legacyOnChecklistItemChange,
+  onChecklistPasteItems: legacyOnChecklistPasteItems,
   onChecklistDeleteItem: legacyOnChecklistDeleteItem,
   onDueDateChange: legacyOnDueDateChange,
   onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
@@ -192,6 +195,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistTitleChange: legacyOnChecklistTitleChange,
     onChecklistAddItem: legacyOnChecklistAddItem,
     onChecklistItemChange: legacyOnChecklistItemChange,
+    onChecklistPasteItems: legacyOnChecklistPasteItems,
     onChecklistDeleteItem: legacyOnChecklistDeleteItem,
     onDueDateChange: legacyOnDueDateChange,
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
@@ -229,6 +233,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistTitleChange,
     onChecklistAddItem,
     onChecklistItemChange,
+    onChecklistPasteItems,
     onChecklistDeleteItem,
     onDueDateChange,
     onRemindOneDayBeforeChange,
@@ -650,6 +655,7 @@ export const TodoModalDetailsPanel = ({
           onChecklistTitleChange={onChecklistTitleChange}
           onChecklistAddItem={onChecklistAddItem}
           onChecklistItemChange={onChecklistItemChange}
+          onChecklistPasteItems={onChecklistPasteItems}
           onChecklistDeleteItem={onChecklistDeleteItem}
         />
 

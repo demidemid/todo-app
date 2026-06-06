@@ -2,6 +2,24 @@ import type { Todo, TodoChecklist, TodoChecklistItem } from '../types/todo';
 
 export const DEFAULT_CHECKLIST_TITLE = 'check list';
 
+const stripChecklistPrefix = (value: string): string => value
+  .replace(/^[-*•—]?\s*\[(?: |x|X)\]\s+/, '')
+  .replace(/^[-*•—]\s+/, '')
+  .replace(/^\d+[.)]\s+/, '')
+  .replace(/^;+\s*/, '')
+  .trim();
+
+export const parseChecklistItemTitles = (rawText: string): string[] => {
+  const normalized = rawText.replace(/\r\n?/g, '\n').trim();
+  if (!normalized) return [];
+
+  const chunks = normalized.includes('\n') ? normalized.split('\n') : normalized.split(';');
+
+  return chunks
+    .map((chunk) => stripChecklistPrefix(chunk.trim()))
+    .filter((chunk) => chunk.length > 0);
+};
+
 export const normalizeTodoChecklist = (
   checklist: Todo['checklist'],
   options?: { createItemId?: () => string }

@@ -444,6 +444,42 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
                 },
               });
             },
+            onChecklistPasteItems: async (itemId, itemTitles) => {
+              const normalizedTitles = itemTitles
+                .map((title) => title.trim())
+                .filter((title) => title.length > 0);
+              if (normalizedTitles.length === 0) return;
+
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              const targetIndex = currentChecklist.items.findIndex((item) => item.id === itemId);
+              if (targetIndex < 0) return;
+
+              const [firstTitle, ...restTitles] = normalizedTitles;
+              const nextItems = currentChecklist.items.flatMap((item, index) => {
+                if (index !== targetIndex) {
+                  return [item];
+                }
+
+                const appendedItems = restTitles.map((title) => ({
+                  id: createChecklistItemId(),
+                  title,
+                  checked: false,
+                }));
+
+                return [{ ...item, title: firstTitle }, ...appendedItems];
+              });
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: nextItems,
+                },
+              });
+            },
             onChecklistDeleteItem: async (itemId) => {
               const currentChecklist = normalizeTodoChecklist(todo.checklist, {
                 createItemId: createChecklistItemId,
