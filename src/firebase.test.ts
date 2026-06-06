@@ -1,13 +1,40 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const initializeAppMock = vi.fn((_config: unknown) => ({ app: 'app' }));
-const getAuthMock = vi.fn((_app: unknown) => ({ auth: 'auth' }));
-const getFirestoreMock = vi.fn((_app: unknown) => ({ db: 'db' }));
-const getStorageMock = vi.fn((_app: unknown) => ({ storage: 'storage' }));
-const connectFirestoreEmulatorMock = vi.fn((_db: unknown, _host: unknown, _port: unknown) => undefined);
-const connectAuthEmulatorMock = vi.fn((_auth: unknown, _url: unknown, _options: unknown) => undefined);
-const connectStorageEmulatorMock = vi.fn((_storage: unknown, _host: unknown, _port: unknown) => undefined);
-const enableIndexedDbPersistenceMock = vi.fn((_db: unknown) => Promise.resolve());
+const initializeAppMock = vi.fn((config: unknown) => {
+  void config;
+  return { app: 'app' };
+});
+const getAuthMock = vi.fn((app: unknown) => {
+  void app;
+  return { auth: 'auth' };
+});
+const getFirestoreMock = vi.fn((app: unknown) => {
+  void app;
+  return { db: 'db' };
+});
+const getStorageMock = vi.fn((app: unknown) => {
+  void app;
+  return { storage: 'storage' };
+});
+const connectFirestoreEmulatorMock = vi.fn((db: unknown, host: unknown, port: unknown) => {
+  void db;
+  void host;
+  void port;
+});
+const connectAuthEmulatorMock = vi.fn((auth: unknown, url: unknown, options: unknown) => {
+  void auth;
+  void url;
+  void options;
+});
+const connectStorageEmulatorMock = vi.fn((storage: unknown, host: unknown, port: unknown) => {
+  void storage;
+  void host;
+  void port;
+});
+const enableIndexedDbPersistenceMock = vi.fn((db: unknown) => {
+  void db;
+  return Promise.resolve();
+});
 
 vi.mock('firebase/app', () => ({
   initializeApp: (config: unknown) => initializeAppMock(config),
