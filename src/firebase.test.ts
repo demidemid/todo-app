@@ -1,32 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const initializeAppMock = vi.fn(() => ({ app: 'app' }));
-const getAuthMock = vi.fn(() => ({ auth: 'auth' }));
-const getFirestoreMock = vi.fn(() => ({ db: 'db' }));
-const getStorageMock = vi.fn(() => ({ storage: 'storage' }));
-const connectFirestoreEmulatorMock = vi.fn();
-const connectAuthEmulatorMock = vi.fn();
-const connectStorageEmulatorMock = vi.fn();
-const enableIndexedDbPersistenceMock = vi.fn(() => Promise.resolve());
+const initializeAppMock = vi.fn((_config: unknown) => ({ app: 'app' }));
+const getAuthMock = vi.fn((_app: unknown) => ({ auth: 'auth' }));
+const getFirestoreMock = vi.fn((_app: unknown) => ({ db: 'db' }));
+const getStorageMock = vi.fn((_app: unknown) => ({ storage: 'storage' }));
+const connectFirestoreEmulatorMock = vi.fn((_db: unknown, _host: unknown, _port: unknown) => undefined);
+const connectAuthEmulatorMock = vi.fn((_auth: unknown, _url: unknown, _options: unknown) => undefined);
+const connectStorageEmulatorMock = vi.fn((_storage: unknown, _host: unknown, _port: unknown) => undefined);
+const enableIndexedDbPersistenceMock = vi.fn((_db: unknown) => Promise.resolve());
 
 vi.mock('firebase/app', () => ({
-  initializeApp: (...args: unknown[]) => initializeAppMock(...args),
+  initializeApp: (config: unknown) => initializeAppMock(config),
 }));
 
 vi.mock('firebase/auth', () => ({
-  getAuth: (...args: unknown[]) => getAuthMock(...args),
-  connectAuthEmulator: (...args: unknown[]) => connectAuthEmulatorMock(...args),
+  getAuth: (app: unknown) => getAuthMock(app),
+  connectAuthEmulator: (auth: unknown, url: unknown, options: unknown) =>
+    connectAuthEmulatorMock(auth, url, options),
 }));
 
 vi.mock('firebase/firestore', () => ({
-  getFirestore: (...args: unknown[]) => getFirestoreMock(...args),
-  connectFirestoreEmulator: (...args: unknown[]) => connectFirestoreEmulatorMock(...args),
-  enableIndexedDbPersistence: (...args: unknown[]) => enableIndexedDbPersistenceMock(...args),
+  getFirestore: (app: unknown) => getFirestoreMock(app),
+  connectFirestoreEmulator: (db: unknown, host: unknown, port: unknown) =>
+    connectFirestoreEmulatorMock(db, host, port),
+  enableIndexedDbPersistence: (db: unknown) => enableIndexedDbPersistenceMock(db),
 }));
 
 vi.mock('firebase/storage', () => ({
-  getStorage: (...args: unknown[]) => getStorageMock(...args),
-  connectStorageEmulator: (...args: unknown[]) => connectStorageEmulatorMock(...args),
+  getStorage: (app: unknown) => getStorageMock(app),
+  connectStorageEmulator: (storage: unknown, host: unknown, port: unknown) =>
+    connectStorageEmulatorMock(storage, host, port),
 }));
 
 const importFirebaseModule = async () => {
