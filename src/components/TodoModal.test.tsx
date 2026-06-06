@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Todo } from '../types/todo';
 import { TodoModal } from './TodoModal';
@@ -127,6 +127,67 @@ describe('TodoModal', () => {
 
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes on Escape from non-editable target and marks event as handled', () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const closeButton = screen.getByLabelText('Close');
+    const escapeEvent = createEvent.keyDown(closeButton, { key: 'Escape' });
+    fireEvent(closeButton, escapeEvent);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(escapeEvent.defaultPrevented).toBe(true);
+  });
+
+  it('does not close on Escape when focus is in editable controls', () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByPlaceholderText('Add a comment...'), { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes only actions menu on Escape and keeps modal open', () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    expect(screen.getByTestId('todo-actions-menu')).toBeInTheDocument();
+
+    const trigger = screen.getByTestId('todo-actions-trigger');
+    const escapeEvent = createEvent.keyDown(trigger, { key: 'Escape' });
+    fireEvent(trigger, escapeEvent);
+
+    expect(screen.queryByTestId('todo-actions-menu')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(escapeEvent.defaultPrevented).toBe(true);
   });
 
   it('triggers title save on Cmd/Ctrl+S while editing title', () => {

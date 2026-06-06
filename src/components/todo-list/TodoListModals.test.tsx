@@ -4,6 +4,7 @@ import {
   CreateCardModal,
   CreateDashboardModal,
   EditDashboardModal,
+  ShareDashboardModal,
 } from './TodoListModals';
 
 describe('TodoListModals', () => {
@@ -212,5 +213,152 @@ describe('TodoListModals', () => {
 
     fireEvent.click(screen.getByTestId('edit-dashboard-modal').parentElement as HTMLElement);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports object state/actions API for create card modal', () => {
+    const onClose = vi.fn();
+    const onTitleChange = vi.fn();
+    const onDescriptionChange = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+
+    render(
+      <CreateCardModal
+        state={{ open: true, title: 'Card A', description: 'Desc A' }}
+        actions={{
+          onClose,
+          onTitleChange,
+          onDescriptionChange,
+          onSubmit,
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId('create-card-title'), { target: { value: 'Card B' } });
+    fireEvent.change(screen.getByTestId('create-card-description'), { target: { value: 'Desc B' } });
+    fireEvent.submit(screen.getByTestId('create-card-modal'));
+
+    expect(onTitleChange).toHaveBeenCalledWith('Card B');
+    expect(onDescriptionChange).toHaveBeenCalledWith('Desc B');
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders share modal loading state and disables save', () => {
+    const onClose = vi.fn();
+
+    render(
+      <ShareDashboardModal
+        state={{
+          open: true,
+          dashboardName: 'Board',
+          users: [],
+          selectedUserIds: [],
+          recipientEmails: '',
+          loadingUsers: true,
+          usersError: null,
+          actionError: '',
+        }}
+        actions={{
+          onClose,
+          onToggleUser: vi.fn(),
+          onRecipientEmailsChange: vi.fn(),
+          onSubmit: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Loading users...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save access' })).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('share-dashboard-modal').parentElement as HTMLElement);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders share modal users error and action error states', () => {
+    render(
+      <ShareDashboardModal
+        state={{
+          open: true,
+          dashboardName: 'Board',
+          users: [],
+          selectedUserIds: [],
+          recipientEmails: '',
+          loadingUsers: false,
+          usersError: 'permission-denied',
+          actionError: 'Save failed',
+        }}
+        actions={{
+          onClose: vi.fn(),
+          onToggleUser: vi.fn(),
+          onRecipientEmailsChange: vi.fn(),
+          onSubmit: vi.fn(),
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId('share-users-error')).toHaveTextContent('permission-denied');
+    expect(screen.getByText('Save failed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save access' })).toBeDisabled();
+  });
+
+  it('renders share modal empty users state', () => {
+    render(
+      <ShareDashboardModal
+        open
+        dashboardName="Board"
+        users={[]}
+        selectedUserIds={[]}
+        recipientEmails=""
+        loadingUsers={false}
+        usersError={null}
+        actionError=""
+        onClose={vi.fn()}
+        onToggleUser={vi.fn()}
+        onRecipientEmailsChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('No other users found yet.')).toBeInTheDocument();
+    expect(screen.getByTestId('share-selected-count')).toHaveTextContent('Selected: 0');
+    expect(screen.getByRole('button', { name: 'Save access' })).not.toBeDisabled();
+  });
+
+  it('handles share modal user selection and email input', () => {
+    const onToggleUser = vi.fn();
+    const onRecipientEmailsChange = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+
+    render(
+      <ShareDashboardModal
+        open
+        dashboardName="Board"
+        users={[
+          { id: 'u-1', email: 'u1@example.com' },
+          { id: 'u-2', email: 'u2@example.com' },
+        ]}
+        selectedUserIds={['u-1']}
+        recipientEmails="first@example.com"
+        loadingUsers={false}
+        usersError={null}
+        actionError=""
+        onClose={vi.fn()}
+        onToggleUser={onToggleUser}
+        onRecipientEmailsChange={onRecipientEmailsChange}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('hardcorovec@ya.ru, other@example.com'), {
+      target: { value: 'a@example.com, b@example.com' },
+    });
+    expect(onRecipientEmailsChange).toHaveBeenCalledWith('a@example.com, b@example.com');
+
+    fireEvent.click(screen.getByTestId('share-user-checkbox-u-2'));
+    expect(onToggleUser).toHaveBeenCalledWith('u-2');
+
+    expect(screen.getByTestId('share-selected-count')).toHaveTextContent('Selected: 1');
+
+    fireEvent.submit(screen.getByTestId('share-dashboard-modal'));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });

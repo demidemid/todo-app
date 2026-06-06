@@ -1048,6 +1048,89 @@ describe('useDashboards', () => {
     );
   });
 
+  it('shareDashboard updates shared access with normalized unique values', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeSnapshotDoc('board-1', {
+            entityType: 'dashboard',
+            userId: 'user-1',
+            name: 'Board 1',
+            order: 0,
+            columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:00:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(1);
+    });
+
+    await act(async () => {
+      await result.current.shareDashboard(
+        'board-1',
+        ['user-2', 'user-2', 'user-1', '', 'user-3'],
+        [' Alice@Example.com ', 'alice@example.com', 'bob@example.com', '']
+      );
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      { path: 'todos/board-1' },
+      expect.objectContaining({
+        sharedWith: ['user-2', 'user-3'],
+        sharedWithEmails: ['alice@example.com', 'bob@example.com'],
+        updatedAt: expect.any(Object),
+      })
+    );
+  });
+
+  it('shareDashboard throws when dashboard is missing', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({ docs: [] });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await expect(result.current.shareDashboard('missing-board', [], [])).rejects.toThrow('Dashboard not found');
+  });
+
+  it('shareDashboard throws when user is not dashboard owner', async () => {
+    const { result } = renderHook(() => useDashboards('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeSnapshotDoc('board-shared', {
+            entityType: 'dashboard',
+            userId: 'owner-2',
+            name: 'Shared board',
+            order: 0,
+            columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:00:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.dashboards).toHaveLength(1);
+    });
+
+    await expect(result.current.shareDashboard('board-shared', ['user-3'], ['u3@example.com'])).rejects.toThrow(
+      'Only dashboard owner can share access'
+    );
+  });
+
   it('throws authentication errors for mutating actions when user is missing', async () => {
     const { result } = renderHook(() => useDashboards(null));
 
@@ -1057,5 +1140,6 @@ describe('useDashboards', () => {
       result.current.updateDashboard('board-1', 'Board', [{ id: 'todo', name: 'To do', order: 0, isDone: false }])
     ).rejects.toThrow('User must be authenticated');
     await expect(result.current.deleteDashboard('board-1')).rejects.toThrow('User must be authenticated');
+    await expect(result.current.shareDashboard('board-1', [], [])).rejects.toThrow('User must be authenticated');
   });
 });

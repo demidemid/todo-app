@@ -78,6 +78,19 @@ describe('TodoModalDetailsPanel', () => {
     expect(screen.getByText(/Status:/)).toHaveTextContent('IN REVIEW');
   });
 
+  it('renders exact due date text when due-state label is not applicable', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: '2099-01-01',
+      isCompleted: false,
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-due-date-metadata')).toHaveTextContent('Due date: 2099-01-01');
+  });
+
   it('opens actions menu with add file item from the plus button', () => {
     const props = createProps();
 
@@ -222,6 +235,23 @@ describe('TodoModalDetailsPanel', () => {
     });
   });
 
+  it('closes due date form without saving when value is unchanged', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      dueDate: '2026-06-05',
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-due-date'));
+    fireEvent.click(screen.getByTestId('todo-due-date-apply'));
+
+    expect(props.onDueDateChange).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('todo-actions-menu')).not.toBeInTheDocument();
+  });
+
   it('hides reminder toggle when due date is not set', () => {
     const props = createProps();
     props.todo = {
@@ -315,6 +345,55 @@ describe('TodoModalDetailsPanel', () => {
       expect(screen.getByText('Enter a valid http/https URL')).toBeInTheDocument();
     });
     expect(props.onAddLink).not.toHaveBeenCalled();
+  });
+
+  it('shows link handler unavailable error when onAddLink is missing', async () => {
+    const props = createProps();
+    props.onAddLink = undefined;
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-add-link'));
+    fireEvent.change(screen.getByPlaceholderText('URL'), {
+      target: { value: 'https://example.com/without-handler' },
+    });
+    fireEvent.click(screen.getByTestId('todo-actions-add-link-submit'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Link handler is not available')).toBeInTheDocument();
+    });
+  });
+
+  it('renders next-status button and forwards transition callback', () => {
+    const props = createProps();
+    props.columns = [
+      { id: 'in_progress', name: 'In Progress' },
+      { id: 'done', name: 'Done' },
+    ];
+    props.onMoveToNextStatus = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-next-status-btn'));
+
+    expect(props.onMoveToNextStatus).toHaveBeenCalledWith('todo-1', 'done');
+  });
+
+  it('hides next-status button when current column has no next column', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      columnId: 'done',
+    };
+    props.columns = [
+      { id: 'in_progress', name: 'In Progress' },
+      { id: 'done', name: 'Done' },
+    ];
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.queryByTestId('todo-next-status-btn')).not.toBeInTheDocument();
   });
 
   it('renders links block inside card details when todo has links', () => {
@@ -428,6 +507,42 @@ describe('TodoModalDetailsPanel', () => {
     fireEvent.click(screen.getByTestId('delete-file-file-1'));
 
     expect(props.onDeleteFile).toHaveBeenCalledWith('file-1');
+  });
+
+  it('renders editable files and links sections in edit mode', () => {
+    const props = createProps();
+    props.isEditing = true;
+    props.filesUploading = true;
+    props.deletingFileIds = ['file-1'];
+    props.filesError = 'Upload failed';
+    props.files = [
+      {
+        id: 'file-1',
+        name: 'song.mp3',
+        path: 'todos/todo-1/song.mp3',
+        url: 'https://example.com/song.mp3',
+        size: 123,
+        contentType: 'audio/mpeg',
+        uploadedBy: 'user-1',
+        uploadedAt: new Date('2026-01-01T10:00:00Z'),
+      },
+    ];
+    props.todo = {
+      ...todo,
+      links: [
+        { name: 'safe', url: 'https://example.com/safe' },
+        { name: 'unsafe', url: 'javascript:alert(1)' },
+      ],
+    };
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByText('Uploading files...')).toBeInTheDocument();
+    expect(screen.getByText('Removing file...')).toBeInTheDocument();
+    expect(screen.getByText('Upload failed')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'song.mp3' })).toHaveAttribute('href', 'https://example.com/song.mp3');
+    expect(screen.getByRole('link', { name: 'safe' })).toHaveAttribute('href', 'https://example.com/safe');
+    expect(screen.queryByRole('link', { name: 'unsafe' })).not.toBeInTheDocument();
   });
 
   it('calls delete handler from red link action button', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type FC, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type FC, type ChangeEvent } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -9,6 +9,7 @@ import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
+import { useHotkey } from '../hooks/useHotkey';
 import { IconButton } from './ui/IconButton';
 import { Input } from './ui/Input';
 
@@ -49,6 +50,27 @@ const createChecklistItemId = () => (
     : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  if (target.closest('[contenteditable="true"]')) {
+    return true;
+  }
+
+  const tagName = target.tagName;
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+    return true;
+  }
+
+  return target.getAttribute('role') === 'textbox' || target.closest('[role="textbox"]') !== null;
+};
+
 export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = useState(false);
@@ -73,21 +95,14 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       : `${actionName} failed: ${errorMessage}`;
   };
 
-  useEffect(() => {
-    const handleEscape = (event: Event) => {
-      if (!(event instanceof KeyboardEvent)) return;
-      if (event.key !== 'Escape') return;
-      if (event.defaultPrevented) return;
+  useHotkey('escape', (event) => {
+    if (isEditableTarget(event.target)) {
+      return;
+    }
 
-      onClose();
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
+    event.preventDefault();
+    onClose();
+  }, { skipIfDefaultPrevented: true });
 
   const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
@@ -146,9 +161,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
     deleteTodo,
   });
 
-  const handleSaveShortcut = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
-
+  useHotkey('mod+s', (event) => {
     if (isEditingTitle) {
       event.preventDefault();
       event.stopPropagation();
@@ -161,7 +174,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       event.stopPropagation();
       void handleSave();
     }
-  };
+  }, { enabled: isEditingTitle || isEditing });
 
   const openFilePicker = () => {
     if (filesUploading) return;
@@ -284,7 +297,6 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       <div
         className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:h-[80vh] md:flex-row"
         onClick={(event) => event.stopPropagation()}
-        onKeyDownCapture={handleSaveShortcut}
       >
         <IconButton
           variant="neutral"
