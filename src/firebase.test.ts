@@ -73,6 +73,7 @@ describe('firebase module', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it('initializes app services and enables persistence by default', async () => {
