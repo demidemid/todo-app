@@ -50,6 +50,27 @@ const createChecklistItemId = () => (
     : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  if (target.closest('[contenteditable="true"]')) {
+    return true;
+  }
+
+  const tagName = target.tagName;
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+    return true;
+  }
+
+  return target.getAttribute('role') === 'textbox' || target.closest('[role="textbox"]') !== null;
+};
+
 export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = useState(false);
@@ -74,7 +95,12 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       : `${actionName} failed: ${errorMessage}`;
   };
 
-  useHotkey('escape', () => {
+  useHotkey('escape', (event) => {
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
     onClose();
   }, { skipIfDefaultPrevented: true });
 
