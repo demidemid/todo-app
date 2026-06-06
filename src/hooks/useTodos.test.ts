@@ -227,6 +227,51 @@ describe('useTodos', () => {
     warnSpy.mockRestore();
   });
 
+  it('surfaces non-permission chunk subscription errors', async () => {
+    const callbacks: Array<{ onNext: (snapshot: { docs: SnapshotDoc[] }) => void; onError: (error: unknown) => void }> = [];
+    mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
+      callbacks.push({ onNext, onError: onErr });
+      return unsubscribeMock;
+    });
+
+    const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-owned', userId: 'user-1' }]));
+
+    act(() => {
+      callbacks[0]?.onError({ code: 'unavailable', message: 'network down' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('Unexpected Firestore error');
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it('handles parse failure in chunked snapshot callback', async () => {
+    const callbacks: Array<{ onNext: (snapshot: { docs: SnapshotDoc[] }) => void; onError: (error: unknown) => void }> = [];
+    mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
+      callbacks.push({ onNext, onError: onErr });
+      return unsubscribeMock;
+    });
+
+    const { result } = renderHook(() => useTodos('user-1', [{ id: 'board-owned', userId: 'user-1' }]));
+
+    const malformedDoc: SnapshotDoc = {
+      id: 'todo-bad',
+      data: () => {
+        throw new Error('bad snapshot payload');
+      },
+    };
+
+    act(() => {
+      callbacks[0]?.onNext({ docs: [malformedDoc] });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('bad snapshot payload');
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
   it('sets timeout error when snapshot does not respond', async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useTodos('user-1'));
