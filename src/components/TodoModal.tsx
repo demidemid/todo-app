@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type FC, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type FC, type ChangeEvent } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -9,9 +9,9 @@ import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
+import { useHotkey } from '../hooks/useHotkey';
 import { IconButton } from './ui/IconButton';
 import { Input } from './ui/Input';
-import { useHotkey } from '../hooks/useHotkey';
 
 interface TodoModalProps {
   todo: Todo;
@@ -74,26 +74,9 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       : `${actionName} failed: ${errorMessage}`;
   };
 
-
   useHotkey('escape', () => {
     onClose();
   }, { skipIfDefaultPrevented: true });
-
-  useEffect(() => {
-    const handleEscape = (event: Event) => {
-      if (!(event instanceof KeyboardEvent)) return;
-      if (event.key !== 'Escape') return;
-      if (event.defaultPrevented) return;
-
-      onClose();
-    };
-
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [onClose]);
 
   const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
@@ -152,11 +135,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
     deleteTodo,
   });
 
-]
-  const handleSaveShortcut = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 's') return;
-
-
+  useHotkey('mod+s', (event) => {
     if (isEditingTitle) {
       event.preventDefault();
       event.stopPropagation();
