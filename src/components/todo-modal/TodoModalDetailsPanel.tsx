@@ -247,7 +247,7 @@ export const TodoModalDetailsPanel = ({
 
   useHotkey('escape', () => {
     setIsActionMenuOpen(false);
-  }, { enabled: isActionMenuOpen });
+  }, { enabled: isActionMenuOpen, capture: true, preventDefault: true });
 
   useEffect(() => {
     if (!isActionMenuOpen) return;

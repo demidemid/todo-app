@@ -166,6 +166,30 @@ describe('TodoModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('closes only actions menu on Escape and keeps modal open', () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    expect(screen.getByTestId('todo-actions-menu')).toBeInTheDocument();
+
+    const trigger = screen.getByTestId('todo-actions-trigger');
+    const escapeEvent = createEvent.keyDown(trigger, { key: 'Escape' });
+    fireEvent(trigger, escapeEvent);
+
+    expect(screen.queryByTestId('todo-actions-menu')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(escapeEvent.defaultPrevented).toBe(true);
+  });
+
   it('triggers title save on Cmd/Ctrl+S while editing title', () => {
     const editorState = createEditorState({
       isEditingTitle: true,

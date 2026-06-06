@@ -4,6 +4,8 @@ export interface UseHotkeyOptions {
   enabled?: boolean;
   target?: 'document' | 'window';
   skipIfDefaultPrevented?: boolean;
+  capture?: boolean;
+  preventDefault?: boolean;
 }
 
 export type HotkeyEvent = Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'defaultPrevented' | 'preventDefault' | 'stopPropagation'>;
@@ -11,6 +13,7 @@ export type HotkeyEvent = Pick<KeyboardEvent, 'key' | 'altKey' | 'ctrlKey' | 'me
 interface UseHotkeyHandlerOptions {
   enabled?: boolean;
   skipIfDefaultPrevented?: boolean;
+  preventDefault?: boolean;
 }
 
 const normalizeKey = (rawKey: string): string => {
@@ -60,7 +63,13 @@ export const useHotkey = (
   callback: (event: KeyboardEvent) => void,
   options: UseHotkeyOptions = {}
 ) => {
-  const { enabled = true, target = 'document', skipIfDefaultPrevented = false } = options;
+  const {
+    enabled = true,
+    target = 'document',
+    skipIfDefaultPrevented = false,
+    capture = false,
+    preventDefault = false,
+  } = options;
   const callbackRef = useRef(callback);
 
   useEffect(() => {
@@ -87,15 +96,19 @@ export const useHotkey = (
         return;
       }
 
+      if (preventDefault) {
+        event.preventDefault();
+      }
+
       callbackRef.current(event);
     };
 
-    eventTarget.addEventListener('keydown', listener);
+    eventTarget.addEventListener('keydown', listener, { capture });
 
     return () => {
-      eventTarget.removeEventListener('keydown', listener);
+      eventTarget.removeEventListener('keydown', listener, { capture });
     };
-  }, [enabled, hotkey, skipIfDefaultPrevented, target]);
+  }, [capture, enabled, hotkey, preventDefault, skipIfDefaultPrevented, target]);
 };
 
 export const useHotkeyHandler = <T extends HotkeyEvent>(
@@ -103,7 +116,7 @@ export const useHotkeyHandler = <T extends HotkeyEvent>(
   callback: (event: T) => void,
   options: UseHotkeyHandlerOptions = {}
 ) => {
-  const { enabled = true, skipIfDefaultPrevented = false } = options;
+  const { enabled = true, skipIfDefaultPrevented = false, preventDefault = false } = options;
   const callbackRef = useRef(callback);
 
   useEffect(() => {
@@ -123,6 +136,10 @@ export const useHotkeyHandler = <T extends HotkeyEvent>(
       return;
     }
 
+    if (preventDefault) {
+      event.preventDefault();
+    }
+
     callbackRef.current(event);
-  }, [enabled, hotkey, skipIfDefaultPrevented]);
+  }, [enabled, hotkey, preventDefault, skipIfDefaultPrevented]);
 };
