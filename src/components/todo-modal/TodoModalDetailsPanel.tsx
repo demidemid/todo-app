@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pencil, Check, Trash2, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell } from 'lucide-react';
+import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2 } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
+import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
 import { getDueDateState } from '../../utils/dueDate';
@@ -89,6 +90,7 @@ interface TodoModalDetailsPanelProps {
     onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
+    onArchive?: () => void;
   };
   files?: TodoFile[];
   filesUploading?: boolean;
@@ -122,6 +124,7 @@ interface TodoModalDetailsPanelProps {
   onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
+  onArchive?: () => void;
 }
 
 export const TodoModalDetailsPanel = ({
@@ -130,6 +133,7 @@ export const TodoModalDetailsPanel = ({
   actions,
   columns = [],
   onMoveToNextStatus: legacyOnMoveToNextStatus,
+  onArchive: legacyOnArchive,
   files: legacyFiles,
   filesUploading: legacyFilesUploading,
   deletingFileIds: legacyDeletingFileIds,
@@ -196,6 +200,7 @@ export const TodoModalDetailsPanel = ({
     onDueDateChange: legacyOnDueDateChange,
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
+    onArchive: legacyOnArchive ?? (() => {}),
   };
 
   const {
@@ -233,6 +238,7 @@ export const TodoModalDetailsPanel = ({
     onDueDateChange,
     onRemindOneDayBeforeChange,
     onMoveToNextStatus,
+    onArchive,
   } = resolvedActions;
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -595,16 +601,31 @@ export const TodoModalDetailsPanel = ({
                   </button>
                 );
               })()}
-            <IconButton
-              variant="danger"
-              label="Delete card"
-              onClick={onDelete}
-              disabled={saving}
-              className="h-10! w-10! aspect-square shrink-0 rounded-full! p-0! text-xl font-semibold leading-none text-rose-100"
-              data-testid="todo-delete-card-btn"
-            >
-              <Trash2 size={18} />
-            </IconButton>
+            <EllipsisMenu
+              triggerLabel="Open card menu"
+              triggerTestId="todo-card-menu-trigger"
+              menuTestId="todo-card-menu"
+              menuClassName="w-40"
+              items={[
+                {
+                  id: 'archive',
+                  label: 'Archive',
+                  icon: <Archive size={14} aria-hidden="true" />,
+                  onSelect: onArchive,
+                  testId: 'todo-card-menu-archive',
+                  disabled: saving,
+                },
+                {
+                  id: 'delete',
+                  label: 'Delete',
+                  icon: <Trash2 size={14} aria-hidden="true" />,
+                  onSelect: onDelete,
+                  testId: 'todo-card-menu-delete',
+                  variant: 'danger',
+                  disabled: saving,
+                },
+              ]}
+            />
           </div>
         )}
 

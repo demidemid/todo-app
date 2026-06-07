@@ -342,6 +342,10 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
             onCancelEdit: handleCancelEdit,
             onSave: handleSave,
             onDelete: handleDelete,
+            onArchive: async () => {
+              await updateTodo(todo.id, { archived: true });
+              onClose();
+            },
             onStartEditTitle: () => {
               setIsEditingTitle(true);
               setIsEditing(false);

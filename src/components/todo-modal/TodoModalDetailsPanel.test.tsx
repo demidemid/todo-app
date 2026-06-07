@@ -59,7 +59,7 @@ describe('TodoModalDetailsPanel', () => {
     expect(screen.getByText(/Status:/)).toHaveTextContent('IN PROGRESS');
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open card menu' })).toBeInTheDocument();
   });
 
   it('renders human-readable status name from columns for opaque column ids', () => {
