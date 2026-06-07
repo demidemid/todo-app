@@ -618,7 +618,7 @@ export const TodoModalDetailsPanel = ({
               triggerLabel="Open card menu"
               triggerTestId="todo-card-menu-trigger"
               menuTestId="todo-card-menu"
-              triggerClassName="!border-cyan-300/40 !bg-cyan-300/10 !text-cyan-100 hover:!bg-cyan-300/20 !h-10 !w-10 !rounded-full !p-0"
+              triggerVariant="rounded"
               items={[
                 {
                   id: 'archive',

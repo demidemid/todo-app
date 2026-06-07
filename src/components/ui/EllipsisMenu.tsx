@@ -16,6 +16,7 @@ export interface EllipsisMenuItem {
 interface EllipsisMenuProps {
   triggerLabel: string;
   triggerTestId?: string;
+  triggerVariant?: 'ghost' | 'rounded';
   triggerClassName?: string;
   triggerStyle?: CSSProperties;
   menuTestId?: string;
@@ -28,6 +29,7 @@ interface EllipsisMenuProps {
 export const EllipsisMenu = ({
   triggerLabel,
   triggerTestId,
+  triggerVariant = 'ghost',
   triggerClassName = '',
   triggerStyle,
   menuTestId,
@@ -111,6 +113,10 @@ export const EllipsisMenu = ({
     [items, stopPropagation]
   );
 
+  const triggerVariantClassName = triggerVariant === 'rounded'
+    ? '!h-10 !w-10 !rounded-full !border-cyan-300/40 !bg-cyan-300/10 !p-0 !text-cyan-100 hover:!bg-cyan-300/20'
+    : '!border-transparent !bg-transparent !p-0 !text-slate-300 hover:!bg-transparent hover:!text-slate-100';
+
   return (
     <div
       ref={rootRef}
@@ -127,7 +133,7 @@ export const EllipsisMenu = ({
         aria-expanded={open}
         style={triggerStyle}
         className={[
-          'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10',
+          triggerVariantClassName,
           open ? 'text-cyan-100' : null,
           triggerClassName,
         ]
