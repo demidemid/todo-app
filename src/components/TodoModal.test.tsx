@@ -373,6 +373,27 @@ describe('TodoModal', () => {
     expect(screen.getByRole('menuitem', { name: 'Checklist' })).toBeInTheDocument();
   });
 
+  it('archives card from modal ellipsis menu and closes modal', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-archive'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', { archived: true });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('shows a readable error when moving card to next status fails', async () => {
     updateTodo.mockRejectedValueOnce({
       code: 'permission-denied',

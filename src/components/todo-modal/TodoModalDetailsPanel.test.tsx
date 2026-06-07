@@ -107,6 +107,23 @@ describe('TodoModalDetailsPanel', () => {
     expect(props.onOpenFilePicker).toHaveBeenCalledTimes(1);
   });
 
+  it('shows card ellipsis menu with archive and delete actions', () => {
+    const props = createProps();
+    props.onArchive = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    expect(screen.getByTestId('todo-card-menu')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-archive'));
+    expect(props.onArchive).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-delete'));
+    expect(props.onDelete).toHaveBeenCalledTimes(1);
+  });
+
   it('shows checklist action in plus menu and triggers create checklist handler', () => {
     const props = createProps();
     props.onCreateChecklist = vi.fn();
