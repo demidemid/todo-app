@@ -383,7 +383,7 @@ export const TodoModalDetailsPanel = ({
             </IconButton>
           </div>
         ) : !isEditing && (
-          <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="mb-4 flex items-start justify-between gap-3 pr-10">
              <h2 className="text-xl font-bold leading-tight text-white">
                {/* Render all but last word as normal, last word + pencil in nowrap span */}
                {(() => {

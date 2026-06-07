@@ -312,9 +312,9 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
         onClick={(event) => event.stopPropagation()}
       >
         <IconButton
-          variant="neutral"
-          size="lg"
-          className="absolute right-4 top-4 size-8 shrink-0 rounded-full"
+          variant="link"
+          size="sm"
+          className="absolute right-4 top-4 h-auto! w-auto! shrink-0 rounded-none! p-0! text-4xl"
           onClick={onClose}
           label="Close"
         >
