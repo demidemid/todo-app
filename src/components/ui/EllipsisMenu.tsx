@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { Button } from './Button';
 import { IconButton } from './IconButton';
 import { useHotkey } from '../../hooks/useHotkey';
@@ -17,6 +17,7 @@ interface EllipsisMenuProps {
   triggerLabel: string;
   triggerTestId?: string;
   triggerClassName?: string;
+  triggerStyle?: CSSProperties;
   menuTestId?: string;
   menuClassName?: string;
   menuAriaLabel?: string;
@@ -28,6 +29,7 @@ export const EllipsisMenu = ({
   triggerLabel,
   triggerTestId,
   triggerClassName = '',
+  triggerStyle,
   menuTestId,
   menuClassName = 'min-w-40',
   menuAriaLabel,
@@ -123,7 +125,14 @@ export const EllipsisMenu = ({
         data-testid={triggerTestId}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={open ? `border-cyan-300/40 bg-cyan-300/15 text-cyan-100 ${triggerClassName}`.trim() : triggerClassName}
+        style={triggerStyle}
+        className={[
+          'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10',
+          open ? 'text-cyan-100' : null,
+          triggerClassName,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(event) => {
           if (stopPropagation) {
             event.stopPropagation();

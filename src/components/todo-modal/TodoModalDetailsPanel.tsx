@@ -425,8 +425,11 @@ export const TodoModalDetailsPanel = ({
         )}
 
         {!isEditing && (
-          <div className="mb-4 flex items-center justify-between" data-testid="todo-actions-panel">
-            <div className="relative flex items-center gap-2" ref={actionMenuRef}>
+          <div
+            className="relative mb-4 flex items-center justify-between before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-1/2 before:z-0 before:-translate-y-1/2 before:border-t before:border-cyan-300/40"
+            data-testid="todo-actions-panel"
+          >
+            <div className="relative z-10 flex items-center gap-2 rounded-full bg-slate-900/95 px-1" ref={actionMenuRef}>
               <IconButton
                 variant="primary"
                 size="md"
@@ -593,23 +596,29 @@ export const TodoModalDetailsPanel = ({
                 const next = idx >= 0 && idx < columns.length - 1 ? columns[idx + 1] : null;
                 if (!next) return null;
                 return (
-                  <button
-                    type="button"
-                    className="flex flex-row items-center justify-center mx-4 px-3 py-2 rounded-lg border border-cyan-400/60 bg-transparent text-cyan-100 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 hover:border-cyan-300 disabled:opacity-60"
-                    style={{ minWidth: 0 }}
-                    disabled={saving}
-                    onClick={() => onMoveToNextStatus && onMoveToNextStatus(todo.id, next.id)}
-                    data-testid="todo-next-status-btn"
-                  >
-                    <ArrowRight size={18} className="mr-2" />
-                    <span className="text-xs font-bold tracking-wide uppercase whitespace-nowrap">{next.name}</span>
-                  </button>
+                  <div className="relative z-10 mx-4 rounded-full bg-slate-900/95 px-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="md"
+                      className="px-3"
+                      style={{ minWidth: 0 }}
+                      disabled={saving}
+                      onClick={() => onMoveToNextStatus && onMoveToNextStatus(todo.id, next.id)}
+                      data-testid="todo-next-status-btn"
+                      startIcon={<ArrowRight size={18} className="mr-2" />}
+                    >
+                      <span className="text-xs font-bold tracking-wide uppercase whitespace-nowrap">{next.name}</span>
+                    </Button>
+                  </div>
                 );
               })()}
+            <div className="relative z-10 rounded-full bg-slate-900/95 px-1">
             <EllipsisMenu
               triggerLabel="Open card menu"
               triggerTestId="todo-card-menu-trigger"
               menuTestId="todo-card-menu"
+              triggerClassName="!border-cyan-300/40 !bg-cyan-300/10 !text-cyan-100 hover:!bg-cyan-300/20 !h-10 !w-10 !rounded-full !p-0"
               items={[
                 {
                   id: 'archive',
@@ -621,17 +630,18 @@ export const TodoModalDetailsPanel = ({
                   testId: 'todo-card-menu-archive',
                   disabled: saving,
                 },
-                {
-                  id: 'delete',
-                  label: 'Delete',
-                  icon: <Trash2 size={14} aria-hidden="true" />,
-                  onSelect: onDelete,
-                  testId: 'todo-card-menu-delete',
-                  variant: 'danger',
-                  disabled: saving,
-                },
-              ]}
-            />
+                  {
+                    id: 'delete',
+                    label: 'Delete',
+                    icon: <Trash2 size={14} aria-hidden="true" />,
+                    onSelect: onDelete,
+                    testId: 'todo-card-menu-delete',
+                    variant: 'danger',
+                    disabled: saving,
+                  },
+                ]}
+              />
+            </div>
           </div>
         )}
 
