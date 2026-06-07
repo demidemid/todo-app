@@ -485,13 +485,63 @@ describe('TodoModal', () => {
           title: 'check list',
           items: [
             expect.objectContaining({
-              title: 'item',
+              title: '',
               checked: false,
             }),
           ],
         },
       });
     });
+  });
+
+  it('focuses first checklist item input when checklist is created from plus actions menu', async () => {
+    const { rerender } = render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-checklist'));
+
+    const checklistUpdateCall = await waitFor(() => {
+      const call = updateTodo.mock.calls.find(([, payload]) => {
+        const updates = payload as Partial<Todo> | undefined;
+        return Boolean(updates?.checklist?.items?.length);
+      });
+
+      expect(call).toBeDefined();
+      return call as [string, Partial<Todo>];
+    });
+
+    const firstItemId = checklistUpdateCall[1].checklist?.items?.[0]?.id;
+    expect(typeof firstItemId).toBe('string');
+
+    rerender(
+      <TodoModal
+        todo={{
+          ...todo,
+          checklist: {
+            title: 'check list',
+            items: [{ id: String(firstItemId), title: '', checked: false }],
+          },
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const firstItemInput = await screen.findByTestId(`todo-checklist-item-input-${String(firstItemId)}`);
+    expect(firstItemInput).toHaveFocus();
+    expect(firstItemInput).toHaveValue('');
   });
 
   it('renders checklist above files and links and allows title/item edit and checkbox toggle', async () => {
@@ -600,14 +650,14 @@ describe('TodoModal', () => {
           title: 'check list',
           items: [
             { id: 'item-1', title: 'first item', checked: false },
-            expect.objectContaining({ title: 'item', checked: false }),
+            expect.objectContaining({ title: '', checked: false }),
           ],
         },
       });
     });
   });
 
-  it('falls back to default names when checklist and item titles are saved empty', async () => {
+  it('falls back to default checklist name and keeps checklist item title empty when saved empty', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
       checklist: {
@@ -648,7 +698,117 @@ describe('TodoModal', () => {
       expect(updateTodo).toHaveBeenCalledWith('todo-1', {
         checklist: {
           title: 'My checklist',
-          items: [{ id: 'item-1', title: 'item', checked: false }],
+          items: [{ id: 'item-1', title: '', checked: false }],
+        },
+      });
+    });
+  });
+
+  it('focuses new checklist item input and keeps it empty after adding item', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'first item', checked: false }],
+      },
+    };
+
+    const { rerender } = render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-add-item'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [
+            { id: 'item-1', title: 'first item', checked: false },
+            expect.objectContaining({ title: '', checked: false }),
+          ],
+        },
+      });
+    });
+
+    const updateCall = updateTodo.mock.calls.find(([, payload]) => {
+      const updates = payload as Partial<Todo> | undefined;
+      return Array.isArray(updates?.checklist?.items) && updates.checklist.items.length === 2;
+    });
+    const addedItemId = (updateCall?.[1] as Partial<Todo> | undefined)?.checklist?.items?.[1]?.id;
+
+    expect(typeof addedItemId).toBe('string');
+
+    rerender(
+      <TodoModal
+        todo={{
+          ...todoWithChecklist,
+          checklist: {
+            title: 'check list',
+            items: [
+              { id: 'item-1', title: 'first item', checked: false },
+              { id: String(addedItemId), title: '', checked: false },
+            ],
+          },
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const newItemInput = await screen.findByTestId(`todo-checklist-item-input-${String(addedItemId)}`);
+    expect(newItemInput).toHaveFocus();
+    expect(newItemInput).toHaveValue('');
+  });
+
+  it('creates multiple checklist items when list text is pasted into item input', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: '', checked: false }],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    const input = screen.getByTestId('todo-checklist-item-input-item-1');
+
+    fireEvent.paste(input, {
+      clipboardData: {
+        getData: () => '- first\nsecond\n3. third',
+      },
+    });
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [
+            { id: 'item-1', title: 'first', checked: false },
+            expect.objectContaining({ title: 'second', checked: false }),
+            expect.objectContaining({ title: 'third', checked: false }),
+          ],
         },
       });
     });

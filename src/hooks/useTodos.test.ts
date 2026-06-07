@@ -4,8 +4,10 @@ import { useTodos } from './useTodos';
 
 const mockAddDoc = vi.fn();
 const mockCollection = vi.fn();
+const mockDisableNetwork = vi.fn();
 const mockDeleteDoc = vi.fn();
 const mockDoc = vi.fn();
+const mockEnableNetwork = vi.fn();
 const mockOnSnapshot = vi.fn();
 const mockQuery = vi.fn();
 const mockAnd = vi.fn();
@@ -30,8 +32,10 @@ vi.mock('firebase/firestore', () => ({
   },
   addDoc: (...args: unknown[]) => mockAddDoc(...args),
   collection: (...args: unknown[]) => mockCollection(...args),
+  disableNetwork: (...args: unknown[]) => mockDisableNetwork(...args),
   deleteDoc: (...args: unknown[]) => mockDeleteDoc(...args),
   doc: (...args: unknown[]) => mockDoc(...args),
+  enableNetwork: (...args: unknown[]) => mockEnableNetwork(...args),
   onSnapshot: (...args: unknown[]) => mockOnSnapshot(...args),
   query: (...args: unknown[]) => mockQuery(...args),
   and: (...args: unknown[]) => mockAnd(...args),
@@ -46,11 +50,13 @@ vi.mock('../firebase', () => ({
 type SnapshotDoc = {
   id: string;
   data: () => Record<string, unknown>;
+  metadata?: { hasPendingWrites?: boolean };
 };
 
-const makeDoc = (id: string, data: Record<string, unknown>): SnapshotDoc => ({
+const makeDoc = (id: string, data: Record<string, unknown>, hasPendingWrites = false): SnapshotDoc => ({
   id,
   data: () => data,
+  metadata: { hasPendingWrites },
 });
 
 describe('useTodos', () => {
@@ -76,8 +82,10 @@ describe('useTodos', () => {
     });
 
     mockAddDoc.mockResolvedValue({ id: 'todo-created' });
+    mockDisableNetwork.mockResolvedValue(undefined);
     mockUpdateDoc.mockResolvedValue(undefined);
     mockDeleteDoc.mockResolvedValue(undefined);
+    mockEnableNetwork.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -155,6 +163,98 @@ describe('useTodos', () => {
 
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+
+  it('normalizes mismatched status and columnId to columnId', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDoc('todo-1', {
+            entityType: 'todo',
+            userId: 'user-1',
+            title: 'Mismatch card',
+            boardId: 'board-1',
+            status: 'todo',
+            columnId: 'in_progress',
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:10:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0]).toMatchObject({
+      id: 'todo-1',
+      status: 'in_progress',
+      columnId: 'in_progress',
+      isCompleted: false,
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Todo has mismatched status and columnId; using columnId as source of truth.',
+      expect.objectContaining({
+        id: 'todo-1',
+        status: 'todo',
+        columnId: 'in_progress',
+      })
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('keeps todos with pending local writes in snapshot projection', async () => {
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDoc(
+            'todo-pending',
+            {
+              entityType: 'todo',
+              userId: 'user-1',
+              title: 'Pending card',
+              boardId: 'board-1',
+              status: 'done',
+              columnId: 'done',
+              createdAt: new Date('2026-01-01T00:00:00Z'),
+              updatedAt: new Date('2026-01-01T00:01:00Z'),
+            },
+            true
+          ),
+          makeDoc('todo-committed', {
+            entityType: 'todo',
+            userId: 'user-1',
+            title: 'Committed card',
+            boardId: 'board-1',
+            status: 'todo',
+            columnId: 'todo',
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:02:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.todos).toHaveLength(2);
+    expect(result.current.todos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'todo-pending', columnId: 'done', status: 'done' }),
+        expect.objectContaining({ id: 'todo-committed', columnId: 'todo', status: 'todo' }),
+      ])
+    );
   });
 
   it('maps permission-denied snapshot errors to user-friendly message', async () => {
@@ -269,6 +369,64 @@ describe('useTodos', () => {
     await waitFor(() => {
       expect(result.current.error).toBe('bad snapshot payload');
       expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it('merges duplicate todos from owner/shared subscriptions by latest updatedAt', async () => {
+    const callbacks: Array<{ onNext: (snapshot: { docs: SnapshotDoc[] }) => void; onError: (error: unknown) => void }> = [];
+    mockOnSnapshot.mockImplementation((_, onNext, onErr) => {
+      callbacks.push({ onNext, onError: onErr });
+      return unsubscribeMock;
+    });
+
+    const { result } = renderHook(() =>
+      useTodos('user-1', [
+        { id: 'board-1', userId: 'user-1' },
+        { id: 'board-1', userId: 'owner-2', readAllTodos: true },
+      ])
+    );
+
+    act(() => {
+      callbacks[0]?.onNext({
+        docs: [
+          makeDoc('todo-1', {
+            entityType: 'todo',
+            userId: 'user-1',
+            title: 'Card',
+            boardId: 'board-1',
+            columnId: 'todo',
+            status: 'todo',
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:00:00Z'),
+          }),
+        ],
+      });
+
+      callbacks[1]?.onNext({
+        docs: [
+          makeDoc('todo-1', {
+            entityType: 'todo',
+            userId: 'user-1',
+            title: 'Card',
+            boardId: 'board-1',
+            columnId: 'done',
+            status: 'done',
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+            updatedAt: new Date('2026-01-01T00:01:00Z'),
+          }),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0]).toMatchObject({
+      id: 'todo-1',
+      columnId: 'done',
+      status: 'done',
     });
   });
 

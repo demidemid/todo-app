@@ -3,8 +3,10 @@ import {
   addDoc,
   and,
   collection,
+  disableNetwork,
   deleteDoc,
   doc,
+  enableNetwork,
   onSnapshot,
   query,
   Timestamp,
@@ -201,13 +203,60 @@ const chunkArray = <T,>(values: T[], chunkSize: number): T[][] => {
   return chunks;
 };
 
-const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string, unknown> }>): Todo[] => {
+const mergeTodosByLatestUpdate = (todos: Todo[]): Todo[] => {
+  const byId = new Map<string, Todo>();
+
+  todos.forEach((todo) => {
+    const existing = byId.get(todo.id);
+    if (!existing || todo.updatedAt.getTime() >= existing.updatedAt.getTime()) {
+      byId.set(todo.id, todo);
+    }
+  });
+
+  return Array.from(byId.values());
+};
+
+type SnapshotTodoDoc = {
+  id: string;
+  data: () => Record<string, unknown>;
+  metadata?: { hasPendingWrites?: boolean; fromCache?: boolean };
+};
+
+const getDebugCardIdFromLocation = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const cardId = new URLSearchParams(window.location.search).get('card');
+  return typeof cardId === 'string' && cardId.length > 0 ? cardId : null;
+};
+
+const logDebugCardSnapshot = (docs: SnapshotTodoDoc[], source: string) => {
+  const debugCardId = getDebugCardIdFromLocation();
+  if (!debugCardId) return;
+
+  const targetDoc = docs.find((doc) => doc.id === debugCardId);
+  if (!targetDoc) return;
+
+  const data = targetDoc.data();
+
+  console.log('[todo-debug]', {
+    source,
+    id: targetDoc.id,
+    boardId: data.boardId,
+    status: data.status,
+    columnId: data.columnId,
+    updatedAt: data.updatedAt,
+    hasPendingWrites: targetDoc.metadata?.hasPendingWrites ?? false,
+    fromCache: targetDoc.metadata?.fromCache ?? false,
+    loggedAt: new Date().toISOString(),
+  });
+};
+
+const parseSnapshotTodos = (docs: SnapshotTodoDoc[]): Todo[] => {
   return docs
     .filter((item) => item.data().entityType !== 'dashboard')
     .flatMap((item) => {
       const data = item.data();
       const createdAt = parseTimestamp(data.createdAt);
-      const status = parseStatus(data.status, data.completed);
+      const parsedStatus = parseStatus(data.status, data.completed);
       const weight = parseWeight(data.weight);
       const boardId = typeof data.boardId === 'string' && data.boardId.length > 0 ? data.boardId : null;
       const columnId =
@@ -215,7 +264,23 @@ const parseSnapshotTodos = (docs: Array<{ id: string; data: () => Record<string,
           ? data.columnId
           : typeof data.status === 'string' && data.status.length > 0
             ? data.status
-            : status;
+            : parsedStatus;
+
+      if (
+        typeof data.columnId === 'string' &&
+        data.columnId.length > 0 &&
+        typeof data.status === 'string' &&
+        data.status.length > 0 &&
+        data.columnId !== data.status
+      ) {
+        console.warn('Todo has mismatched status and columnId; using columnId as source of truth.', {
+          id: item.id,
+          status: data.status,
+          columnId: data.columnId,
+        });
+      }
+
+      const status = columnId;
       const isCompleted = typeof data.isCompleted === 'boolean' ? data.isCompleted : status === 'done';
       const completedAt = parseIsoString(data.completedAt);
       const dueDate = parseLocalDateString(data.dueDate);
@@ -327,6 +392,8 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
     const boardAccess = parseNormalizedBoardAccess(normalizedBoardAccessKey);
 
     const unsubs: Array<() => void> = [];
+    let pendingWritesSinceMs: number | null = null;
+    let reconnectInFlight = false;
     let hasSnapshotResponse = false;
     const snapshotTimeout = window.setTimeout(() => {
       if (!hasSnapshotResponse) {
@@ -351,6 +418,37 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
       setResolvedSubscriptionKey(subscriptionKey);
     };
 
+    const tryRecoverStuckPendingWrites = (docs: SnapshotTodoDoc[], source: string) => {
+      const hasPendingWrites = docs.some((item) => item.metadata?.hasPendingWrites);
+
+      if (!hasPendingWrites) {
+        pendingWritesSinceMs = null;
+        return;
+      }
+
+      if (pendingWritesSinceMs == null) {
+        pendingWritesSinceMs = Date.now();
+        return;
+      }
+
+      const elapsedMs = Date.now() - pendingWritesSinceMs;
+      if (elapsedMs < 15000 || reconnectInFlight) {
+        return;
+      }
+
+      reconnectInFlight = true;
+      console.warn(`[useTodos:${source}] Pending writes are stuck. Forcing Firestore reconnect.`);
+
+      void disableNetwork(db)
+        .catch(() => undefined)
+        .then(() => enableNetwork(db))
+        .catch(() => undefined)
+        .finally(() => {
+          reconnectInFlight = false;
+          pendingWritesSinceMs = Date.now();
+        });
+    };
+
     try {
       if (!useBoardFiltering) {
         const q = query(collection(db, 'todos'), where('userId', '==', userId));
@@ -358,6 +456,8 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
           q,
           (snapshot) => {
             try {
+              logDebugCardSnapshot(snapshot.docs, 'main');
+              tryRecoverStuckPendingWrites(snapshot.docs, 'main');
               onSuccess(parseSnapshotTodos(snapshot.docs));
             } catch (parseError) {
               onFailure(parseError, 'main-parse');
@@ -378,8 +478,7 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
 
         const syncCombinedTodos = () => {
           const merged = Array.from(trackedSnapshots.values()).flat();
-          const deduped = merged.filter((item, index, all) => all.findIndex((next) => next.id === item.id) === index);
-          onSuccess(deduped);
+          onSuccess(mergeTodosByLatestUpdate(merged));
         };
 
         const subscribeChunkedBoards = (boardIds: string[], mode: 'owner' | 'shared') => {
@@ -402,6 +501,8 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
               boardQuery,
               (snapshot) => {
                 try {
+                  logDebugCardSnapshot(snapshot.docs, `${mode}-chunk:${key}`);
+                  tryRecoverStuckPendingWrites(snapshot.docs, `${mode}-chunk:${key}`);
                   trackedSnapshots.set(key, parseSnapshotTodos(snapshot.docs));
                   syncCombinedTodos();
                 } catch (parseError) {

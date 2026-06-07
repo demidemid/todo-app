@@ -3,7 +3,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
 import { storage } from '../firebase';
-import { DEFAULT_CHECKLIST_TITLE, DEFAULT_CHECKLIST_ITEM_TITLE, normalizeTodoChecklist } from '../utils/todoChecklist';
+import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist } from '../utils/todoChecklist';
 import { resolveReminderScheduledAt } from '../utils/dueDate';
 import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
@@ -381,7 +381,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
                   items: [
                     {
                       id: createChecklistItemId(),
-                      title: DEFAULT_CHECKLIST_ITEM_TITLE,
+                      title: '',
                       checked: false,
                     },
                   ],
@@ -416,7 +416,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
                     ...currentChecklist.items,
                     {
                       id: createChecklistItemId(),
-                      title: DEFAULT_CHECKLIST_ITEM_TITLE,
+                      title: '',
                       checked: false,
                     },
                   ],
@@ -437,10 +437,46 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
 
                     return {
                       ...item,
-                      ...(updates.title != null ? { title: updates.title.trim() || DEFAULT_CHECKLIST_ITEM_TITLE } : {}),
+                      ...(updates.title != null ? { title: updates.title.trim() } : {}),
                       ...(updates.checked != null ? { checked: updates.checked } : {}),
                     };
                   }),
+                },
+              });
+            },
+            onChecklistPasteItems: async (itemId, itemTitles) => {
+              const normalizedTitles = itemTitles
+                .map((title) => title.trim())
+                .filter((title) => title.length > 0);
+              if (normalizedTitles.length === 0) return;
+
+              const currentChecklist = normalizeTodoChecklist(todo.checklist, {
+                createItemId: createChecklistItemId,
+              });
+              if (!currentChecklist) return;
+
+              const targetIndex = currentChecklist.items.findIndex((item) => item.id === itemId);
+              if (targetIndex < 0) return;
+
+              const [firstTitle, ...restTitles] = normalizedTitles;
+              const nextItems = currentChecklist.items.flatMap((item, index) => {
+                if (index !== targetIndex) {
+                  return [item];
+                }
+
+                const appendedItems = restTitles.map((title) => ({
+                  id: createChecklistItemId(),
+                  title,
+                  checked: false,
+                }));
+
+                return [{ ...item, title: firstTitle }, ...appendedItems];
+              });
+
+              await updateTodo(todo.id, {
+                checklist: {
+                  ...currentChecklist,
+                  items: nextItems,
                 },
               });
             },

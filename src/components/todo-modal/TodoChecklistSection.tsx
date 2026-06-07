@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Plus, X } from 'lucide-react';
 import type { Todo } from '../../types/todo';
-import { normalizeTodoChecklist } from '../../utils/todoChecklist';
+import { normalizeTodoChecklist, parseChecklistItemTitles } from '../../utils/todoChecklist';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
@@ -11,6 +11,7 @@ interface TodoChecklistSectionProps {
   onChecklistTitleChange?: (title: string) => Promise<void> | void;
   onChecklistAddItem?: () => Promise<void> | void;
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+  onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
 }
 
@@ -19,6 +20,7 @@ export const TodoChecklistSection = ({
   onChecklistTitleChange,
   onChecklistAddItem,
   onChecklistItemChange,
+  onChecklistPasteItems,
   onChecklistDeleteItem,
 }: TodoChecklistSectionProps) => {
   const checklist = useMemo(() => normalizeTodoChecklist(rawChecklist), [rawChecklist]);
@@ -27,6 +29,10 @@ export const TodoChecklistSection = ({
   const [checklistTitleDraft, setChecklistTitleDraft] = useState('');
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [checklistItemTitleDraft, setChecklistItemTitleDraft] = useState('');
+  const [focusNewChecklistItem, setFocusNewChecklistItem] = useState(false);
+  const checklistItems = useMemo(() => checklist?.items ?? [], [checklist]);
+  const previousChecklistItemIdsRef = useRef<string[]>(checklistItems.map((item) => item.id));
+  const hadChecklistRef = useRef(Boolean(checklist));
 
   const saveChecklistTitle = async () => {
     if (!onChecklistTitleChange || !checklist) {
@@ -91,6 +97,67 @@ export const TodoChecklistSection = ({
     handleChecklistItemEscape(event);
   };
 
+  const handleChecklistItemPaste = async (event: React.ClipboardEvent<HTMLInputElement>, itemId: string) => {
+    if (!onChecklistPasteItems) {
+      return;
+    }
+
+    const parsedTitles = parseChecklistItemTitles(event.clipboardData.getData('text'));
+    if (parsedTitles.length <= 1) {
+      return;
+    }
+
+    event.preventDefault();
+
+    try {
+      await onChecklistPasteItems(itemId, parsedTitles);
+      cancelChecklistItemEdit();
+    } catch {
+      // Ignore paste handler errors and keep the current edit session active.
+    }
+  };
+
+  useEffect(() => {
+    const currentItemIds = checklistItems.map((item) => item.id);
+    const hadChecklist = hadChecklistRef.current;
+
+    if (!hadChecklist && checklist && editingChecklistItemId === null) {
+      const firstItem = checklistItems[0];
+      if (firstItem && firstItem.title.trim() === '') {
+        queueMicrotask(() => {
+          startChecklistItemEdit(firstItem.id, firstItem.title);
+        });
+      }
+    }
+
+    if (focusNewChecklistItem && checklist) {
+      const previousItemIds = new Set(previousChecklistItemIdsRef.current);
+      const newItem = checklistItems.find((item) => !previousItemIds.has(item.id));
+
+      if (newItem) {
+        startChecklistItemEdit(newItem.id, newItem.title);
+        setFocusNewChecklistItem(false);
+      }
+    }
+
+    previousChecklistItemIdsRef.current = currentItemIds;
+    hadChecklistRef.current = Boolean(checklist);
+  }, [checklist, checklistItems, editingChecklistItemId, focusNewChecklistItem]);
+
+  const handleAddChecklistItem = async () => {
+    if (!onChecklistAddItem) {
+      return;
+    }
+
+    setFocusNewChecklistItem(true);
+
+    try {
+      await onChecklistAddItem();
+    } catch {
+      setFocusNewChecklistItem(false);
+    }
+  };
+
   if (!checklist) return null;
 
   return (
@@ -129,7 +196,7 @@ export const TodoChecklistSection = ({
           label="Add checklist item"
           className="h-7! w-7! rounded-full! p-0!"
           onClick={() => {
-            void onChecklistAddItem?.();
+            void handleAddChecklistItem();
           }}
           data-testid="todo-checklist-add-item"
         >
@@ -158,6 +225,9 @@ export const TodoChecklistSection = ({
                   className="h-8 flex-1"
                   autoFocus
                   onKeyDown={handleChecklistItemKeyDown}
+                  onPaste={(event) => {
+                    void handleChecklistItemPaste(event, item.id);
+                  }}
                   data-testid={`todo-checklist-item-input-${item.id}`}
                 />
                 <IconButton
