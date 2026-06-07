@@ -386,6 +386,44 @@ describe('useTodoListController', () => {
     expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: true });
   });
 
+  it('archives all todos from the last dashboard status', async () => {
+    const { args, mocks } = createArgs();
+    args.todos = [
+      ...todos,
+      {
+        ...todos[0],
+        id: 't-done-1',
+        boardId: 'board-a',
+        status: 'done',
+        columnId: 'done',
+      },
+      {
+        ...todos[0],
+        id: 't-done-2',
+        boardId: 'board-a',
+        status: 'done',
+        columnId: 'done',
+      },
+      {
+        ...todos[0],
+        id: 't-done-archived',
+        boardId: 'board-a',
+        status: 'done',
+        columnId: 'done',
+        archived: true,
+      },
+    ];
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleArchiveAllCompleted('board-a');
+    });
+
+    expect(mocks.updateTodo).toHaveBeenCalledWith('t-done-1', { archived: true });
+    expect(mocks.updateTodo).toHaveBeenCalledWith('t-done-2', { archived: true });
+    expect(mocks.updateTodo).not.toHaveBeenCalledWith('t-done-archived', { archived: true });
+  });
+
   it('unarchives todo by clearing archived flag', async () => {
     const { args, mocks } = createArgs();
     const { result } = renderHook(() => useTodoListController(args));

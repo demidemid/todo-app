@@ -59,6 +59,7 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
   onDashboardDrop: vi.fn(),
   onOpenEditDashboard: vi.fn(),
   onDeleteDashboard: vi.fn(),
+  onArchiveAllCompleted: vi.fn(),
   onOpenCreateCard: vi.fn(),
   onMoveTodo: vi.fn(),
   onSetDragState: vi.fn(),
@@ -114,6 +115,28 @@ describe('DashboardSection', () => {
     expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', 'board-1');
     expect(props.onDashboardDragStart).toHaveBeenCalledTimes(1);
     expect(props.onDashboardDragEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it('archives all completed cards from dashboard actions menu', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      ...props.groupedTodos,
+      done: [
+        {
+          ...todo,
+          id: 'todo-done-1',
+          status: 'done',
+          columnId: 'done',
+        },
+      ],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    fireEvent.click(screen.getByTestId('dashboard-actions-trigger-board-1'));
+    fireEvent.click(screen.getByTestId('archive-completed-dashboard-button-board-1'));
+
+    expect(props.onArchiveAllCompleted).toHaveBeenCalledWith('board-1');
   });
 
   it('opens create card flow and handles guarded column drop interactions', () => {
