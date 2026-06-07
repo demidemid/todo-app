@@ -140,7 +140,7 @@ export const EllipsisMenu = ({
 
       {open && (
         <div
-          className={`absolute right-0 top-10 z-50 rounded-lg border border-white/10 bg-slate-900 shadow-lg  ${menuClassName}`.trim()}
+          className={`absolute right-0 top-10 z-50 rounded-lg border border-white/10 bg-slate-900 shadow-lg ${menuClassName}`.trim()}
           data-testid={menuTestId}
           role="menu"
           aria-label={menuAriaLabel ?? triggerLabel}
