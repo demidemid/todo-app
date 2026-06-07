@@ -378,10 +378,11 @@ export const DashboardSection = ({
 
       {isExpanded && (
         <div className="border-t border-white/10 p-4">
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(0, 1fr))` }}
-          >
+          <div className="overflow-x-auto pb-2">
+            <div
+              className="grid min-w-full gap-4"
+              style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(16rem, 1fr))` }}
+            >
             {columns.map((column) => {
               const columnTodos = groupedTodos[column.id] ?? [];
 
@@ -481,7 +482,7 @@ export const DashboardSection = ({
                           onClick={() => {
                             if (editingTodoId !== todo.id) onOpenTodoModal(todo);
                           }}
-                          className={`relative rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
+                          className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
                             dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
                           } ${
                             editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
@@ -683,6 +684,7 @@ export const DashboardSection = ({
                 This dashboard has no columns yet.
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
