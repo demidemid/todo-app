@@ -351,8 +351,10 @@ export const DashboardSection = ({
 
         {canManageDashboard && (
           <EllipsisMenu
-            triggerLabel="Open dashboard actions"
-            triggerTestId={`dashboard-actions-trigger-${dashboard.id}`}
+            trigger={{
+              label: 'Open dashboard actions',
+              testId: `dashboard-actions-trigger-${dashboard.id}`,
+            }}
             menuTestId={`dashboard-actions-menu-${dashboard.id}`}
             menuAriaLabel={`Dashboard actions for ${dashboard.name}`}
             stopPropagation
@@ -641,8 +643,10 @@ export const DashboardSection = ({
                                 )}
                               </div>
                               <EllipsisMenu
-                                triggerLabel={`Open actions for ${todo.title}`}
-                                triggerTestId={`card-menu-trigger-${todo.id}`}
+                                trigger={{
+                                  label: `Open actions for ${todo.title}`,
+                                  testId: `card-menu-trigger-${todo.id}`,
+                                }}
                                 menuTestId="card-menu"
                                 stopPropagation
                                 items={[

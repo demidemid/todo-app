@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2 } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
+import { getEllipsisMenuItemClassName } from '../ui/ellipsisMenuStyles';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
 import { getDueDateState } from '../../utils/dueDate';
 import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
-import { useHotkey, useHotkeyHandler } from '../../hooks/useHotkey';
+import { useHotkeyHandler } from '../../hooks/useHotkey';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -254,29 +255,6 @@ export const TodoModalDetailsPanel = ({
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
   const [linkSaving, setLinkSaving] = useState(false);
-  const actionMenuRef = useRef<HTMLDivElement | null>(null);
-
-  useHotkey('escape', () => {
-    setIsActionMenuOpen(false);
-  }, { enabled: isActionMenuOpen, capture: true, preventDefault: true });
-
-  useEffect(() => {
-    if (!isActionMenuOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!actionMenuRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !actionMenuRef.current.contains(target)) {
-        setIsActionMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isActionMenuOpen]);
 
   useEffect(() => {
     if (isActionMenuOpen) return;
@@ -316,7 +294,7 @@ export const TodoModalDetailsPanel = ({
     handleTitleEscape(event);
   };
 
-  const handleAddLink = async () => {
+  const handleAddLink = async (closeMenu?: () => void) => {
     const url = normalizeSafeUrl(linkUrl);
     const name = linkName.trim();
 
@@ -342,6 +320,7 @@ export const TodoModalDetailsPanel = ({
       setLinkUrl('');
       setIsLinksFormOpen(false);
       setIsActionMenuOpen(false);
+      closeMenu?.();
     } catch (addLinkError) {
       const message = addLinkError instanceof Error ? addLinkError.message : 'Failed to add link';
       setLinkError(message);
@@ -429,166 +408,167 @@ export const TodoModalDetailsPanel = ({
             className="relative mb-4 flex items-center justify-between before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-1/2 before:z-0 before:-translate-y-1/2 before:border-t before:border-cyan-300/40"
             data-testid="todo-actions-panel"
           >
-            <div className="relative z-10 flex items-center gap-2 rounded-full bg-slate-900/95 px-1" ref={actionMenuRef}>
-              <IconButton
-                variant="primary"
-                size="md"
-                label="Open actions menu"
-                className="h-10! w-10! aspect-square shrink-0 rounded-full! border-cyan-300/35 bg-cyan-300/15 p-0! text-xl font-semibold leading-none text-cyan-100"
-                data-testid="todo-actions-trigger"
-                onClick={() => setIsActionMenuOpen((prev) => !prev)}
-              >
-                <Plus size={18} aria-hidden="true" />
-              </IconButton>
-              {isActionMenuOpen && (
-                <div
-                  className="absolute left-0 top-12 z-10 min-w-60 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl"
-                  data-testid="todo-actions-menu"
-                  role="menu"
-                >
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
-                    role="menuitem"
-                    onClick={() => {
-                      setIsActionMenuOpen(false);
-                      onOpenFilePicker();
-                    }}
-                  >
-                    <Plus size={16} />
-                    Add files
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
-                    role="menuitem"
-                    data-testid="todo-actions-add-link"
-                    onClick={() => {
-                      setIsLinksFormOpen((prev) => !prev);
-                      setLinkError('');
-                    }}
-                  >
-                    <Link2 size={16} />
-                    Links
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
-                    role="menuitem"
-                    data-testid="todo-actions-checklist"
-                    onClick={() => {
-                      void onCreateChecklist?.();
-                      setIsActionMenuOpen(false);
-                    }}
-                  >
-                    <ListChecks size={16} />
-                    Checklist
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40 focus:outline-none"
-                    role="menuitem"
-                    data-testid="todo-actions-due-date"
-                    onClick={() => {
-                      setIsDueDateFormOpen((prev) => !prev);
-                      setDueDateDraft(todo.dueDate ?? '');
-                    }}
-                  >
-                    <CalendarDays size={16} />
-                    Due date
-                  </button>
-                  {isDueDateFormOpen && (
-                    <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
-                      <label className="mb-1 block text-xs text-slate-300">Due date</label>
-                      <Input
-                        type="date"
-                        value={dueDateDraft}
-                        onChange={(event) => {
-                          setDueDateDraft(event.target.value.trim());
-                        }}
-                        data-testid="todo-due-date-input"
-                        className="mb-2 w-full"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="mb-2 w-full"
-                        onClick={() => {
-                          const nextValue = dueDateDraft.trim() || null;
-                          if (nextValue === (todo.dueDate ?? null)) {
-                            setIsDueDateFormOpen(false);
-                            setIsActionMenuOpen(false);
-                            return;
-                          }
+            <div className="relative z-10 flex items-center gap-2 rounded-full bg-slate-900/95 px-1">
+              <EllipsisMenu
+                trigger={{
+                  label: 'Open actions menu',
+                  testId: 'todo-actions-trigger',
+                  variant: 'rounded',
+                  icon: <Plus size={18} aria-hidden="true" />,
+                }}
+                menuTestId="todo-actions-menu"
+                menuAlign="left"
+                menuOffsetClassNameOverride="top-12"
+                onOpenChange={setIsActionMenuOpen}
+                menuContent={({ closeMenu }) => (
+                  <>
+                    <button
+                      type="button"
+                      className={getEllipsisMenuItemClassName({ tone: 'default', isFirst: true })}
+                      role="menuitem"
+                      onClick={() => {
+                        closeMenu();
+                        onOpenFilePicker();
+                      }}
+                    >
+                      <Plus size={16} />
+                      Add files
+                    </button>
+                    <button
+                      type="button"
+                      className={getEllipsisMenuItemClassName({ tone: 'default' })}
+                      role="menuitem"
+                      data-testid="todo-actions-add-link"
+                      onClick={() => {
+                        setIsLinksFormOpen((prev) => !prev);
+                        setLinkError('');
+                      }}
+                    >
+                      <Link2 size={16} />
+                      Links
+                    </button>
+                    <button
+                      type="button"
+                      className={getEllipsisMenuItemClassName({ tone: 'default' })}
+                      role="menuitem"
+                      data-testid="todo-actions-checklist"
+                      onClick={() => {
+                        void onCreateChecklist?.();
+                        closeMenu();
+                      }}
+                    >
+                      <ListChecks size={16} />
+                      Checklist
+                    </button>
+                    <button
+                      type="button"
+                      className={getEllipsisMenuItemClassName({ tone: 'default', isLast: true })}
+                      role="menuitem"
+                      data-testid="todo-actions-due-date"
+                      onClick={() => {
+                        setIsDueDateFormOpen((prev) => !prev);
+                        setDueDateDraft(todo.dueDate ?? '');
+                      }}
+                    >
+                      <CalendarDays size={16} />
+                      Due date
+                    </button>
+                    {isDueDateFormOpen && (
+                      <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
+                        <label className="mb-1 block text-xs text-slate-300">Due date</label>
+                        <Input
+                          type="date"
+                          value={dueDateDraft}
+                          onChange={(event) => {
+                            setDueDateDraft(event.target.value.trim());
+                          }}
+                          data-testid="todo-due-date-input"
+                          className="mb-2 w-full"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mb-2 w-full"
+                          onClick={() => {
+                            const nextValue = dueDateDraft.trim() || null;
+                            if (nextValue === (todo.dueDate ?? null)) {
+                              setIsDueDateFormOpen(false);
+                              closeMenu();
+                              return;
+                            }
 
-                          void onDueDateChange?.(nextValue);
-                          setIsDueDateFormOpen(false);
-                          setIsActionMenuOpen(false);
-                        }}
-                        data-testid="todo-due-date-apply"
-                      >
-                        OK
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mb-2 w-full"
-                        onClick={handleClearDueDate}
-                        data-testid="todo-due-date-clear"
-                      >
-                        Clear due date
-                      </Button>
-                      {todo.dueDate && (
-                        <label className="flex items-center gap-2 text-xs text-slate-200" data-testid="todo-remind-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={todo.remindOneDayBefore ?? false}
-                            onChange={(event) => {
-                              void onRemindOneDayBeforeChange?.(event.target.checked);
-                            }}
-                            className="size-4 accent-cyan-400"
-                            data-testid="todo-remind-checkbox"
-                          />
-                          <Bell size={14} />
-                          Remind 1 day before
-                        </label>
-                      )}
-                    </div>
-                  )}
-                  {isLinksFormOpen && (
-                    <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
-                      <Input
-                        type="text"
-                        placeholder="Name (optional)"
-                        value={linkName}
-                        onChange={(event) => setLinkName(event.target.value)}
-                        className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
-                      />
-                      <Input
-                        type="url"
-                        placeholder="URL"
-                        value={linkUrl}
-                        onChange={(event) => setLinkUrl(event.target.value)}
-                        className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
-                      />
-                      {linkError && <p className="mb-2 text-xs text-rose-300">{linkError}</p>}
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => {
-                          void handleAddLink();
-                        }}
-                        disabled={linkSaving}
-                        data-testid="todo-actions-add-link-submit"
-                      >
-                        {linkSaving ? 'Adding...' : 'Add link'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+                            void onDueDateChange?.(nextValue);
+                            setIsDueDateFormOpen(false);
+                            closeMenu();
+                          }}
+                          data-testid="todo-due-date-apply"
+                        >
+                          OK
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mb-2 w-full"
+                          onClick={() => {
+                            handleClearDueDate();
+                            closeMenu();
+                          }}
+                          data-testid="todo-due-date-clear"
+                        >
+                          Clear due date
+                        </Button>
+                        {todo.dueDate && (
+                          <label className="flex items-center gap-2 text-xs text-slate-200" data-testid="todo-remind-checkbox-row">
+                            <input
+                              type="checkbox"
+                              checked={todo.remindOneDayBefore ?? false}
+                              onChange={(event) => {
+                                void onRemindOneDayBeforeChange?.(event.target.checked);
+                              }}
+                              className="size-4 accent-cyan-400"
+                              data-testid="todo-remind-checkbox"
+                            />
+                            <Bell size={14} />
+                            Remind 1 day before
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    {isLinksFormOpen && (
+                      <div className="mx-3 mt-1 rounded-md border border-slate-700/80 bg-slate-950/50 p-2">
+                        <Input
+                          type="text"
+                          placeholder="Name (optional)"
+                          value={linkName}
+                          onChange={(event) => setLinkName(event.target.value)}
+                          className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
+                        />
+                        <Input
+                          type="url"
+                          placeholder="URL"
+                          value={linkUrl}
+                          onChange={(event) => setLinkUrl(event.target.value)}
+                          className="mb-2 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-400"
+                        />
+                        {linkError && <p className="mb-2 text-xs text-rose-300">{linkError}</p>}
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            void handleAddLink(closeMenu);
+                          }}
+                          disabled={linkSaving}
+                          data-testid="todo-actions-add-link-submit"
+                        >
+                          {linkSaving ? 'Adding...' : 'Add link'}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              />
             </div>
               {/* Кнопка перевода на следующий статус по центру */}
               {columns.length > 1 && (() => {
@@ -615,10 +595,12 @@ export const TodoModalDetailsPanel = ({
               })()}
             <div className="relative z-10 rounded-full bg-slate-900/95 px-1">
             <EllipsisMenu
-              triggerLabel="Open card menu"
-              triggerTestId="todo-card-menu-trigger"
+              trigger={{
+                label: 'Open card menu',
+                testId: 'todo-card-menu-trigger',
+                variant: 'rounded',
+              }}
               menuTestId="todo-card-menu"
-              triggerVariant="rounded"
               items={[
                 {
                   id: 'archive',
