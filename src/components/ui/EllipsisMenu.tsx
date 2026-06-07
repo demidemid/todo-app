@@ -82,7 +82,7 @@ export const EllipsisMenu = ({
 
   useHotkey('escape', () => {
     setMenuOpen(false);
-  }, { enabled: open });
+  }, { enabled: open, capture: true, preventDefault: true });
 
   useEffect(() => {
     if (!open) return;
