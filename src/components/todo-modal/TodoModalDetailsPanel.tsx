@@ -627,6 +627,9 @@ export const TodoModalDetailsPanel = ({
                   onSelect: () => {
                     onArchive?.();
                   },
+                  testId: 'todo-card-menu-archive',
+                  disabled: saving,
+                },
                   {
                     id: 'delete',
                     label: 'Delete',
