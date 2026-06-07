@@ -126,3 +126,6 @@ export const useDashboardSectionActions = ({
     userId,
   ]);
 };
+
+export type DashboardSectionActionsFactory = ReturnType<typeof useDashboardSectionActions>;
+export type DashboardSectionActions = ReturnType<DashboardSectionActionsFactory>;

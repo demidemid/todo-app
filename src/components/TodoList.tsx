@@ -6,7 +6,9 @@ import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
 import { DashboardDndContainer } from './todo-list/DashboardDndContainer';
 import { DashboardSection } from './todo-list/DashboardSection';
 import { useDashboardSectionActions } from './todo-list/useDashboardSectionActions';
+import { useTodoListDashboardSectionProps } from './todo-list/useTodoListDashboardSectionProps';
 import { useTodoListDerivedData } from './todo-list/useTodoListDerivedData';
+import { useTodoListModalState } from './todo-list/useTodoListModalState';
 import { useTodoListShareActions } from './todo-list/useTodoListShareActions';
 import { useSyncDashboardQueryParam, useTodoListUrlState } from './todo-list/useTodoListUrlState';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
@@ -123,6 +125,20 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     closeShareModal,
     setShareActionError,
   });
+  const modalState = useTodoListModalState({
+    controller,
+    shareDashboardTarget,
+    users,
+    shareSelectedUserIds,
+    shareRecipientEmails,
+    usersLoading,
+    usersError,
+    shareActionError,
+    closeShareModal,
+    toggleShareUser,
+    setShareRecipientEmails,
+    handleSaveShare,
+  });
 
   useSyncDashboardQueryParam({
     dashboardParamId,
@@ -143,6 +159,17 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     setDashboardHoverId,
     openShareModal,
     openTodoByLink,
+  });
+  const dashboardSectionViewModels = useTodoListDashboardSectionProps({
+    dashboards,
+    userId,
+    activeDashboardId,
+    dashboardHoverId,
+    controller,
+    columns,
+    groupedTodos,
+    getDashboardSectionActions,
+    dashboardSectionRefs,
   });
 
   if (loading || dashboardsLoading) {
@@ -182,85 +209,23 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
       )}
 
       <CreateDashboardModal
-        state={{
-          open: controller.isCreateDashboardModalOpen,
-          dashboardName: controller.dashboardName,
-          columnDraft: controller.columnDraft,
-          dashboardColumns: controller.dashboardColumns,
-          formError: controller.dashboardFormError,
-        }}
-        actions={{
-          onClose: controller.closeCreateDashboardModal,
-          onDashboardNameChange: controller.setDashboardName,
-          onColumnDraftChange: controller.setColumnDraft,
-          onAddColumn: controller.addColumnToDraft,
-          onRemoveColumn: controller.removeCreateDashboardColumn,
-          onColumnNameChange: controller.updateCreateDashboardColumnName,
-          onReorderColumn: controller.reorderCreateDashboardColumns,
-          onSubmit: controller.handleCreateDashboard,
-        }}
+        state={modalState.createDashboard.state}
+        actions={modalState.createDashboard.actions}
       />
 
       <CreateCardModal
-        state={{
-          open: controller.isCreateModalOpen,
-          title: controller.title,
-          description: controller.description,
-        }}
-        actions={{
-          onClose: () => {
-            controller.setIsCreateModalOpen(false);
-            controller.setCreateCardDashboardId(null);
-            controller.setCreateCardColumnId(null);
-          },
-          onTitleChange: controller.setTitle,
-          onDescriptionChange: controller.setDescription,
-          onSubmit: controller.handleAddTodo,
-        }}
+        state={modalState.createCard.state}
+        actions={modalState.createCard.actions}
       />
 
       <EditDashboardModal
-        state={{
-          open: controller.isEditDashboardModalOpen,
-          dashboardName: controller.editingDashboardName,
-          columns: controller.editingDashboardColumns,
-          columnDraft: controller.editingColumnDraft,
-          actionError: controller.dashboardActionError,
-        }}
-        actions={{
-          onClose: () => controller.setIsEditDashboardModalOpen(false),
-          onDashboardNameChange: controller.setEditingDashboardName,
-          onColumnDraftChange: controller.setEditingColumnDraft,
-          onAddColumn: controller.addColumnToEditDraft,
-          onRemoveColumn: (columnId) =>
-            controller.setEditingDashboardColumns((prev) => prev.filter((item) => item.id !== columnId)),
-          onColumnNameChange: (columnId, value) => {
-            controller.setEditingDashboardColumns((prev) =>
-              prev.map((item) => (item.id === columnId ? { ...item, name: value } : item))
-            );
-          },
-          onReorderColumn: controller.reorderEditDashboardColumns,
-          onSubmit: controller.handleSaveDashboardEdit,
-        }}
+        state={modalState.editDashboard.state}
+        actions={modalState.editDashboard.actions}
       />
 
       <ShareDashboardModal
-        state={{
-          open: shareDashboardTarget != null,
-          dashboardName: shareDashboardTarget?.name ?? '',
-          users,
-          selectedUserIds: shareSelectedUserIds,
-          recipientEmails: shareRecipientEmails,
-          loadingUsers: usersLoading,
-          usersError,
-          actionError: shareActionError,
-        }}
-        actions={{
-          onClose: closeShareModal,
-          onToggleUser: toggleShareUser,
-          onRecipientEmailsChange: setShareRecipientEmails,
-          onSubmit: handleSaveShare,
-        }}
+        state={modalState.shareDashboard.state}
+        actions={modalState.shareDashboard.actions}
       />
 
       {viewMode === 'dashboards' ? (
@@ -279,32 +244,20 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           dueHighlights={dueHighlights}
           onOpenTodoByLink={openTodoByLink}
         >
-          {dashboards.map((dashboard, index) => (
+          {dashboardSectionViewModels.map(({ dashboard, sectionRef, isExpanded, isDragging, isDropTarget, dashboardsLength, interactionState, canManageDashboard, actions }) => (
             <DashboardSection
               key={dashboard.id}
-              sectionRef={(element) => {
-                dashboardSectionRefs.current[dashboard.id] = element;
-              }}
+              sectionRef={sectionRef}
               dashboard={dashboard}
-              isExpanded={activeDashboardId === dashboard.id}
-              isDragging={controller.dashboardDragId === dashboard.id}
-              isDropTarget={
-                dashboard.userId === userId &&
-                dashboardHoverId === dashboard.id &&
-                controller.dashboardDragId !== dashboard.id
-              }
-              dashboardsLength={dashboards.length}
+              isExpanded={isExpanded}
+              isDragging={isDragging}
+              isDropTarget={isDropTarget}
+              dashboardsLength={dashboardsLength}
               columns={columns}
               groupedTodos={groupedTodos}
-              interactionState={{
-                editingTodoId: controller.editingTodoId,
-                editingTitle: controller.editingTitle,
-                editingDescription: controller.editingDescription,
-                dragState: controller.dragState,
-                dropTarget: controller.dropTarget,
-              }}
-              canManageDashboard={dashboard.userId === userId}
-              actions={getDashboardSectionActions(dashboard, index)}
+              interactionState={interactionState}
+              canManageDashboard={canManageDashboard}
+              actions={actions}
             />
           ))}
         </DashboardDndContainer>
