@@ -541,6 +541,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
                   if (!nextDashboard || nextDashboard.userId !== userId) return;
                   openShareModal(nextDashboard);
                 },
+                onArchiveAllCompleted: (dashboardId) => void controller.handleArchiveAllCompleted(dashboardId),
                 onOpenCreateCard: (dashboardId, columnId) => {
                   setActiveDashboardId(dashboardId);
                   updateSearch((nextParams) => {

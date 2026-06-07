@@ -610,7 +610,6 @@ export const TodoModalDetailsPanel = ({
               triggerLabel="Open card menu"
               triggerTestId="todo-card-menu-trigger"
               menuTestId="todo-card-menu"
-              menuClassName="w-40"
               items={[
                 {
                   id: 'archive',
