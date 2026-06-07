@@ -139,6 +139,16 @@ describe('DashboardSection', () => {
     expect(props.onArchiveAllCompleted).toHaveBeenCalledWith('board-1');
   });
 
+  it('disables archive-all-completed action when last status has no cards', () => {
+    const props = createProps();
+
+    render(<DashboardSection {...props} />);
+
+    fireEvent.click(screen.getByTestId('dashboard-actions-trigger-board-1'));
+
+    expect(screen.getByTestId('archive-completed-dashboard-button-board-1')).toBeDisabled();
+  });
+
   it('opens create card flow and handles guarded column drop interactions', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);
