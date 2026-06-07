@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type FC, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FC, type ChangeEvent } from 'react';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -94,6 +94,19 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
       ? `${actionName} failed (${errorCode}): ${errorMessage}`
       : `${actionName} failed: ${errorMessage}`;
   };
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'contain';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
+    };
+  }, []);
 
   useHotkey('escape', (event) => {
     if (isEditableTarget(event.target)) {
@@ -290,18 +303,18 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-0 backdrop-blur-sm md:p-4"
+      className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-slate-950/70 p-0 backdrop-blur-sm md:p-4"
       onClick={onClose}
       data-testid="todo-modal"
     >
       <div
-        className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-hidden rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:h-[80vh] md:flex-row"
+        className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:overflow-hidden lg:h-[80vh] lg:flex-row"
         onClick={(event) => event.stopPropagation()}
       >
         <IconButton
-          variant="neutral"
-          size="lg"
-          className="absolute right-4 top-4 size-8 shrink-0 rounded-full"
+          variant="link"
+          size="sm"
+          className="absolute right-4 top-4 h-auto! w-auto! shrink-0 rounded-none! p-0! text-4xl"
           onClick={onClose}
           label="Close"
         >
@@ -329,6 +342,10 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
             onCancelEdit: handleCancelEdit,
             onSave: handleSave,
             onDelete: handleDelete,
+            onArchive: async () => {
+              await updateTodo(todo.id, { archived: true });
+              onClose();
+            },
             onStartEditTitle: () => {
               setIsEditingTitle(true);
               setIsEditing(false);

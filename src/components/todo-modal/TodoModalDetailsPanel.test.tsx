@@ -59,7 +59,7 @@ describe('TodoModalDetailsPanel', () => {
     expect(screen.getByText(/Status:/)).toHaveTextContent('IN PROGRESS');
     expect(screen.getByRole('button', { name: 'Edit title' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit description' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete card' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open card menu' })).toBeInTheDocument();
   });
 
   it('renders human-readable status name from columns for opaque column ids', () => {
@@ -105,6 +105,23 @@ describe('TodoModalDetailsPanel', () => {
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Add files' }));
     expect(props.onOpenFilePicker).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows card ellipsis menu with archive and delete actions', () => {
+    const props = createProps();
+    props.onArchive = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    expect(screen.getByTestId('todo-card-menu')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-archive'));
+    expect(props.onArchive).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-delete'));
+    expect(props.onDelete).toHaveBeenCalledTimes(1);
   });
 
   it('shows checklist action in plus menu and triggers create checklist handler', () => {

@@ -146,7 +146,7 @@ export const TodoModalCommentsPanel = ({
   } = resolvedActions;
 
   return (
-    <div className="mt-8 min-h-0 w-full shrink-0 overflow-y-auto border-l border-white/10 pl-0 pr-1 md:mt-0 md:w-80 md:pl-6">
+    <div className="mt-4 w-full shrink-0 overflow-visible border-t border-white/10 pt-4 pr-1 md:min-h-0 md:overflow-y-auto lg:mt-2 lg:w-80 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
       <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>
       <form onSubmit={onSubmit} className="mb-4 flex flex-col gap-2">
         <Textarea

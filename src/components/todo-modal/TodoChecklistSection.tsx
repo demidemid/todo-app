@@ -213,7 +213,7 @@ export const TodoChecklistSection = ({
               onChange={(event) => {
                 void onChecklistItemChange?.(item.id, { checked: event.target.checked });
               }}
-              className="h-4 w-4 rounded border-white/30 bg-slate-900 text-cyan-300"
+              className="shrink-0 h-4 w-4 rounded border-white/30 bg-slate-900 text-cyan-300"
               data-testid={`todo-checklist-toggle-${item.id}`}
             />
             {editingChecklistItemId === item.id ? (

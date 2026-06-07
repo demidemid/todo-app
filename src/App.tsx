@@ -95,7 +95,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_55%)]">
+    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_55%)]">
       <AppHeader
         user={user}
         sectionMode={sectionMode}
@@ -104,8 +104,8 @@ function App() {
         logoutLoading={logoutLoading}
       />
 
-      <main className="mx-auto flex w-full max-w-6xl px-5 py-10">
-        <div className="w-full">
+      <main className="mx-auto flex w-full max-w-6xl px-3 py-6 sm:px-5 sm:py-10">
+        <div className="min-w-0 w-full">
           {authActionError && (
             <p className="mb-4 rounded-lg border border-rose-300/30 bg-rose-400/10 p-2 text-sm text-rose-200">
               {authActionError}
