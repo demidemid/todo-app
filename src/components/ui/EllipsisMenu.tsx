@@ -114,8 +114,11 @@ export const EllipsisMenu = ({
   );
 
   const triggerVariantClassName = triggerVariant === 'rounded'
-    ? '!h-10 !w-10 !rounded-full !border-cyan-300/40 !bg-cyan-300/10 !p-0 !text-cyan-100 hover:!bg-cyan-300/20'
-    : '!border-transparent !bg-transparent !p-0 !text-slate-300 hover:!bg-transparent hover:!text-slate-100';
+    ? '!h-10 !w-10 !aspect-square !shrink-0 !rounded-full !border-transparent !bg-cyan-300/15 !p-0 !text-cyan-100 hover:!border-cyan-300/35 hover:!bg-cyan-300/25'
+    : '!border-transparent !bg-transparent !p-1.5 !text-slate-300 hover:!bg-transparent hover:!text-slate-100';
+  const triggerOpenClassName = triggerVariant === 'rounded'
+    ? 'text-cyan-100'
+    : '!border-cyan-300/45 !text-cyan-100';
 
   return (
     <div
@@ -134,7 +137,7 @@ export const EllipsisMenu = ({
         style={triggerStyle}
         className={[
           triggerVariantClassName,
-          open ? 'text-cyan-100' : null,
+          open ? triggerOpenClassName : null,
           triggerClassName,
         ]
           .filter(Boolean)
