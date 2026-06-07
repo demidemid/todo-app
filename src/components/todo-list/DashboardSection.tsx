@@ -292,7 +292,7 @@ export const DashboardSection = ({
     ? dashboard.columns.reduce((latest, column) => (column.order > latest.order ? column : latest))
     : null;
   const completedColumn = dashboard.columns.find((column) => column.isDone) ?? fallbackLastColumn;
-  const completedCount = isExpanded && completedColumn ? (groupedTodos[completedColumn.id] ?? []).length : 0;
+  const completedCount = isExpanded && completedColumn ? (groupedTodos[completedColumn.id] ?? []).length : null;
 
   return (
     <section
@@ -377,7 +377,7 @@ export const DashboardSection = ({
                 icon: <Archive size={14} aria-hidden="true" />,
                 onSelect: () => onArchiveAllCompleted?.(dashboard.id),
                 testId: `archive-completed-dashboard-button-${dashboard.id}`,
-                disabled: completedCount === 0,
+                disabled: !isExpanded || completedCount === 0,
               },
               {
                 id: 'delete',
