@@ -127,10 +127,11 @@ export const EllipsisMenu = ({
         aria-expanded={open}
         className={[
           'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10',
-          open ? 'text-cyan-100' : '',
+          open ? 'text-cyan-100' : null,
           triggerClassName,
-        ].join(' ').trim()}
-        style={triggerStyle}
+        ]
+          .filter(Boolean)
+          .join(' ')}
         onClick={(event) => {
           if (stopPropagation) {
             event.stopPropagation();
