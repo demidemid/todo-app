@@ -361,8 +361,8 @@ export const TodoModalDetailsPanel = ({
   })();
 
   return (
-    <div className="min-h-0 min-w-0 flex flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto pl-1 pr-2">
+    <div className="min-w-0 flex flex-col md:min-h-0 md:flex-1">
+      <div className="overflow-visible pl-1 pr-2 md:min-h-0 md:flex-1 md:overflow-y-auto">
         {/* Title row */}
         {isEditingTitle ? (
           <div className="mb-4 flex items-center gap-2 pt-1">
