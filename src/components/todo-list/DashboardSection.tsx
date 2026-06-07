@@ -288,11 +288,11 @@ export const DashboardSection = ({
     return event.clientY > midpointY ? baseIndex + 1 : baseIndex;
   };
 
-  const fallbackLastColumn = columns.length > 0
-    ? columns.reduce((latest, column) => (column.order > latest.order ? column : latest))
+  const fallbackLastColumn = dashboard.columns.length > 0
+    ? dashboard.columns.reduce((latest, column) => (column.order > latest.order ? column : latest))
     : null;
-  const completedColumn = columns.find((column) => column.isDone) ?? fallbackLastColumn;
-  const completedCount = completedColumn ? (groupedTodos[completedColumn.id] ?? []).length : 0;
+  const completedColumn = dashboard.columns.find((column) => column.isDone) ?? fallbackLastColumn;
+  const completedCount = isExpanded && completedColumn ? (groupedTodos[completedColumn.id] ?? []).length : 0;
 
   return (
     <section
