@@ -98,6 +98,7 @@ interface DashboardSectionActions {
   onOpenEditDashboard: (dashboardId: string) => void;
   onDeleteDashboard: (dashboardId: string, dashboardName: string) => void;
   onOpenShareDashboard?: (dashboardId: string) => void;
+  onArchiveAllCompleted?: (dashboardId: string) => void;
   onOpenCreateCard: (dashboardId: string, columnId: string) => void;
   onMoveTodo: (todoId: string, targetColumnId: string, targetIndex: number) => void;
   onSetDragState: (state: DragState | null) => void;
@@ -137,6 +138,7 @@ interface DashboardSectionProps {
   onOpenEditDashboard?: (dashboardId: string) => void;
   onDeleteDashboard?: (dashboardId: string, dashboardName: string) => void;
   onOpenShareDashboard?: (dashboardId: string) => void;
+  onArchiveAllCompleted?: (dashboardId: string) => void;
   canManageDashboard?: boolean;
   onOpenCreateCard?: (dashboardId: string, columnId: string) => void;
   onMoveTodo?: (todoId: string, targetColumnId: string, targetIndex: number) => void;
@@ -177,6 +179,7 @@ export const DashboardSection = ({
   onOpenEditDashboard: legacyOnOpenEditDashboard,
   onDeleteDashboard: legacyOnDeleteDashboard,
   onOpenShareDashboard: legacyOnOpenShareDashboard,
+  onArchiveAllCompleted: legacyOnArchiveAllCompleted,
   canManageDashboard = true,
   onOpenCreateCard: legacyOnOpenCreateCard,
   onMoveTodo: legacyOnMoveTodo,
@@ -209,6 +212,7 @@ export const DashboardSection = ({
     onOpenEditDashboard: legacyOnOpenEditDashboard ?? (() => {}),
     onDeleteDashboard: legacyOnDeleteDashboard ?? (() => {}),
     onOpenShareDashboard: legacyOnOpenShareDashboard,
+    onArchiveAllCompleted: legacyOnArchiveAllCompleted,
     onOpenCreateCard: legacyOnOpenCreateCard ?? (() => {}),
     onMoveTodo: legacyOnMoveTodo ?? (() => {}),
     onSetDragState: legacyOnSetDragState ?? (() => {}),
@@ -241,6 +245,7 @@ export const DashboardSection = ({
     onOpenEditDashboard,
     onDeleteDashboard,
     onOpenShareDashboard,
+    onArchiveAllCompleted,
     onOpenCreateCard,
     onMoveTodo,
     onSetDragState,
@@ -282,6 +287,12 @@ export const DashboardSection = ({
     const midpointY = rect.top + rect.height / 2;
     return event.clientY > midpointY ? baseIndex + 1 : baseIndex;
   };
+
+  const fallbackLastColumn = dashboard.columns.length > 0
+    ? dashboard.columns.reduce((latest, column) => (column.order > latest.order ? column : latest))
+    : null;
+  const completedColumn = dashboard.columns.find((column) => column.isDone) ?? fallbackLastColumn;
+  const completedCount = isExpanded && completedColumn ? (groupedTodos[completedColumn.id] ?? []).length : null;
 
   return (
     <section
@@ -344,7 +355,6 @@ export const DashboardSection = ({
             triggerTestId={`dashboard-actions-trigger-${dashboard.id}`}
             menuTestId={`dashboard-actions-menu-${dashboard.id}`}
             menuAriaLabel={`Dashboard actions for ${dashboard.name}`}
-            menuClassName="w-40"
             stopPropagation
             items={[
               {
@@ -360,6 +370,14 @@ export const DashboardSection = ({
                 icon: <Pencil size={14} aria-hidden="true" />,
                 onSelect: () => onOpenEditDashboard(dashboard.id),
                 testId: `edit-dashboard-button-${dashboard.id}`,
+              },
+              {
+                id: 'archive-all-completed',
+                label: 'Archive all completed',
+                icon: <Archive size={14} aria-hidden="true" />,
+                onSelect: () => onArchiveAllCompleted?.(dashboard.id),
+                testId: `archive-completed-dashboard-button-${dashboard.id}`,
+                disabled: !isExpanded || completedCount === 0,
               },
               {
                 id: 'delete',
@@ -626,7 +644,6 @@ export const DashboardSection = ({
                                 triggerLabel={`Open actions for ${todo.title}`}
                                 triggerTestId={`card-menu-trigger-${todo.id}`}
                                 menuTestId="card-menu"
-                                menuClassName="w-32"
                                 stopPropagation
                                 items={[
                                   {

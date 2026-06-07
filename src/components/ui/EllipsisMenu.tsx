@@ -31,7 +31,7 @@ export const EllipsisMenu = ({
   triggerClassName = '',
   triggerStyle,
   menuTestId,
-  menuClassName = 'w-40',
+  menuClassName = 'min-w-40',
   menuAriaLabel,
   items,
   stopPropagation = false,
@@ -79,7 +79,7 @@ export const EllipsisMenu = ({
         const isDanger = item.variant === 'danger';
 
         const className = [
-          'flex w-full items-center justify-start gap-2 rounded-none border-x-0 px-3 py-2 text-left text-sm font-normal',
+          'flex w-full items-center justify-start gap-2 rounded-none border-x-0 px-3 py-2 text-left text-sm font-normal whitespace-nowrap',
           isLast ? 'border-b-0 border-t' : 'border-b border-t-0',
           isDanger
             ? 'border-rose-400/10 text-rose-200 hover:bg-rose-400/10'

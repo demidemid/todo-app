@@ -322,6 +322,32 @@ export const useTodoListController = ({
     }
   };
 
+  const handleArchiveAllCompleted = async (dashboardId: string) => {
+    const dashboard = dashboards.find((item) => item.id === dashboardId);
+    if (!dashboard || dashboard.columns.length === 0) return;
+
+    const fallbackLastColumn = dashboard.columns.reduce((latest, column) => (
+      column.order > latest.order ? column : latest
+    ));
+    const completedColumn = dashboard.columns.find((column) => column.isDone) ?? fallbackLastColumn;
+
+    const completedTodos = todos.filter((todo) => (
+      todo.boardId === dashboardId
+      && !todo.archived
+      && (todo.columnId === completedColumn.id || todo.status === completedColumn.id)
+    ));
+
+    if (completedTodos.length === 0) return;
+
+    try {
+      await Promise.all(
+        completedTodos.map((todo) => updateTodo(todo.id, { archived: true }))
+      );
+    } catch (error) {
+      console.error('Error archiving completed todos:', error);
+    }
+  };
+
   const handleUnarchiveTodo = async (id: string) => {
     try {
       await updateTodo(id, {
@@ -513,6 +539,7 @@ export const useTodoListController = ({
     handleSaveEdit,
     handleEditKeyDown,
     handleArchiveTodo,
+    handleArchiveAllCompleted,
     handleUnarchiveTodo,
     handleDeleteTodo,
     addColumnToDraft,

@@ -614,28 +614,18 @@ export const TodoModalDetailsPanel = ({
                 );
               })()}
             <div className="relative z-10 rounded-full bg-slate-900/95 px-1">
-              <EllipsisMenu
-                triggerLabel="Open card menu"
-                triggerTestId="todo-card-menu-trigger"
-                triggerClassName="!border-cyan-300/40 !bg-cyan-300/10 !text-cyan-100 hover:!bg-cyan-300/20 !h-10 !w-10 !rounded-full !p-0"
-                triggerStyle={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  padding: 0,
-                  borderRadius: '9999px',
-                }}
-                menuTestId="todo-card-menu"
-                menuClassName="w-40 mt-[5px]"
-                items={[
-                  {
-                    id: 'archive',
-                    label: 'Archive',
-                    icon: <Archive size={14} aria-hidden="true" />,
-                    onSelect: () => {
-                      onArchive?.();
-                    },
-                    testId: 'todo-card-menu-archive',
-                    disabled: saving,
+            <EllipsisMenu
+              triggerLabel="Open card menu"
+              triggerTestId="todo-card-menu-trigger"
+              menuTestId="todo-card-menu"
+              triggerClassName="!border-cyan-300/40 !bg-cyan-300/10 !text-cyan-100 hover:!bg-cyan-300/20 !h-10 !w-10 !rounded-full !p-0"
+              items={[
+                {
+                  id: 'archive',
+                  label: 'Archive',
+                  icon: <Archive size={14} aria-hidden="true" />,
+                  onSelect: () => {
+                    onArchive?.();
                   },
                   {
                     id: 'delete',
