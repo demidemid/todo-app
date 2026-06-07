@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
-import { Button } from './Button';
 import { IconButton } from './IconButton';
 import { useHotkey } from '../../hooks/useHotkey';
 
@@ -33,7 +32,7 @@ export const EllipsisMenu = ({
   triggerClassName = '',
   triggerStyle,
   menuTestId,
-  menuClassName = 'min-w-40',
+  menuClassName = 'min-w-60',
   menuAriaLabel,
   items,
   stopPropagation = false,
@@ -81,23 +80,23 @@ export const EllipsisMenu = ({
         const isDanger = item.variant === 'danger';
 
         const className = [
-          'flex w-full items-center justify-start gap-2 rounded-none border-x-0 px-3 py-2 text-left text-sm font-normal whitespace-nowrap',
-          isLast ? 'border-b-0 border-t' : 'border-b border-t-0',
+          'flex w-full items-center gap-3 px-4 py-2 text-left text-sm whitespace-nowrap focus:outline-none',
           isDanger
-            ? 'border-rose-400/10 text-rose-200 hover:bg-rose-400/10'
-            : 'text-slate-100 hover:bg-cyan-400/10',
+            ? 'text-rose-200 hover:bg-rose-500/20 focus:bg-rose-500/20'
+            : 'text-slate-100 hover:bg-cyan-900/40 focus:bg-cyan-900/40',
+          item.disabled ? 'cursor-not-allowed opacity-50' : null,
+          isLast ? 'rounded-b-lg' : null,
+          index === 0 ? 'rounded-t-lg' : null,
         ].join(' ');
 
         return (
-          <Button
+          <button
             key={item.id}
             type="button"
-            variant="ghost"
-            size="sm"
             className={className}
-            startIcon={item.icon}
             disabled={item.disabled}
-            data-testid={item.testId} role="menuitem"
+            data-testid={item.testId}
+            role="menuitem"
             onClick={(event) => {
               if (stopPropagation) {
                 event.stopPropagation();
@@ -106,8 +105,9 @@ export const EllipsisMenu = ({
               setOpen(false);
             }}
           >
+            {item.icon}
             {item.label}
-          </Button>
+          </button>
         );
       }),
     [items, stopPropagation]
@@ -119,6 +119,7 @@ export const EllipsisMenu = ({
   const triggerOpenClassName = triggerVariant === 'rounded'
     ? 'text-cyan-100'
     : '!border-cyan-300/45 !text-cyan-100';
+  const menuOffsetClassName = triggerVariant === 'rounded' ? 'top-11' : 'top-10';
 
   return (
     <div
@@ -158,7 +159,7 @@ export const EllipsisMenu = ({
 
       {open && (
         <div
-          className={`absolute right-0 top-10 z-50 rounded-lg border border-white/10 bg-slate-900 shadow-lg ${menuClassName}`.trim()}
+          className={`absolute right-0 ${menuOffsetClassName} z-50 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl ${menuClassName}`.trim()}
           data-testid={menuTestId}
           role="menu"
           aria-label={menuAriaLabel ?? triggerLabel}
