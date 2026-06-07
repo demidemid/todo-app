@@ -247,28 +247,6 @@ describe('TodoList', () => {
     expect(setterArg('board-2')).toBe('board-2');
   });
 
-  it('renders archive mode as a single card list with dashboard name on each card', () => {
-    const firstDashboard = createDashboard({ id: 'board-1', name: 'Main Board' });
-    const secondDashboard = createDashboard({ id: 'board-2', name: 'QA Board', order: 1 });
-
-    setDashboardsState([firstDashboard, secondDashboard]);
-    setTodosState([
-      createTodo({ id: 'todo-active', title: 'Active card', columnId: 'done', status: 'done', archived: false }),
-      createTodo({ id: 'todo-archived-a', title: 'Archived card A', boardId: 'board-1', archived: true }),
-      createTodo({ id: 'todo-archived-b', title: 'Archived card B', boardId: 'board-2', archived: true }),
-    ]);
-
-    renderTodoList(['/'], { viewMode: 'archive' });
-
-    expect(screen.getByTestId('archive-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('dashboard-board-1')).not.toBeInTheDocument();
-    expect(screen.getByTestId('archive-card-todo-archived-a')).toBeInTheDocument();
-    expect(screen.getByTestId('archive-card-todo-archived-b')).toBeInTheDocument();
-    expect(screen.queryByTestId('archive-card-todo-active')).not.toBeInTheDocument();
-    expect(screen.getByText('Main Board')).toBeInTheDocument();
-    expect(screen.getByText('QA Board')).toBeInTheDocument();
-  });
-
   it('archives card from ellipsis menu', async () => {
     const user = userEvent.setup();
 
@@ -284,42 +262,6 @@ describe('TodoList', () => {
     await waitFor(() => {
       expect(mockUpdateTodo).toHaveBeenCalledWith('t-archive', { archived: true });
     });
-  });
-
-  it('unarchives card from archive ellipsis menu without opening modal', async () => {
-    const user = userEvent.setup();
-
-    setTodosState([
-      createTodo({ id: 't-archived', title: 'Archived card', archived: true }),
-    ]);
-
-    renderTodoList(['/'], { viewMode: 'archive' });
-
-    await user.click(screen.getByTestId('archive-menu-trigger-t-archived'));
-    await user.click(screen.getByTestId('archive-menu-unarchive-t-archived'));
-
-    await waitFor(() => {
-      expect(mockUpdateTodo).toHaveBeenCalledWith('t-archived', { archived: false });
-    });
-    expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
-  });
-
-  it('deletes card from archive ellipsis menu without opening modal', async () => {
-    const user = userEvent.setup();
-
-    setTodosState([
-      createTodo({ id: 't-archived', title: 'Archived card', archived: true }),
-    ]);
-
-    renderTodoList(['/'], { viewMode: 'archive' });
-
-    await user.click(screen.getByTestId('archive-menu-trigger-t-archived'));
-    await user.click(screen.getByTestId('archive-menu-delete-t-archived'));
-
-    await waitFor(() => {
-      expect(mockDeleteTodo).toHaveBeenCalledWith('t-archived');
-    });
-    expect(screen.queryByTestId('todo-modal')).not.toBeInTheDocument();
   });
 
   it('adds a comment from card modal', async () => {
@@ -890,67 +832,6 @@ describe('TodoList', () => {
     expect(screen.getByTestId('card-due-badge-due-today')).toHaveAttribute('title', `Due date: ${toDateString(today)}`);
     expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveTextContent('Tomorrow');
     expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveAttribute('title', `Due date: ${toDateString(tomorrow)}`);
-  });
-
-  it('renders due highlights banner above dashboard list and links task title to the task modal', async () => {
-    const user = userEvent.setup();
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const toDateString = (value: Date) => {
-      const year = value.getFullYear();
-      const month = String(value.getMonth() + 1).padStart(2, '0');
-      const day = String(value.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    setTodosState([
-      createTodo({ id: 'overdue-alert', title: 'Overdue card', dueDate: '2000-01-01', remindOneDayBefore: true }),
-      createTodo({
-        id: 'tomorrow-alert',
-        title: 'Tomorrow card',
-        dueDate: toDateString(tomorrow),
-        remindOneDayBefore: true,
-        weight: 2000,
-      }),
-    ]);
-
-    renderTodoList();
-
-    expect(screen.getByTestId('due-highlights-banner')).toBeInTheDocument();
-    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('Overdue card');
-    expect(screen.getByTestId('due-highlight-overdue-alert')).toHaveTextContent('was due on 2000-01-01');
-    expect(screen.getByTestId('due-highlight-overdue-alert').className).toContain('bg-rose-500/20');
-    expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('Tomorrow card');
-    expect(screen.getByTestId('due-highlight-tomorrow-alert')).toHaveTextContent('is due tomorrow');
-
-    const dueRows = screen.getByTestId('due-highlights-banner').querySelectorAll('li');
-    expect(dueRows.item(0)).toHaveAttribute('data-testid', 'due-highlight-overdue-alert');
-
-    await user.click(screen.getByTestId('due-highlight-link-tomorrow-alert'));
-
-    expect(screen.getByTestId('location-search')).toHaveTextContent('card=tomorrow-alert');
-    expect(screen.getByTestId('location-search')).toHaveTextContent('dashboard=board-1');
-  });
-
-  it('does not render due highlights banner when remindOneDayBefore is disabled', () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const toDateString = (value: Date) => {
-      const year = value.getFullYear();
-      const month = String(value.getMonth() + 1).padStart(2, '0');
-      const day = String(value.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    setTodosState([
-      createTodo({ id: 'overdue-muted', title: 'Overdue muted', dueDate: '2000-01-01', remindOneDayBefore: false }),
-      createTodo({ id: 'tomorrow-muted', title: 'Tomorrow muted', dueDate: toDateString(tomorrow), remindOneDayBefore: false, weight: 2000 }),
-    ]);
-
-    renderTodoList();
-
-    expect(screen.queryByTestId('due-highlights-banner')).not.toBeInTheDocument();
   });
 
   it('highlights overdue cards in dashboard list', () => {

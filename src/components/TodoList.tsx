@@ -2,21 +2,19 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
-import { RotateCcw, Trash2 } from 'lucide-react';
 import { TodoModal } from './TodoModal';
+import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
 import { DashboardSection } from './todo-list/DashboardSection';
+import { DueHighlightsBanner, type DueHighlightEntry } from './todo-list/DueHighlightsBanner';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
 import { getDueDateState } from '../utils/dueDate';
-import { EllipsisMenu } from './ui/EllipsisMenu';
-import { getEllipsisMenuItemClassName } from './ui/ellipsisMenuStyles';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
 import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
-import { isHotkeyPressed } from '../hooks/useHotkey';
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -86,15 +84,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
 
   const dueHighlights = useMemo(() => {
     const now = new Date();
-    type HighlightDueState = 'overdue' | 'due_today' | 'due_tomorrow';
-    type DueHighlightEntry = {
-      todo: typeof todos[number];
-      dashboardName: string;
-      dueText: string;
-      dueState: HighlightDueState;
-      rank: number;
-      sortDate: string;
-    };
+    type HighlightDueState = DueHighlightEntry['dueState'];
     const rankByState = (state: ReturnType<typeof getDueDateState>) => {
       if (state === 'overdue') return 0;
       if (state === 'due_today') return 1;
@@ -137,7 +127,6 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           sortDate: todo.todo.dueDate ?? '9999-99-99',
         };
       })
-      .filter((entry): entry is DueHighlightEntry => entry !== null)
       .sort((a, b) => {
         if (a.rank !== b.rank) return a.rank - b.rank;
         return a.sortDate.localeCompare(b.sortDate);
@@ -428,37 +417,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
             }, 0);
           }}
         >
-          {dueHighlights.length > 0 && (
-            <section
-              className="mb-3 rounded-xl border border-amber-300/30 bg-amber-400/10 p-3 text-sm text-amber-100"
-              data-testid="due-highlights-banner"
-            >
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-200/90">Due Alerts</p>
-              <ul className="space-y-1.5">
-                {dueHighlights.map(({ todo, dashboardName, dueText, dueState }) => (
-                  <li
-                    key={todo.id}
-                    className={dueState === 'overdue' ? 'rounded-md bg-rose-500/20 px-2 py-1 text-rose-100' : undefined}
-                    data-testid={`due-highlight-${todo.id}`}
-                  >
-                    <button
-                      type="button"
-                      className={dueState === 'overdue'
-                        ? 'mr-1 underline decoration-rose-200/70 underline-offset-2 hover:text-rose-50'
-                        : 'mr-1 underline decoration-amber-200/70 underline-offset-2 hover:text-amber-50'}
-                      onClick={() => openTodoByLink(todo.id, todo.boardId)}
-                      data-testid={`due-highlight-link-${todo.id}`}
-                    >
-                      {todo.title}
-                    </button>
-                    <span>in dashboard </span>
-                    <span className={dueState === 'overdue' ? 'font-semibold text-rose-50' : 'font-semibold text-amber-50'}>{dashboardName}</span>
-                    <span> {dueText}.</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+          <DueHighlightsBanner entries={dueHighlights} onOpenTodoByLink={openTodoByLink} />
 
           {dashboards.map((dashboard, index) => (
             <DashboardSection
@@ -571,83 +530,17 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           ))}
         </div>
       ) : (
-        <section className="space-y-4" data-testid="archive-view">
-          {archivedTodos.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4 text-sm text-slate-300">
-              Archive is empty.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {archivedTodos.map((todo) => (
-                <article
-                  key={todo.id}
-                  onClick={() => openTodoByLink(todo.id, todo.boardId)}
-                  onKeyDown={(event) => {
-                    if (isHotkeyPressed('enter', event) || isHotkeyPressed('space', event)) {
-                      event.preventDefault();
-                      openTodoByLink(todo.id, todo.boardId);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950/60 p-3 text-left transition hover:border-cyan-300/40 hover:bg-slate-900"
-                  data-testid={`archive-card-${todo.id}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-100">{todo.title}</p>
-                    <EllipsisMenu
-                      trigger={{
-                        label: 'Open archive card actions',
-                        testId: `archive-menu-trigger-${todo.id}`,
-                      }}
-                      menu={{
-                        testId: `archive-menu-${todo.id}`,
-                        className: 'w-40',
-                      }}
-                      stopPropagation
-                      menuContent={({ closeMenu }) => (
-                        <>
-                          <button
-                            type="button"
-                            className={getEllipsisMenuItemClassName({ tone: 'default', isFirst: true })}
-                            data-testid={`archive-menu-unarchive-${todo.id}`}
-                            role="menuitem"
-                            onClick={() => {
-                              closeMenu();
-                              void controller.handleUnarchiveTodo(todo.id);
-                            }}
-                          >
-                            <RotateCcw size={14} aria-hidden="true" />
-                            Return to board
-                          </button>
-                          <button
-                            type="button"
-                            className={getEllipsisMenuItemClassName({ tone: 'danger', isLast: true })}
-                            data-testid={`archive-menu-delete-${todo.id}`}
-                            role="menuitem"
-                            onClick={() => {
-                              closeMenu();
-                              void controller.handleDeleteTodo(todo.id);
-                            }}
-                          >
-                            <Trash2 size={14} aria-hidden="true" />
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    />
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-3 text-xs">
-                    <p className="text-slate-400">Updated {todo.updatedAt.toLocaleString()}</p>
-                    <p className="truncate font-semibold uppercase tracking-wide text-cyan-200">
-                      {dashboardsById.get(todo.boardId)?.name ?? 'Unknown dashboard'}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+        <ArchiveTodoListView
+          archivedTodos={archivedTodos}
+          dashboardsById={dashboardsById}
+          onOpenTodoByLink={openTodoByLink}
+          onUnarchiveTodo={(todoId) => {
+            void controller.handleUnarchiveTodo(todoId);
+          }}
+          onDeleteTodo={(todoId) => {
+            void controller.handleDeleteTodo(todoId);
+          }}
+        />
       )}
 
       {modalTodo && (
