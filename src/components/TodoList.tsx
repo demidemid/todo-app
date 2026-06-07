@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useMemo, useRef } from 'react';
 import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
 import { TodoModal } from './TodoModal';
@@ -7,6 +6,7 @@ import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
 import { DashboardDndContainer } from './todo-list/DashboardDndContainer';
 import { DashboardSection } from './todo-list/DashboardSection';
 import type { DueHighlightEntry } from './todo-list/DueHighlightsBanner';
+import { useSyncDashboardQueryParam, useTodoListUrlState } from './todo-list/useTodoListUrlState';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
@@ -26,8 +26,13 @@ interface TodoListProps {
 }
 
 const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const dashboardParamId = searchParams.get('dashboard');
+  const {
+    dashboardParamId,
+    modalTodoId,
+    updateSearch,
+    openTodoByLink,
+    closeTodoLink,
+  } = useTodoListUrlState();
   const dashboardSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const dashboardHoverId = useTodoListUiStoreScoped((state) => state.dashboardHoverId);
   const setDashboardHoverId = useTodoListUiStoreScoped((state) => state.setDashboardHoverId);
@@ -160,7 +165,6 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     reorderDashboards,
   });
 
-  const modalTodoId = searchParams.get('card');
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
   const modalColumns = modalTodo
     ? dashboardsById.get(modalTodo.boardId)?.columns ?? []
@@ -169,46 +173,12 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
     : null;
 
-  const updateSearch = useCallback(
-    (updater: (nextParams: URLSearchParams) => void) => {
-      setSearchParams((prevParams) => {
-        const nextParams = new URLSearchParams(prevParams);
-        updater(nextParams);
-        return nextParams;
-      });
-    },
-    [setSearchParams]
-  );
-
-  useEffect(() => {
-    if (dashboards.length === 0 || !dashboardParamId) return;
-
-    const exists = dashboards.some((dashboard) => dashboard.id === dashboardParamId);
-
-    if (!exists) {
-      updateSearch((nextParams) => {
-        nextParams.delete('dashboard');
-      });
-      return;
-    }
-
-    setActiveDashboardId((prevDashboardId) =>
-      prevDashboardId === dashboardParamId ? prevDashboardId : dashboardParamId
-    );
-  }, [dashboardParamId, dashboards, setActiveDashboardId, updateSearch]);
-
-  const openTodoByLink = (todoId: string, dashboardId: string) => {
-    updateSearch((nextParams) => {
-      nextParams.set('card', todoId);
-      nextParams.set('dashboard', dashboardId);
-    });
-  };
-
-  const closeTodoLink = () => {
-    updateSearch((nextParams) => {
-      nextParams.delete('card');
-    });
-  };
+  useSyncDashboardQueryParam({
+    dashboardParamId,
+    dashboards,
+    setActiveDashboardId,
+    updateSearch,
+  });
 
   const handleSaveShare = async (event: React.FormEvent) => {
     event.preventDefault();
