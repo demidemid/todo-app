@@ -355,8 +355,10 @@ export const DashboardSection = ({
               label: 'Open dashboard actions',
               testId: `dashboard-actions-trigger-${dashboard.id}`,
             }}
-            menuTestId={`dashboard-actions-menu-${dashboard.id}`}
-            menuAriaLabel={`Dashboard actions for ${dashboard.name}`}
+            menu={{
+              testId: `dashboard-actions-menu-${dashboard.id}`,
+              ariaLabel: `Dashboard actions for ${dashboard.name}`,
+            }}
             stopPropagation
             items={[
               {
@@ -647,7 +649,7 @@ export const DashboardSection = ({
                                   label: `Open actions for ${todo.title}`,
                                   testId: `card-menu-trigger-${todo.id}`,
                                 }}
-                                menuTestId="card-menu"
+                                menu={{ testId: 'card-menu' }}
                                 stopPropagation
                                 items={[
                                   {

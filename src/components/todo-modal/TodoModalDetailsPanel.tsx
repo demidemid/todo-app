@@ -416,9 +416,11 @@ export const TodoModalDetailsPanel = ({
                   variant: 'rounded',
                   icon: <Plus size={18} aria-hidden="true" />,
                 }}
-                menuTestId="todo-actions-menu"
-                menuAlign="left"
-                menuOffsetClassNameOverride="top-12"
+                menu={{
+                  testId: 'todo-actions-menu',
+                  align: 'left',
+                  offsetClassName: 'top-12',
+                }}
                 onOpenChange={setIsActionMenuOpen}
                 menuContent={({ closeMenu }) => (
                   <>
@@ -600,7 +602,7 @@ export const TodoModalDetailsPanel = ({
                 testId: 'todo-card-menu-trigger',
                 variant: 'rounded',
               }}
-              menuTestId="todo-card-menu"
+              menu={{ testId: 'todo-card-menu' }}
               items={[
                 {
                   id: 'archive',

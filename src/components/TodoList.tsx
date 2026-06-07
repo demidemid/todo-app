@@ -600,8 +600,10 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
                         label: 'Open archive card actions',
                         testId: `archive-menu-trigger-${todo.id}`,
                       }}
-                      menuTestId={`archive-menu-${todo.id}`}
-                      menuClassName="w-40"
+                      menu={{
+                        testId: `archive-menu-${todo.id}`,
+                        className: 'w-40',
+                      }}
                       stopPropagation
                       menuContent={({ closeMenu }) => (
                         <>
