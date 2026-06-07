@@ -326,14 +326,15 @@ export const useTodoListController = ({
     const dashboard = dashboards.find((item) => item.id === dashboardId);
     if (!dashboard || dashboard.columns.length === 0) return;
 
-    const lastColumn = dashboard.columns.reduce((latest, column) => (
+    const fallbackLastColumn = dashboard.columns.reduce((latest, column) => (
       column.order > latest.order ? column : latest
     ));
+    const completedColumn = dashboard.columns.find((column) => column.isDone) ?? fallbackLastColumn;
 
     const completedTodos = todos.filter((todo) => (
       todo.boardId === dashboardId
       && !todo.archived
-      && (todo.columnId === lastColumn.id || todo.status === lastColumn.id)
+      && (todo.columnId === completedColumn.id || todo.status === completedColumn.id)
     ));
 
     if (completedTodos.length === 0) return;

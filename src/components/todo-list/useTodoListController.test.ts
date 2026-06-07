@@ -424,6 +424,47 @@ describe('useTodoListController', () => {
     expect(mocks.updateTodo).not.toHaveBeenCalledWith('t-done-archived', { archived: true });
   });
 
+  it('archives todos from isDone column even when it is not the max-order column', async () => {
+    const { args, mocks } = createArgs();
+    args.dashboards = [
+      {
+        ...dashboards[0],
+        columns: [
+          { id: 'done', name: 'Done', order: 0, isDone: true },
+          { id: 'later', name: 'Later', order: 10, isDone: false },
+        ],
+      },
+      ...dashboards.slice(1),
+    ];
+    args.columns = args.dashboards[0].columns;
+    args.activeDashboard = args.dashboards[0];
+    args.todos = [
+      {
+        ...todos[0],
+        id: 't-done',
+        boardId: 'board-a',
+        status: 'done',
+        columnId: 'done',
+      },
+      {
+        ...todos[0],
+        id: 't-later',
+        boardId: 'board-a',
+        status: 'later',
+        columnId: 'later',
+      },
+    ];
+
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleArchiveAllCompleted('board-a');
+    });
+
+    expect(mocks.updateTodo).toHaveBeenCalledWith('t-done', { archived: true });
+    expect(mocks.updateTodo).not.toHaveBeenCalledWith('t-later', { archived: true });
+  });
+
   it('archives only todos from the selected dashboard', async () => {
     const { args, mocks } = createArgs();
     args.todos = [
