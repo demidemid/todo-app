@@ -611,7 +611,9 @@ export const TodoModalDetailsPanel = ({
                   id: 'archive',
                   label: 'Archive',
                   icon: <Archive size={14} aria-hidden="true" />,
-                  onSelect: onArchive,
+                  onSelect: () => {
+                    onArchive?.();
+                  },
                   testId: 'todo-card-menu-archive',
                   disabled: saving,
                 },
