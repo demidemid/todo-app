@@ -4,8 +4,9 @@ import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
 import { TodoModal } from './TodoModal';
 import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
+import { DashboardDndContainer } from './todo-list/DashboardDndContainer';
 import { DashboardSection } from './todo-list/DashboardSection';
-import { DueHighlightsBanner, type DueHighlightEntry } from './todo-list/DueHighlightsBanner';
+import type { DueHighlightEntry } from './todo-list/DueHighlightsBanner';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
@@ -351,74 +352,21 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
       />
 
       {viewMode === 'dashboards' ? (
-        <div
-          className="space-y-3"
-          onDragOver={(event) => {
-            event.preventDefault();
-            if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
-
-            const sections = dashboards
-              .filter((dashboard) => dashboard.userId === userId)
-              .map((dashboard, index) => ({
-                id: dashboard.id,
-                index,
-                element: dashboardSectionRefs.current[dashboard.id],
-              }))
-              .filter((item): item is { id: string; index: number; element: HTMLElement } => item.element != null);
-
-            if (sections.length === 0) return;
-
-            const pointerY = event.clientY;
-
-            const exactMatch = sections.find((item) => {
-              const rect = item.element.getBoundingClientRect();
-              return rect.height > 0 && pointerY >= rect.top && pointerY <= rect.bottom;
-            });
-
-            if (exactMatch) {
-              const sourceIndex = dashboards.findIndex((dashboard) => dashboard.id === controller.dashboardDragId);
-              const nextIndex = sourceIndex < exactMatch.index ? exactMatch.index + 1 : exactMatch.index;
-              controller.setDashboardDropIndex(nextIndex);
-              setDashboardHoverId(exactMatch.id);
-              return;
-            }
-
-            const firstRect = sections[0].element.getBoundingClientRect();
-            if (pointerY < firstRect.top) {
-              controller.setDashboardDropIndex(0);
-              setDashboardHoverId(sections[0].id);
-              return;
-            }
-
-            const lastRect = sections[sections.length - 1].element.getBoundingClientRect();
-            if (pointerY > lastRect.bottom) {
-              controller.setDashboardDropIndex(dashboards.length);
-              setDashboardHoverId(sections[sections.length - 1].id);
-              return;
-            }
-          }}
-          onDrop={(event) => {
-            event.preventDefault();
-            if (!controller.dashboardDragId) return;
-
-            const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-            const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
-            if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
-
-            const targetIndex = controller.dashboardDropIndex ?? manageableDashboardIds.length;
-            void controller.handleDashboardDrop(targetIndex, draggedDashboardId, manageableDashboardIds);
-            setDashboardHoverId(null);
-          }}
-          onDragEndCapture={() => {
-            window.setTimeout(() => {
-              controller.setDashboardDragId(null);
-              controller.setDashboardDropIndex(null);
-              setDashboardHoverId(null);
-            }, 0);
-          }}
+        <DashboardDndContainer
+          dashboards={dashboards}
+          userId={userId}
+          dashboardSectionRefs={dashboardSectionRefs}
+          dashboardDragId={controller.dashboardDragId}
+          dashboardDropIndex={controller.dashboardDropIndex}
+          setDashboardDropIndex={controller.setDashboardDropIndex}
+          setDashboardDragId={controller.setDashboardDragId}
+          handleDashboardDrop={controller.handleDashboardDrop}
+          manageableIndexById={manageableIndexById}
+          manageableDashboardIds={manageableDashboardIds}
+          setDashboardHoverId={setDashboardHoverId}
+          dueHighlights={dueHighlights}
+          onOpenTodoByLink={openTodoByLink}
         >
-          <DueHighlightsBanner entries={dueHighlights} onOpenTodoByLink={openTodoByLink} />
-
           {dashboards.map((dashboard, index) => (
             <DashboardSection
               key={dashboard.id}
@@ -528,7 +476,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               }}
             />
           ))}
-        </div>
+        </DashboardDndContainer>
       ) : (
         <ArchiveTodoListView
           archivedTodos={archivedTodos}
