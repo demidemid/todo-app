@@ -125,6 +125,7 @@ export const EllipsisMenu = ({
         data-testid={triggerTestId}
         aria-haspopup="menu"
         aria-expanded={open}
+        style={triggerStyle}
         className={[
           'border-white/20 bg-white/5 text-slate-200 hover:bg-white/10',
           open ? 'text-cyan-100' : null,
