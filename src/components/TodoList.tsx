@@ -5,12 +5,13 @@ import { TodoModal } from './TodoModal';
 import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
 import { DashboardDndContainer } from './todo-list/DashboardDndContainer';
 import { DashboardSection } from './todo-list/DashboardSection';
-import type { DueHighlightEntry } from './todo-list/DueHighlightsBanner';
+import { useDashboardSectionActions } from './todo-list/useDashboardSectionActions';
+import { useTodoListDerivedData } from './todo-list/useTodoListDerivedData';
+import { useTodoListShareActions } from './todo-list/useTodoListShareActions';
 import { useSyncDashboardQueryParam, useTodoListUrlState } from './todo-list/useTodoListUrlState';
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
-import { getDueDateState } from '../utils/dueDate';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
 import { useDueDateReminders } from '../hooks/useDueDateReminders';
@@ -79,66 +80,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     () => new Map(dashboards.map((dashboard) => [dashboard.id, dashboard])),
     [dashboards]
   );
-
-  const archivedTodos = useMemo(
-    () =>
-      todos
-        .filter((todo) => todo.archived)
-        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
-    [todos]
-  );
-
-  const dueHighlights = useMemo(() => {
-    const now = new Date();
-    type HighlightDueState = DueHighlightEntry['dueState'];
-    const rankByState = (state: ReturnType<typeof getDueDateState>) => {
-      if (state === 'overdue') return 0;
-      if (state === 'due_today') return 1;
-      if (state === 'due_tomorrow') return 2;
-      return 3;
-    };
-
-    return todos
-      .filter(
-        (todo) =>
-          !todo.archived
-          && Boolean(todo.dueDate)
-          && Boolean(todo.remindOneDayBefore)
-          && !(todo.isCompleted ?? todo.status === 'done')
-      )
-      .map((todo) => ({
-        todo,
-        dueState: getDueDateState(todo, now),
-      }))
-      .filter((entry): entry is { todo: typeof todos[number]; dueState: HighlightDueState } => (
-        entry.dueState === 'overdue' || entry.dueState === 'due_today' || entry.dueState === 'due_tomorrow'
-      ))
-      .map((todo) => {
-        const dashboardName = dashboardsById.get(todo.todo.boardId)?.name ?? 'Unknown dashboard';
-        const dueState = todo.dueState;
-        const dueText = dueState === 'overdue'
-          ? `was due on ${todo.todo.dueDate}`
-          : dueState === 'due_today'
-            ? 'is due today'
-            : dueState === 'due_tomorrow'
-              ? 'is due tomorrow'
-              : 'is due';
-
-        return {
-          todo: todo.todo,
-          dashboardName,
-          dueText,
-          dueState,
-          rank: rankByState(dueState),
-          sortDate: todo.todo.dueDate ?? '9999-99-99',
-        };
-      })
-      .sort((a, b) => {
-        if (a.rank !== b.rank) return a.rank - b.rank;
-        return a.sortDate.localeCompare(b.sortDate);
-      })
-      .slice(0, 8);
-  }, [dashboardsById, todos]);
+  const { archivedTodos, dueHighlights } = useTodoListDerivedData({ todos, dashboardsById });
 
   const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
   const manageableDashboardIds = useMemo(
@@ -169,9 +111,18 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   const modalColumns = modalTodo
     ? dashboardsById.get(modalTodo.boardId)?.columns ?? []
     : [];
-  const shareDashboardTarget = shareDashboardId
-    ? dashboards.find((dashboard) => dashboard.id === shareDashboardId) ?? null
-    : null;
+  const { shareDashboardTarget, handleSaveShare } = useTodoListShareActions({
+    dashboards,
+    shareDashboardId,
+    users,
+    shareSelectedUserIds,
+    shareRecipientEmails,
+    usersLoading,
+    usersError,
+    shareDashboard,
+    closeShareModal,
+    setShareActionError,
+  });
 
   useSyncDashboardQueryParam({
     dashboardParamId,
@@ -180,28 +131,19 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     updateSearch,
   });
 
-  const handleSaveShare = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!shareDashboardTarget) return;
-    if (usersLoading || usersError) return;
-
-    setShareActionError('');
-
-    try {
-      const selectedEmails = users
-        .filter((user) => shareSelectedUserIds.includes(user.id))
-        .map((user) => user.email);
-      const manualEmails = shareRecipientEmails
-        .split(/[\n,;]/)
-        .map((email) => email.trim().toLowerCase())
-        .filter(Boolean);
-
-      await shareDashboard(shareDashboardTarget.id, shareSelectedUserIds, [...selectedEmails, ...manualEmails]);
-      closeShareModal();
-    } catch (shareError) {
-      setShareActionError(shareError instanceof Error ? shareError.message : 'Failed to share dashboard');
-    }
-  };
+  const getDashboardSectionActions = useDashboardSectionActions({
+    dashboards,
+    userId,
+    activeDashboardId,
+    setActiveDashboardId,
+    updateSearch,
+    controller,
+    manageableIndexById,
+    manageableDashboardIds,
+    setDashboardHoverId,
+    openShareModal,
+    openTodoByLink,
+  });
 
   if (loading || dashboardsLoading) {
     return <div className="py-8 text-center text-slate-300">Loading todos...</div>;
@@ -362,88 +304,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
                 dropTarget: controller.dropTarget,
               }}
               canManageDashboard={dashboard.userId === userId}
-              actions={{
-                onToggle: (dashboardId) => {
-                  const nextDashboardId = activeDashboardId === dashboardId ? null : dashboardId;
-
-                  setActiveDashboardId(nextDashboardId);
-                  updateSearch((nextParams) => {
-                    if (nextDashboardId) {
-                      nextParams.set('dashboard', nextDashboardId);
-                    } else {
-                      nextParams.delete('dashboard');
-                      nextParams.delete('card');
-                    }
-                  });
-                },
-                onDashboardDragStart: () => {
-                  if (dashboard.userId !== userId) return;
-                  controller.setDashboardDragId(dashboard.id);
-                  const sourceIndex = manageableIndexById.get(dashboard.id);
-                  controller.setDashboardDropIndex(sourceIndex ?? index);
-                  setDashboardHoverId(dashboard.id);
-                },
-                onDashboardDragOver: (event) => {
-                  event.preventDefault();
-                  if (dashboard.userId !== userId) return;
-                  if (!controller.dashboardDragId || !manageableIndexById.has(controller.dashboardDragId)) return;
-
-                  const sourceIndex = manageableIndexById.get(controller.dashboardDragId);
-                  const targetIndex = manageableIndexById.get(dashboard.id);
-                  if (sourceIndex == null || targetIndex == null) return;
-
-                  const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
-                  controller.setDashboardDropIndex(nextIndex);
-                  setDashboardHoverId(dashboard.id);
-                },
-                onDashboardDrop: (event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  if (dashboard.userId !== userId) return;
-                  const draggedDashboardId = event.dataTransfer?.getData('text/plain') || undefined;
-                  const activeDragId = draggedDashboardId ?? controller.dashboardDragId;
-                  if (!activeDragId || !manageableIndexById.has(activeDragId)) return;
-
-                  const sourceIndex = manageableIndexById.get(activeDragId);
-                  const targetIndex = manageableIndexById.get(dashboard.id);
-                  if (sourceIndex == null || targetIndex == null) return;
-
-                  const nextIndex = sourceIndex < targetIndex ? targetIndex + 1 : targetIndex;
-                  void controller.handleDashboardDrop(nextIndex, draggedDashboardId, manageableDashboardIds);
-                },
-                onOpenEditDashboard: controller.openEditDashboard,
-                onDeleteDashboard: (dashboardId, dashboardName) =>
-                  void controller.handleDeleteDashboard(dashboardId, dashboardName),
-                onOpenShareDashboard: (dashboardId) => {
-                  const nextDashboard = dashboards.find((item) => item.id === dashboardId);
-                  if (!nextDashboard || nextDashboard.userId !== userId) return;
-                  openShareModal(nextDashboard);
-                },
-                onArchiveAllCompleted: (dashboardId) => void controller.handleArchiveAllCompleted(dashboardId),
-                onOpenCreateCard: (dashboardId, columnId) => {
-                  setActiveDashboardId(dashboardId);
-                  updateSearch((nextParams) => {
-                    nextParams.set('dashboard', dashboardId);
-                  });
-                  controller.setCreateCardDashboardId(dashboardId);
-                  controller.setCreateCardColumnId(columnId);
-                  controller.setIsCreateModalOpen(true);
-                },
-                onMoveTodo: controller.handleMoveTodo,
-                onSetDragState: controller.setDragState,
-                onSetDropTarget: controller.setDropTarget,
-                onOpenTodoModal: (todo) => {
-                  openTodoByLink(todo.id, todo.boardId);
-                },
-                onCancelEdit: controller.cancelEdit,
-                onSaveEdit: (todoId) => void controller.handleSaveEdit(todoId),
-                onEditTitleChange: controller.setEditingTitle,
-                onEditDescriptionChange: controller.setEditingDescription,
-                onEditKeyDown: controller.handleEditKeyDown,
-                onMenuEdit: (todo) => controller.startEdit(todo),
-                onMenuArchive: (todoId) => void controller.handleArchiveTodo(todoId),
-                onMenuDelete: (todoId) => void controller.handleDeleteTodo(todoId),
-              }}
+              actions={getDashboardSectionActions(dashboard, index)}
             />
           ))}
         </DashboardDndContainer>
