@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
@@ -280,6 +280,48 @@ export const DashboardSection = ({
   const touchDragRef = useRef<{ todoId: string; moved: boolean } | null>(null);
   const suppressCardClickUntilRef = useRef(0);
   const [touchDraggingTodoId, setTouchDraggingTodoId] = useState<string | null>(null);
+  const [touchDragPreview, setTouchDragPreview] = useState<{
+    todoId: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+
+  const todoById = useMemo(() => {
+    const lookup = new Map<string, Todo>();
+    columns.forEach((column) => {
+      (groupedTodos[column.id] ?? []).forEach((todo) => {
+        lookup.set(todo.id, todo);
+      });
+    });
+    return lookup;
+  }, [columns, groupedTodos]);
+
+  const touchPreviewTitle = touchDragPreview
+    ? (todoById.get(touchDragPreview.todoId)?.title ?? 'Moving card')
+    : null;
+  const touchPreviewTodo = touchDragPreview
+    ? (todoById.get(touchDragPreview.todoId) ?? null)
+    : null;
+  const touchPreviewDueState = touchPreviewTodo ? getDueDateState(touchPreviewTodo, new Date()) : null;
+  const touchPreviewDueLabel = touchPreviewDueState === 'due_today'
+    ? 'Today'
+    : touchPreviewDueState === 'due_tomorrow'
+      ? 'Tomorrow'
+      : touchPreviewDueState === 'overdue'
+        ? 'Overdue'
+        : null;
+  const touchPreviewChecklist = touchPreviewTodo ? normalizeTodoChecklist(touchPreviewTodo.checklist) : null;
+  const touchPreviewChecklistClosed = touchPreviewChecklist
+    ? touchPreviewChecklist.items.filter((item) => item.checked).length
+    : 0;
+  const touchPreviewChecklistTotal = touchPreviewChecklist ? touchPreviewChecklist.items.length : 0;
+  const touchPreviewChecklistPalette = touchPreviewChecklist
+    ? getChecklistBadgePalette(touchPreviewChecklistClosed, touchPreviewChecklistTotal)
+    : null;
 
   const resolveCardDropIndex = (
     event: React.DragEvent<HTMLElement>,
@@ -549,8 +591,21 @@ export const DashboardSection = ({
                             if (editingTodoId === todo.id) return;
                             if (event.touches.length !== 1) return;
 
+                            const touch = event.touches[0];
+                            if (!touch) return;
+                            const rect = event.currentTarget.getBoundingClientRect();
+
                             touchDragRef.current = { todoId: todo.id, moved: false };
                             setTouchDraggingTodoId(todo.id);
+                            setTouchDragPreview({
+                              todoId: todo.id,
+                              x: touch.clientX,
+                              y: touch.clientY,
+                              width: rect.width,
+                              height: rect.height,
+                              offsetX: touch.clientX - rect.left,
+                              offsetY: touch.clientY - rect.top,
+                            });
                             onSetDragState({ todoId: todo.id });
                           }}
                           onTouchMove={(event) => {
@@ -560,6 +615,11 @@ export const DashboardSection = ({
 
                             const touch = event.touches[0];
                             if (!touch) return;
+
+                            setTouchDragPreview((prev) => (prev
+                              ? { ...prev, x: touch.clientX, y: touch.clientY }
+                              : prev
+                            ));
 
                             const target = resolveTouchDropTarget(touch.clientX, touch.clientY);
                             if (!target) return;
@@ -592,12 +652,14 @@ export const DashboardSection = ({
                             onSetDropTarget(null);
                             touchDragRef.current = null;
                             setTouchDraggingTodoId(null);
+                            setTouchDragPreview(null);
                           }}
                           onTouchCancel={() => {
                             onSetDragState(null);
                             onSetDropTarget(null);
                             touchDragRef.current = null;
                             setTouchDraggingTodoId(null);
+                            setTouchDragPreview(null);
                           }}
                           onClick={() => {
                             if (Date.now() < suppressCardClickUntilRef.current) return;
@@ -606,7 +668,7 @@ export const DashboardSection = ({
                           className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
                             dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
                           } ${
-                            touchDraggingTodoId === todo.id ? 'scale-[0.985] opacity-70 shadow-2xl ring-1 ring-cyan-300/60' : ''
+                            touchDraggingTodoId === todo.id ? 'opacity-70 shadow-2xl ring-1 ring-cyan-300/60' : ''
                           } ${
                             editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
                           }`}
@@ -808,6 +870,49 @@ export const DashboardSection = ({
                 This dashboard has no columns yet.
               </div>
             )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {touchDragPreview && touchPreviewTitle && (
+        <div
+          className="pointer-events-none fixed z-[120] overflow-hidden rounded-lg border border-cyan-300/60 bg-slate-900/90 p-3 pb-8 text-sm font-semibold text-cyan-100 shadow-2xl shadow-cyan-900/40"
+          style={{
+            left: touchDragPreview.x - touchDragPreview.offsetX,
+            top: touchDragPreview.y - touchDragPreview.offsetY,
+            width: touchDragPreview.width,
+            height: touchDragPreview.height,
+          }}
+          data-testid="touch-drag-preview"
+          aria-hidden="true"
+        >
+          <div className="flex h-full flex-col justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight text-slate-100">{touchPreviewTitle}</p>
+              {touchPreviewDueLabel && (
+                <span
+                  className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                    touchPreviewDueState === 'overdue'
+                      ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
+                      : 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                  }`}
+                >
+                  {touchPreviewDueLabel}
+                </span>
+              )}
+              {touchPreviewChecklist && touchPreviewChecklistPalette && (
+                <div
+                  className={`mt-2 inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${touchPreviewChecklistPalette}`}
+                >
+                  <span className="truncate">{touchPreviewChecklist.title}</span>
+                  <span className="shrink-0">{touchPreviewChecklistClosed}/{touchPreviewChecklistTotal}</span>
+                </div>
+              )}
+            </div>
+            <div className="inline-flex items-center gap-1 text-[11px] font-medium text-white/90">
+              <MessageCircle size={12} className="text-white/90" aria-hidden="true" />
+              <span>{touchPreviewTodo?.comments?.length ?? 0}</span>
             </div>
           </div>
         </div>
