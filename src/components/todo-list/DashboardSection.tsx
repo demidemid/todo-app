@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
@@ -279,6 +279,7 @@ export const DashboardSection = ({
 
   const touchDragRef = useRef<{ todoId: string; moved: boolean } | null>(null);
   const suppressCardClickUntilRef = useRef(0);
+  const [touchDraggingTodoId, setTouchDraggingTodoId] = useState<string | null>(null);
 
   const resolveCardDropIndex = (
     event: React.DragEvent<HTMLElement>,
@@ -293,7 +294,7 @@ export const DashboardSection = ({
 
   const resolveTouchDropTarget = (clientX: number, clientY: number): DropTarget | null => {
     const element = document.elementFromPoint(clientX, clientY);
-    if (!(element instanceof HTMLElement)) return null;
+    if (!element) return null;
 
     const cardElement = element.closest<HTMLElement>('[data-touch-card-id]');
     if (cardElement) {
@@ -549,6 +550,7 @@ export const DashboardSection = ({
                             if (event.touches.length !== 1) return;
 
                             touchDragRef.current = { todoId: todo.id, moved: false };
+                            setTouchDraggingTodoId(todo.id);
                             onSetDragState({ todoId: todo.id });
                           }}
                           onTouchMove={(event) => {
@@ -571,7 +573,9 @@ export const DashboardSection = ({
                             const touchDrag = touchDragRef.current;
                             if (!touchDrag || touchDrag.todoId !== todo.id) return;
 
-                            event.preventDefault();
+                            if (touchDrag.moved) {
+                              event.preventDefault();
+                            }
 
                             const changedTouch = event.changedTouches[0];
                             const resolvedTarget = changedTouch
@@ -587,11 +591,13 @@ export const DashboardSection = ({
                             onSetDragState(null);
                             onSetDropTarget(null);
                             touchDragRef.current = null;
+                            setTouchDraggingTodoId(null);
                           }}
                           onTouchCancel={() => {
                             onSetDragState(null);
                             onSetDropTarget(null);
                             touchDragRef.current = null;
+                            setTouchDraggingTodoId(null);
                           }}
                           onClick={() => {
                             if (Date.now() < suppressCardClickUntilRef.current) return;
@@ -599,6 +605,8 @@ export const DashboardSection = ({
                           }}
                           className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
                             dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
+                          } ${
+                            touchDraggingTodoId === todo.id ? 'scale-[0.985] opacity-70 shadow-2xl ring-1 ring-cyan-300/60' : ''
                           } ${
                             editingTodoId === todo.id ? 'cursor-default' : 'cursor-pointer'
                           }`}
