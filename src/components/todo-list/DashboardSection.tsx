@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
@@ -80,6 +80,23 @@ interface DropTarget {
   columnId: string;
   index: number;
 }
+
+interface PendingTouchDrag {
+  todoId: string;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  width: number;
+  height: number;
+  offsetX: number;
+  offsetY: number;
+  activated: boolean;
+  holdTimer: number | null;
+}
+
+const TOUCH_DRAG_HOLD_MS = 160;
+const TOUCH_DRAG_CANCEL_DISTANCE_PX = 10;
 
 interface DashboardSectionInteractionState {
   editingTodoId: string | null;
@@ -278,6 +295,8 @@ export const DashboardSection = ({
   };
 
   const touchDragRef = useRef<{ todoId: string; moved: boolean } | null>(null);
+  const pendingTouchDragRef = useRef<PendingTouchDrag | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const suppressCardClickUntilRef = useRef(0);
   const [touchDraggingTodoId, setTouchDraggingTodoId] = useState<string | null>(null);
   const [touchDragPreview, setTouchDragPreview] = useState<{
@@ -322,6 +341,66 @@ export const DashboardSection = ({
   const touchPreviewChecklistPalette = touchPreviewChecklist
     ? getChecklistBadgePalette(touchPreviewChecklistClosed, touchPreviewChecklistTotal)
     : null;
+
+  const clearPendingTouchDrag = () => {
+    const pending = pendingTouchDragRef.current;
+    if (pending?.holdTimer != null) {
+      window.clearTimeout(pending.holdTimer);
+    }
+    pendingTouchDragRef.current = null;
+  };
+
+  const resetTouchDragState = () => {
+    onSetDragState(null);
+    onSetDropTarget(null);
+    touchDragRef.current = null;
+    clearPendingTouchDrag();
+    setTouchDraggingTodoId(null);
+    setTouchDragPreview(null);
+  };
+
+  const applyTouchEdgeAutoScroll = (clientX: number, clientY: number) => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const rect = scrollContainer.getBoundingClientRect();
+    const threshold = Math.max(28, Math.min(96, rect.width * 0.16));
+
+    let delta = 0;
+    if (clientX < rect.left + threshold) {
+      const intensity = (rect.left + threshold - clientX) / threshold;
+      delta = -Math.max(1, Math.round(18 * intensity));
+    } else if (clientX > rect.right - threshold) {
+      const intensity = (clientX - (rect.right - threshold)) / threshold;
+      delta = Math.max(1, Math.round(18 * intensity));
+    }
+
+    if (delta !== 0) {
+      scrollContainer.scrollLeft += delta;
+    }
+
+    const viewportHeight = window.innerHeight || 0;
+    if (viewportHeight <= 0 || typeof window.scrollBy !== 'function') return;
+
+    const verticalThreshold = Math.max(36, Math.min(120, viewportHeight * 0.12));
+    let deltaY = 0;
+
+    if (clientY < verticalThreshold) {
+      const intensity = (verticalThreshold - clientY) / verticalThreshold;
+      deltaY = -Math.max(1, Math.round(16 * intensity));
+    } else if (clientY > viewportHeight - verticalThreshold) {
+      const intensity = (clientY - (viewportHeight - verticalThreshold)) / verticalThreshold;
+      deltaY = Math.max(1, Math.round(16 * intensity));
+    }
+
+    if (deltaY !== 0) {
+      window.scrollBy(0, deltaY);
+    }
+  };
+
+  useEffect(() => () => {
+    clearPendingTouchDrag();
+  }, []);
 
   const resolveCardDropIndex = (
     event: React.DragEvent<HTMLElement>,
@@ -481,7 +560,7 @@ export const DashboardSection = ({
 
       {isExpanded && (
         <div className="border-t border-white/10 p-4">
-          <div className="overflow-x-auto pb-2">
+          <div ref={scrollContainerRef} className="overflow-x-auto pb-2">
             <div
               className="grid min-w-full gap-4"
               style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(16rem, 1fr))` }}
@@ -595,41 +674,93 @@ export const DashboardSection = ({
                             if (!touch) return;
                             const rect = event.currentTarget.getBoundingClientRect();
 
-                            touchDragRef.current = { todoId: todo.id, moved: false };
-                            setTouchDraggingTodoId(todo.id);
-                            setTouchDragPreview({
+                            clearPendingTouchDrag();
+
+                            const pending: PendingTouchDrag = {
                               todoId: todo.id,
-                              x: touch.clientX,
-                              y: touch.clientY,
+                              startX: touch.clientX,
+                              startY: touch.clientY,
+                              lastX: touch.clientX,
+                              lastY: touch.clientY,
                               width: rect.width,
                               height: rect.height,
                               offsetX: touch.clientX - rect.left,
                               offsetY: touch.clientY - rect.top,
-                            });
-                            onSetDragState({ todoId: todo.id });
+                              activated: false,
+                              holdTimer: null,
+                            };
+
+                            pending.holdTimer = window.setTimeout(() => {
+                              const currentPending = pendingTouchDragRef.current;
+                              if (!currentPending || currentPending.todoId !== todo.id) return;
+
+                              currentPending.activated = true;
+                              touchDragRef.current = { todoId: todo.id, moved: false };
+                              setTouchDraggingTodoId(todo.id);
+                              setTouchDragPreview({
+                                todoId: todo.id,
+                                x: currentPending.lastX,
+                                y: currentPending.lastY,
+                                width: currentPending.width,
+                                height: currentPending.height,
+                                offsetX: currentPending.offsetX,
+                                offsetY: currentPending.offsetY,
+                              });
+                              onSetDragState({ todoId: todo.id });
+                            }, TOUCH_DRAG_HOLD_MS);
+
+                            pendingTouchDragRef.current = pending;
                           }}
                           onTouchMove={(event) => {
                             if (editingTodoId === todo.id) return;
-                            const touchDrag = touchDragRef.current;
-                            if (!touchDrag || touchDrag.todoId !== todo.id) return;
+                            const pendingTouchDrag = pendingTouchDragRef.current;
+                            if (!pendingTouchDrag || pendingTouchDrag.todoId !== todo.id) return;
 
                             const touch = event.touches[0];
                             if (!touch) return;
+
+                            pendingTouchDrag.lastX = touch.clientX;
+                            pendingTouchDrag.lastY = touch.clientY;
+
+                            if (!pendingTouchDrag.activated) {
+                              const movedDistance = Math.hypot(
+                                touch.clientX - pendingTouchDrag.startX,
+                                touch.clientY - pendingTouchDrag.startY,
+                              );
+                              if (movedDistance > TOUCH_DRAG_CANCEL_DISTANCE_PX) {
+                                clearPendingTouchDrag();
+                              }
+                              return;
+                            }
+
+                            const touchDrag = touchDragRef.current;
+                            if (!touchDrag || touchDrag.todoId !== todo.id) return;
+
+                            event.preventDefault();
 
                             setTouchDragPreview((prev) => (prev
                               ? { ...prev, x: touch.clientX, y: touch.clientY }
                               : prev
                             ));
 
-                            const target = resolveTouchDropTarget(touch.clientX, touch.clientY);
-                            if (!target) return;
+                            applyTouchEdgeAutoScroll(touch.clientX, touch.clientY);
 
-                            event.preventDefault();
-                            touchDrag.moved = true;
-                            onSetDropTarget(target);
+                            const target = resolveTouchDropTarget(touch.clientX, touch.clientY);
+                            if (target) {
+                              touchDrag.moved = true;
+                              onSetDropTarget(target);
+                            }
                           }}
                           onTouchEnd={(event) => {
                             if (editingTodoId === todo.id) return;
+                            const pendingTouchDrag = pendingTouchDragRef.current;
+                            if (!pendingTouchDrag || pendingTouchDrag.todoId !== todo.id) return;
+
+                            if (!pendingTouchDrag.activated) {
+                              clearPendingTouchDrag();
+                              return;
+                            }
+
                             const touchDrag = touchDragRef.current;
                             if (!touchDrag || touchDrag.todoId !== todo.id) return;
 
@@ -648,18 +779,10 @@ export const DashboardSection = ({
                               suppressCardClickUntilRef.current = Date.now() + 250;
                             }
 
-                            onSetDragState(null);
-                            onSetDropTarget(null);
-                            touchDragRef.current = null;
-                            setTouchDraggingTodoId(null);
-                            setTouchDragPreview(null);
+                            resetTouchDragState();
                           }}
                           onTouchCancel={() => {
-                            onSetDragState(null);
-                            onSetDropTarget(null);
-                            touchDragRef.current = null;
-                            setTouchDraggingTodoId(null);
-                            setTouchDragPreview(null);
+                            resetTouchDragState();
                           }}
                           onClick={() => {
                             if (Date.now() < suppressCardClickUntilRef.current) return;
