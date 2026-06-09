@@ -200,6 +200,40 @@ describe('DashboardSection', () => {
     expect(props.onSetDropTarget).toHaveBeenCalledWith(null);
   });
 
+  it('moves todo via touch drag-and-drop fallback on touch devices', () => {
+    const props = createProps();
+    render(<DashboardSection {...props} />);
+
+    const card = screen.getByTestId('card-todo-1');
+    const targetDropSlot = screen.getByTestId('drop-done-end');
+    const originalElementFromPoint = (document as Document & { elementFromPoint?: (x: number, y: number) => Element | null }).elementFromPoint;
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => targetDropSlot),
+    });
+
+    fireEvent.touchStart(card, {
+      touches: [{ clientX: 24, clientY: 24 }],
+    });
+    fireEvent.touchMove(card, {
+      touches: [{ clientX: 24, clientY: 200 }],
+    });
+    fireEvent.touchEnd(card, {
+      changedTouches: [{ clientX: 24, clientY: 200 }],
+    });
+
+    expect(props.onSetDragState).toHaveBeenCalledWith({ todoId: 'todo-1' });
+    expect(props.onSetDropTarget).toHaveBeenCalledWith({ columnId: 'done', index: 0 });
+    expect(props.onMoveTodo).toHaveBeenCalledWith('todo-1', 'done', 0);
+    expect(props.onSetDragState).toHaveBeenCalledWith(null);
+    expect(props.onSetDropTarget).toHaveBeenCalledWith(null);
+
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: originalElementFromPoint,
+    });
+  });
+
   it('opens todo modal when card is clicked and not editing, and opens card menu trigger', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);

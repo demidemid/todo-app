@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist } from '../../utils/todoChecklist';
@@ -277,6 +277,9 @@ export const DashboardSection = ({
     handleHeaderSpace(event);
   };
 
+  const touchDragRef = useRef<{ todoId: string; moved: boolean } | null>(null);
+  const suppressCardClickUntilRef = useRef(0);
+
   const resolveCardDropIndex = (
     event: React.DragEvent<HTMLElement>,
     baseIndex: number,
@@ -286,6 +289,41 @@ export const DashboardSection = ({
 
     const midpointY = rect.top + rect.height / 2;
     return event.clientY > midpointY ? baseIndex + 1 : baseIndex;
+  };
+
+  const resolveTouchDropTarget = (clientX: number, clientY: number): DropTarget | null => {
+    const element = document.elementFromPoint(clientX, clientY);
+    if (!(element instanceof HTMLElement)) return null;
+
+    const cardElement = element.closest<HTMLElement>('[data-touch-card-id]');
+    if (cardElement) {
+      const columnId = cardElement.dataset.touchColumnId;
+      const baseIndexRaw = cardElement.dataset.touchCardIndex;
+      const baseIndex = baseIndexRaw != null ? Number(baseIndexRaw) : NaN;
+      if (!columnId || Number.isNaN(baseIndex)) return null;
+
+      const rect = cardElement.getBoundingClientRect();
+      const midpointY = rect.top + rect.height / 2;
+      return {
+        columnId,
+        index: clientY > midpointY ? baseIndex + 1 : baseIndex,
+      };
+    }
+
+    const columnElement = element.closest<HTMLElement>('[data-touch-column-id]');
+    if (columnElement) {
+      const columnId = columnElement.dataset.touchColumnId;
+      const columnLengthRaw = columnElement.dataset.touchColumnLength;
+      const columnLength = columnLengthRaw != null ? Number(columnLengthRaw) : 0;
+      if (!columnId || Number.isNaN(columnLength)) return null;
+
+      return {
+        columnId,
+        index: columnLength,
+      };
+    }
+
+    return null;
   };
 
   const fallbackLastColumn = dashboard.columns.length > 0
@@ -412,6 +450,8 @@ export const DashboardSection = ({
                 <section
                   key={column.id}
                   data-testid={`column-${column.id}`}
+                  data-touch-column-id={column.id}
+                  data-touch-column-length={columnTodos.length}
                   className={`rounded-xl border bg-slate-800/50 p-3 transition-colors ${
                     dropTarget?.columnId === column.id
                       ? 'border-cyan-200/70'
@@ -495,13 +535,66 @@ export const DashboardSection = ({
                       >
                         <article
                           data-testid={`card-${todo.id}`}
+                          data-touch-card-id={todo.id}
+                          data-touch-column-id={column.id}
+                          data-touch-card-index={index}
                           draggable={editingTodoId !== todo.id}
                           onDragStart={() => onSetDragState({ todoId: todo.id })}
                           onDragEnd={() => {
                             onSetDragState(null);
                             onSetDropTarget(null);
                           }}
+                          onTouchStart={(event) => {
+                            if (editingTodoId === todo.id) return;
+                            if (event.touches.length !== 1) return;
+
+                            touchDragRef.current = { todoId: todo.id, moved: false };
+                            onSetDragState({ todoId: todo.id });
+                          }}
+                          onTouchMove={(event) => {
+                            if (editingTodoId === todo.id) return;
+                            const touchDrag = touchDragRef.current;
+                            if (!touchDrag || touchDrag.todoId !== todo.id) return;
+
+                            const touch = event.touches[0];
+                            if (!touch) return;
+
+                            const target = resolveTouchDropTarget(touch.clientX, touch.clientY);
+                            if (!target) return;
+
+                            event.preventDefault();
+                            touchDrag.moved = true;
+                            onSetDropTarget(target);
+                          }}
+                          onTouchEnd={(event) => {
+                            if (editingTodoId === todo.id) return;
+                            const touchDrag = touchDragRef.current;
+                            if (!touchDrag || touchDrag.todoId !== todo.id) return;
+
+                            event.preventDefault();
+
+                            const changedTouch = event.changedTouches[0];
+                            const resolvedTarget = changedTouch
+                              ? resolveTouchDropTarget(changedTouch.clientX, changedTouch.clientY)
+                              : null;
+                            const target = resolvedTarget ?? dropTarget;
+
+                            if (touchDrag.moved && target) {
+                              void onMoveTodo(todo.id, target.columnId, target.index);
+                              suppressCardClickUntilRef.current = Date.now() + 250;
+                            }
+
+                            onSetDragState(null);
+                            onSetDropTarget(null);
+                            touchDragRef.current = null;
+                          }}
+                          onTouchCancel={() => {
+                            onSetDragState(null);
+                            onSetDropTarget(null);
+                            touchDragRef.current = null;
+                          }}
                           onClick={() => {
+                            if (Date.now() < suppressCardClickUntilRef.current) return;
                             if (editingTodoId !== todo.id) onOpenTodoModal(todo);
                           }}
                           className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
