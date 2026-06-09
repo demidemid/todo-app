@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Dashboard } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
@@ -201,6 +201,7 @@ describe('DashboardSection', () => {
   });
 
   it('moves todo via touch drag-and-drop fallback on touch devices', () => {
+    vi.useFakeTimers();
     const props = createProps();
     render(<DashboardSection {...props} />);
 
@@ -214,6 +215,9 @@ describe('DashboardSection', () => {
 
     fireEvent.touchStart(card, {
       touches: [{ clientX: 24, clientY: 24 }],
+    });
+    act(() => {
+      vi.advanceTimersByTime(170);
     });
     fireEvent.touchMove(card, {
       touches: [{ clientX: 24, clientY: 200 }],
@@ -232,6 +236,33 @@ describe('DashboardSection', () => {
       configurable: true,
       value: originalElementFromPoint,
     });
+    vi.useRealTimers();
+  });
+
+  it('does not start touch drag on quick movement before hold delay', () => {
+    vi.useFakeTimers();
+    const props = createProps();
+    render(<DashboardSection {...props} />);
+
+    const card = screen.getByTestId('card-todo-1');
+
+    fireEvent.touchStart(card, {
+      touches: [{ clientX: 40, clientY: 40 }],
+    });
+    fireEvent.touchMove(card, {
+      touches: [{ clientX: 120, clientY: 40 }],
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    fireEvent.touchEnd(card, {
+      changedTouches: [{ clientX: 120, clientY: 40 }],
+    });
+
+    expect(props.onSetDragState).not.toHaveBeenCalledWith({ todoId: 'todo-1' });
+    expect(props.onMoveTodo).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
   });
 
   it('opens todo modal when card is clicked and not editing, and opens card menu trigger', () => {
