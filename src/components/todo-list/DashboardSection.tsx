@@ -991,7 +991,7 @@ export const DashboardSection = ({
 
       {touchDragPreview && touchPreviewTitle && (
         <div
-          className="pointer-events-none fixed z-120 overflow-hidden rounded-lg border border-cyan-300/60 bg-slate-900/90 p-3 pb-8 text-sm font-semibold text-cyan-100 shadow-2xl shadow-cyan-900/40"
+          className="pointer-events-none fixed z-[120] overflow-hidden rounded-lg border border-cyan-300/60 bg-slate-900/90 p-3 pb-8 text-sm font-semibold text-cyan-100 shadow-2xl shadow-cyan-900/40"
           style={{
             left: touchDragPreview.x - touchDragPreview.offsetX,
             top: touchDragPreview.y - touchDragPreview.offsetY,
