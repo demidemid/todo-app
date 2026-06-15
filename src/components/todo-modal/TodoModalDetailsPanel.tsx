@@ -280,7 +280,7 @@ export const TodoModalDetailsPanel = ({
 
   const dueDateState = getDueDateState(todo, new Date());
   const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
-  const primaryChecklist = (Array.isArray(todo.checklists) ? todo.checklists[0] : undefined) ?? todo.checklist;
+  const primaryChecklist = Array.isArray(todo.checklists) ? todo.checklists[0] : todo.checklist;
   const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
   const dueStateLabel = dueDateState === 'due_today'
     ? 'Today'
