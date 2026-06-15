@@ -89,6 +89,7 @@ interface TodoModalDetailsPanelProps {
     onChecklistTitleChange?: (title: string, checklistIndex?: number) => Promise<void> | void;
     onChecklistAddItem?: (checklistIndex?: number) => Promise<void> | void;
     onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }, checklistIndex?: number) => Promise<void> | void;
+    onChecklistItemSaveAndAddNext?: (itemId: string, title: string, checklistIndex?: number) => Promise<void> | void;
     onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
     onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
     onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
@@ -124,6 +125,7 @@ interface TodoModalDetailsPanelProps {
   onChecklistTitleChange?: (title: string, checklistIndex?: number) => Promise<void> | void;
   onChecklistAddItem?: (checklistIndex?: number) => Promise<void> | void;
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }, checklistIndex?: number) => Promise<void> | void;
+  onChecklistItemSaveAndAddNext?: (itemId: string, title: string, checklistIndex?: number) => Promise<void> | void;
   onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
   onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
@@ -170,6 +172,7 @@ export const TodoModalDetailsPanel = ({
   onChecklistTitleChange: legacyOnChecklistTitleChange,
   onChecklistAddItem: legacyOnChecklistAddItem,
   onChecklistItemChange: legacyOnChecklistItemChange,
+  onChecklistItemSaveAndAddNext: legacyOnChecklistItemSaveAndAddNext,
   onChecklistPasteItems: legacyOnChecklistPasteItems,
   onChecklistDeleteItem: legacyOnChecklistDeleteItem,
   onChecklistDelete: legacyOnChecklistDelete,
@@ -209,6 +212,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistTitleChange: legacyOnChecklistTitleChange,
     onChecklistAddItem: legacyOnChecklistAddItem,
     onChecklistItemChange: legacyOnChecklistItemChange,
+    onChecklistItemSaveAndAddNext: legacyOnChecklistItemSaveAndAddNext,
     onChecklistPasteItems: legacyOnChecklistPasteItems,
     onChecklistDeleteItem: legacyOnChecklistDeleteItem,
     onChecklistDelete: legacyOnChecklistDelete,
@@ -249,6 +253,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistTitleChange,
     onChecklistAddItem,
     onChecklistItemChange,
+    onChecklistItemSaveAndAddNext,
     onChecklistPasteItems,
     onChecklistDeleteItem,
     onChecklistDelete,
@@ -657,6 +662,7 @@ export const TodoModalDetailsPanel = ({
           onChecklistTitleChange={(title) => onChecklistTitleChange?.(title)}
           onChecklistAddItem={() => onChecklistAddItem?.()}
           onChecklistItemChange={(itemId, updates) => onChecklistItemChange?.(itemId, updates)}
+          onChecklistItemSaveAndAddNext={(itemId, title) => onChecklistItemSaveAndAddNext?.(itemId, title)}
           onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles)}
           onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId)}
           onChecklistDelete={() => onChecklistDelete?.()}
@@ -673,6 +679,7 @@ export const TodoModalDetailsPanel = ({
               onChecklistTitleChange={(title) => onChecklistTitleChange?.(title, checklistIndex)}
               onChecklistAddItem={() => onChecklistAddItem?.(checklistIndex)}
               onChecklistItemChange={(itemId, updates) => onChecklistItemChange?.(itemId, updates, checklistIndex)}
+              onChecklistItemSaveAndAddNext={(itemId, title) => onChecklistItemSaveAndAddNext?.(itemId, title, checklistIndex)}
               onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles, checklistIndex)}
               onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId, checklistIndex)}
               onChecklistDelete={() => onChecklistDelete?.(checklistIndex)}

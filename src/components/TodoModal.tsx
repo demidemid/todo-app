@@ -514,6 +514,38 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
 
               await updateTodo(todo.id, buildChecklistUpdates(nextChecklists));
             },
+            onChecklistItemSaveAndAddNext: async (itemId, title, checklistIndex = 0) => {
+              const currentChecklists = getNormalizedChecklists();
+              const targetChecklist = currentChecklists[checklistIndex];
+              if (!targetChecklist) return;
+
+              const nextChecklists = currentChecklists.map((checklist, index) => {
+                if (index !== checklistIndex) return checklist;
+
+                const nextItems = targetChecklist.items.flatMap((item) => {
+                  if (item.id !== itemId) return [item];
+
+                  return [
+                    {
+                      ...item,
+                      title: title.trim(),
+                    },
+                    {
+                      id: createChecklistItemId(),
+                      title: '',
+                      checked: false,
+                    },
+                  ];
+                });
+
+                return {
+                  ...targetChecklist,
+                  items: nextItems,
+                };
+              });
+
+              await updateTodo(todo.id, buildChecklistUpdates(nextChecklists));
+            },
             onChecklistPasteItems: async (itemId, itemTitles, checklistIndex = 0) => {
               const normalizedTitles = itemTitles
                 .map((title) => title.trim())

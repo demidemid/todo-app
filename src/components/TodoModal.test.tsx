@@ -960,6 +960,43 @@ describe('TodoModal', () => {
     expect(newItemInput).toHaveValue('');
   });
 
+  it('saves current checklist item text and adds a new empty item on Shift+Enter', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: '', checked: false }],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'edited item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter', shiftKey: true });
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [
+            { id: 'item-1', title: 'edited item', checked: false },
+            expect.objectContaining({ title: '', checked: false }),
+          ],
+        },
+      });
+    });
+  });
+
   it('creates multiple checklist items when list text is pasted into item input', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
