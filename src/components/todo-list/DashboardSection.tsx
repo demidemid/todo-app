@@ -620,7 +620,7 @@ export const DashboardSection = ({
                   <div className="space-y-2">
                     {columnTodos.map((todo, index) => {
                       const dueState = getDueDateState(todo, new Date());
-                      const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
+                      const dueDateHint = todo.dueDate ? `The task must be completed before ${todo.dueDate}` : undefined;
                       const dueLabel = formatDueDateBadgeLabel(todo.dueDate);
 
                       return (
@@ -779,7 +779,7 @@ export const DashboardSection = ({
                             if (Date.now() < suppressCardClickUntilRef.current) return;
                             if (editingTodoId !== todo.id) onOpenTodoModal(todo);
                           }}
-                          className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-8 select-none transition-shadow duration-150 hover:shadow-lg ${
+                          className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-12 select-none transition-shadow duration-150 hover:shadow-lg ${
                             dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
                           } ${
                             touchDraggingTodoId === todo.id ? 'opacity-70 shadow-2xl ring-1 ring-cyan-300/60' : ''
@@ -938,7 +938,7 @@ export const DashboardSection = ({
                                   },
                                 ]}
                               />
-                              <div className="pointer-events-none absolute bottom-1 left-3 right-3 inline-flex items-center justify-between gap-2 text-[11px] font-medium text-white">
+                              <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
                                 <span className="inline-flex items-center gap-1">
                                   <MessageCircle size={12} className="text-white" aria-hidden="true" />
                                   <span>{todo.comments?.length ?? 0}</span>
@@ -991,7 +991,7 @@ export const DashboardSection = ({
 
       {touchDragPreview && touchPreviewTitle && (
         <div
-          className="pointer-events-none fixed z-[120] overflow-hidden rounded-lg border border-cyan-300/60 bg-slate-900/90 p-3 pb-8 text-sm font-semibold text-cyan-100 shadow-2xl shadow-cyan-900/40"
+          className="pointer-events-none fixed z-120 overflow-hidden rounded-lg border border-cyan-300/60 bg-slate-900/90 p-3 pb-8 text-sm font-semibold text-cyan-100 shadow-2xl shadow-cyan-900/40"
           style={{
             left: touchDragPreview.x - touchDragPreview.offsetX,
             top: touchDragPreview.y - touchDragPreview.offsetY,

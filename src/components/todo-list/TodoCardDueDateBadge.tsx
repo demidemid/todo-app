@@ -21,9 +21,10 @@ export const TodoCardDueDateBadge = ({ dueLabel, dueState, testId, title }: Todo
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}
+      className={`pointer-events-auto inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClassName}`}
       data-testid={testId}
       title={title}
+      aria-label={title}
     >
       <CalendarDays size={12} className="mr-1" aria-hidden="true" />
       {dueLabel}
