@@ -50,6 +50,7 @@ export interface Todo {
   files?: TodoFile[];
   links?: TodoLink[];
   checklist?: TodoChecklist;
+  checklists?: TodoChecklist[];
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>;

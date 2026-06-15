@@ -9,6 +9,7 @@ import { IconButton } from '../ui/IconButton';
 import { InlineEditableHeading } from '../ui/InlineEditableHeading';
 import { Input } from '../ui/Input';
 import { getDueDateState } from '../../utils/dueDate';
+import { normalizeTodoChecklists } from '../../utils/todoChecklist';
 import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
@@ -85,11 +86,12 @@ interface TodoModalDetailsPanelProps {
     onDeleteLink?: (linkIndex: number) => Promise<void> | void;
     onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
     onCreateChecklist?: () => Promise<void> | void;
-    onChecklistTitleChange?: (title: string) => Promise<void> | void;
-    onChecklistAddItem?: () => Promise<void> | void;
-    onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
-    onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
-    onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+    onChecklistTitleChange?: (title: string, checklistIndex?: number) => Promise<void> | void;
+    onChecklistAddItem?: (checklistIndex?: number) => Promise<void> | void;
+    onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }, checklistIndex?: number) => Promise<void> | void;
+    onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
+    onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
+    onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
     onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
@@ -119,16 +121,19 @@ interface TodoModalDetailsPanelProps {
   onDeleteLink?: (linkIndex: number) => Promise<void> | void;
   onAddLink?: (link: { name?: string; url: string }) => Promise<void> | void;
   onCreateChecklist?: () => Promise<void> | void;
-  onChecklistTitleChange?: (title: string) => Promise<void> | void;
-  onChecklistAddItem?: () => Promise<void> | void;
-  onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
-  onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
-  onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+  onChecklistTitleChange?: (title: string, checklistIndex?: number) => Promise<void> | void;
+  onChecklistAddItem?: (checklistIndex?: number) => Promise<void> | void;
+  onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }, checklistIndex?: number) => Promise<void> | void;
+  onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
+  onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
+  onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
   onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
   onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   onArchive?: () => void;
+  focusChecklistIndex?: number | null;
+  onChecklistAutoFocusHandled?: () => void;
 }
 
 export const TodoModalDetailsPanel = ({
@@ -167,8 +172,11 @@ export const TodoModalDetailsPanel = ({
   onChecklistItemChange: legacyOnChecklistItemChange,
   onChecklistPasteItems: legacyOnChecklistPasteItems,
   onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+  onChecklistDelete: legacyOnChecklistDelete,
   onDueDateChange: legacyOnDueDateChange,
   onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
+  focusChecklistIndex = null,
+  onChecklistAutoFocusHandled,
 }: TodoModalDetailsPanelProps) => {
   const resolvedState = state ?? {
     files: legacyFiles ?? [],
@@ -203,6 +211,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistItemChange: legacyOnChecklistItemChange,
     onChecklistPasteItems: legacyOnChecklistPasteItems,
     onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+    onChecklistDelete: legacyOnChecklistDelete,
     onDueDateChange: legacyOnDueDateChange,
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
@@ -242,6 +251,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistItemChange,
     onChecklistPasteItems,
     onChecklistDeleteItem,
+    onChecklistDelete,
     onDueDateChange,
     onRemindOneDayBeforeChange,
     onMoveToNextStatus,
@@ -269,6 +279,8 @@ export const TodoModalDetailsPanel = ({
   }, [todo.dueDate]);
 
   const dueDateState = getDueDateState(todo, new Date());
+  const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
+  const primaryChecklist = Array.isArray(todo.checklists) ? todo.checklists[0] : todo.checklist;
   const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
   const dueStateLabel = dueDateState === 'due_today'
     ? 'Today'
@@ -466,7 +478,6 @@ export const TodoModalDetailsPanel = ({
                           className="mb-2 w-full"
                         />
                         <Button
-                          type="button"
                           size="sm"
                           className="mb-2 w-full"
                           onClick={() => {
@@ -486,7 +497,6 @@ export const TodoModalDetailsPanel = ({
                           OK
                         </Button>
                         <Button
-                          type="button"
                           variant="ghost"
                           size="sm"
                           className="mb-2 w-full"
@@ -533,7 +543,6 @@ export const TodoModalDetailsPanel = ({
                         />
                         {linkError && <p className="mb-2 text-xs text-rose-300">{linkError}</p>}
                         <Button
-                          type="button"
                           size="sm"
                           className="w-full"
                           onClick={() => {
@@ -558,7 +567,6 @@ export const TodoModalDetailsPanel = ({
                 return (
                   <div className="relative z-10 mx-4 rounded-full bg-slate-900/95 px-1">
                     <Button
-                      type="button"
                       variant="secondary"
                       size="md"
                       className="px-3"
@@ -645,13 +653,34 @@ export const TodoModalDetailsPanel = ({
         )}
 
         <TodoChecklistSection
-          checklist={todo.checklist}
-          onChecklistTitleChange={onChecklistTitleChange}
-          onChecklistAddItem={onChecklistAddItem}
-          onChecklistItemChange={onChecklistItemChange}
-          onChecklistPasteItems={onChecklistPasteItems}
-          onChecklistDeleteItem={onChecklistDeleteItem}
+          checklist={primaryChecklist}
+          onChecklistTitleChange={(title) => onChecklistTitleChange?.(title)}
+          onChecklistAddItem={() => onChecklistAddItem?.()}
+          onChecklistItemChange={(itemId, updates) => onChecklistItemChange?.(itemId, updates)}
+          onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles)}
+          onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId)}
+          onChecklistDelete={() => onChecklistDelete?.()}
+          autoFocusOnMount={focusChecklistIndex === 0}
+          onAutoFocusHandled={focusChecklistIndex === 0 ? onChecklistAutoFocusHandled : undefined}
         />
+
+        {checklists.slice(1).map((checklist, relativeIndex) => {
+          const checklistIndex = relativeIndex + 1;
+          return (
+            <TodoChecklistSection
+              key={`checklist-${checklistIndex}-${checklist.title}`}
+              checklist={checklist}
+              onChecklistTitleChange={(title) => onChecklistTitleChange?.(title, checklistIndex)}
+              onChecklistAddItem={() => onChecklistAddItem?.(checklistIndex)}
+              onChecklistItemChange={(itemId, updates) => onChecklistItemChange?.(itemId, updates, checklistIndex)}
+              onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles, checklistIndex)}
+              onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId, checklistIndex)}
+              onChecklistDelete={() => onChecklistDelete?.(checklistIndex)}
+              autoFocusOnMount={focusChecklistIndex === checklistIndex}
+              onAutoFocusHandled={focusChecklistIndex === checklistIndex ? onChecklistAutoFocusHandled : undefined}
+            />
+          );
+        })}
 
         {isEditing ? (
           <>
@@ -856,10 +885,10 @@ export const TodoModalDetailsPanel = ({
         <div className="mt-4 border-t border-white/10 bg-slate-900/95 pt-4">
           {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onCancelEdit} disabled={saving}>
+            <Button variant="ghost" onClick={onCancelEdit} disabled={saving}>
               Cancel
             </Button>
-            <Button type="button" onClick={onSave} disabled={saving}>
+            <Button onClick={onSave} disabled={saving}>
               Save
             </Button>
           </div>

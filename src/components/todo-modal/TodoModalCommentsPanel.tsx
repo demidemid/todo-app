@@ -216,7 +216,6 @@ export const TodoModalCommentsPanel = ({
                   />
                   <div className="flex justify-end gap-2">
                     <Button
-                      type="button"
                       size="sm"
                       variant="ghost"
                       onClick={onCancelEditComment}
@@ -225,7 +224,6 @@ export const TodoModalCommentsPanel = ({
                       Cancel
                     </Button>
                     <Button
-                      type="button"
                       size="sm"
                       onClick={onSaveEditComment}
                       disabled={commentActionSubmittingId === comment.id || !editingCommentText.trim()}

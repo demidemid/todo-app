@@ -188,7 +188,6 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     <div>
       {viewMode === 'dashboards' && (
         <IconButton
-          type="button"
           variant="primary"
           onClick={() => controller.setIsCreateDashboardModalOpen(true)}
           data-testid="new-dashboard-button"

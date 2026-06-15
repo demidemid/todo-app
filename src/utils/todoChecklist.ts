@@ -55,3 +55,18 @@ export const normalizeTodoChecklist = (
     items: normalizedItems,
   };
 };
+
+export const normalizeTodoChecklists = (
+  checklists: Todo['checklists'],
+  fallbackChecklist?: Todo['checklist'],
+  options?: { createItemId?: () => string }
+): TodoChecklist[] => {
+  if (Array.isArray(checklists)) {
+    return checklists
+      .map((checklist) => normalizeTodoChecklist(checklist, options))
+      .filter((checklist): checklist is TodoChecklist => checklist !== null);
+  }
+
+  const normalizedFallback = normalizeTodoChecklist(fallbackChecklist, options);
+  return normalizedFallback ? [normalizedFallback] : [];
+};

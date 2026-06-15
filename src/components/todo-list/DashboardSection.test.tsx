@@ -435,6 +435,41 @@ describe('DashboardSection', () => {
     expect(screen.getByTestId('card-checklist-progress-todo-1')).toHaveTextContent('2/4');
   });
 
+  it('renders all checklist badges when card has multiple checklists', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      todo: [
+        {
+          ...todo,
+          checklists: [
+            {
+              title: 'Release checklist',
+              items: [
+                { id: 'i-1', title: 'One', checked: true },
+                { id: 'i-2', title: 'Two', checked: false },
+              ],
+            },
+            {
+              title: 'QA checklist',
+              items: [
+                { id: 'i-3', title: 'Three', checked: true },
+                { id: 'i-4', title: 'Four', checked: true },
+              ],
+            },
+          ],
+        },
+      ],
+      done: [],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-checklist-title-todo-1')).toHaveTextContent('Release checklist');
+    expect(screen.getByTestId('card-checklist-progress-todo-1')).toHaveTextContent('1/2');
+    expect(screen.getByTestId('card-checklist-title-todo-1-1')).toHaveTextContent('QA checklist');
+    expect(screen.getByTestId('card-checklist-progress-todo-1-1')).toHaveTextContent('2/2');
+  });
+
   it('uses red checklist badge below 25 percent completion', () => {
     const props = createProps();
     props.groupedTodos = {

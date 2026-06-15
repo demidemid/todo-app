@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist, parseChecklistItemTitles } from './todoChecklist';
+import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist, normalizeTodoChecklists, parseChecklistItemTitles } from './todoChecklist';
 
 describe('parseChecklistItemTitles', () => {
   it('splits multi-line text into checklist item titles', () => {
@@ -103,5 +103,30 @@ describe('normalizeTodoChecklist', () => {
       title: 'Checklist',
       items: [{ id: 'generated-id', title: 'item', checked: false }],
     });
+  });
+});
+
+describe('normalizeTodoChecklists', () => {
+  it('normalizes checklist array when present', () => {
+    expect(
+      normalizeTodoChecklists([
+        { title: '  First  ', items: [{ id: 'i-1', title: ' one ', checked: false }] },
+        { title: 'Second', items: [] },
+      ], undefined)
+    ).toEqual([
+      { title: 'First', items: [{ id: 'i-1', title: 'one', checked: false }] },
+      { title: 'Second', items: [] },
+    ]);
+  });
+
+  it('falls back to legacy single checklist when array is missing', () => {
+    expect(
+      normalizeTodoChecklists(undefined, {
+        title: 'Legacy',
+        items: [{ id: 'legacy-item', title: 'item', checked: false }],
+      })
+    ).toEqual([
+      { title: 'Legacy', items: [{ id: 'legacy-item', title: 'item', checked: false }] },
+    ]);
   });
 });

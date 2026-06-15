@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Plus, X } from 'lucide-react';
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist, parseChecklistItemTitles } from '../../utils/todoChecklist';
+import { Button } from '../ui/Button';
+import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
-import { InlineEditableHeading } from '../ui/InlineEditableHeading';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
 
 interface TodoChecklistSectionProps {
@@ -14,6 +15,9 @@ interface TodoChecklistSectionProps {
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
   onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+  onChecklistDelete?: () => Promise<void> | void;
+  autoFocusOnMount?: boolean;
+  onAutoFocusHandled?: () => void;
 }
 
 export const TodoChecklistSection = ({
@@ -23,17 +27,22 @@ export const TodoChecklistSection = ({
   onChecklistItemChange,
   onChecklistPasteItems,
   onChecklistDeleteItem,
+  onChecklistDelete,
+  autoFocusOnMount = false,
+  onAutoFocusHandled,
 }: TodoChecklistSectionProps) => {
   const checklist = useMemo(() => normalizeTodoChecklist(rawChecklist), [rawChecklist]);
 
   const [isEditingChecklistTitle, setIsEditingChecklistTitle] = useState(false);
   const [checklistTitleDraft, setChecklistTitleDraft] = useState('');
+  const [showDeleteChecklistWarning, setShowDeleteChecklistWarning] = useState(false);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
   const [checklistItemTitleDraft, setChecklistItemTitleDraft] = useState('');
   const [focusNewChecklistItem, setFocusNewChecklistItem] = useState(false);
   const checklistItems = useMemo(() => checklist?.items ?? [], [checklist]);
   const previousChecklistItemIdsRef = useRef<string[]>(checklistItems.map((item) => item.id));
   const hadChecklistRef = useRef(Boolean(checklist));
+  const hasHandledAutoFocusOnMountRef = useRef(false);
 
   const saveChecklistTitle = async () => {
     if (!onChecklistTitleChange || !checklist) {
@@ -119,6 +128,18 @@ export const TodoChecklistSection = ({
   };
 
   useEffect(() => {
+    if (autoFocusOnMount && !hasHandledAutoFocusOnMountRef.current && checklist && editingChecklistItemId === null) {
+      const firstItem = checklistItems[0];
+      if (firstItem && firstItem.title.trim() === '') {
+        queueMicrotask(() => {
+          startChecklistItemEdit(firstItem.id, firstItem.title);
+        });
+      }
+
+      hasHandledAutoFocusOnMountRef.current = true;
+      onAutoFocusHandled?.();
+    }
+
     const currentItemIds = checklistItems.map((item) => item.id);
     const hadChecklist = hadChecklistRef.current;
 
@@ -143,7 +164,7 @@ export const TodoChecklistSection = ({
 
     previousChecklistItemIdsRef.current = currentItemIds;
     hadChecklistRef.current = Boolean(checklist);
-  }, [checklist, checklistItems, editingChecklistItemId, focusNewChecklistItem]);
+  }, [autoFocusOnMount, checklist, checklistItems, editingChecklistItemId, focusNewChecklistItem, onAutoFocusHandled]);
 
   const handleAddChecklistItem = async () => {
     if (!onChecklistAddItem) {
@@ -157,6 +178,22 @@ export const TodoChecklistSection = ({
     } catch {
       setFocusNewChecklistItem(false);
     }
+  };
+
+  const hasUncheckedItems = checklistItems.some((item) => !item.checked);
+
+  const handleDeleteChecklist = async () => {
+    if (!onChecklistDelete) {
+      return;
+    }
+
+    if (hasUncheckedItems && !showDeleteChecklistWarning) {
+      setShowDeleteChecklistWarning(true);
+      return;
+    }
+
+    await onChecklistDelete();
+    setShowDeleteChecklistWarning(false);
   };
 
   if (!checklist) return null;
@@ -178,34 +215,71 @@ export const TodoChecklistSection = ({
             data-testid="todo-checklist-title-input"
           />
         ) : (
-          <div className="flex items-center gap-2">
-            <h3 className="text-left text-xs font-semibold uppercase tracking-wide text-slate-300" data-testid="todo-checklist-title">
-              <InlineEditableHeading
-                text={checklist.title}
-                onStartEdit={() => {
-                  setChecklistTitleDraft(checklist.title);
-                  setIsEditingChecklistTitle(true);
-                }}
-                editLabel="Edit checklist title"
-                editButtonTestId="todo-checklist-title-edit"
-              />
-            </h3>
-          </div>
+          <h3 className="min-w-0 flex-1 truncate text-xs font-semibold uppercase leading-none tracking-wide text-slate-300" data-testid="todo-checklist-title">
+            {checklist.title}
+          </h3>
         )}
 
-        <IconButton
-          variant="neutral"
-          size="sm"
-          label="Add checklist item"
-          className="h-7! w-7! rounded-full! p-0!"
-          onClick={() => {
-            void handleAddChecklistItem();
+        <EllipsisMenu
+          trigger={{
+            label: 'Checklist actions',
+            testId: 'todo-checklist-actions-trigger',
           }}
-          data-testid="todo-checklist-add-item"
-        >
-          <Plus size={14} />
-        </IconButton>
+          menu={{ testId: 'todo-checklist-actions-menu' }}
+          items={[
+            {
+              id: 'add-item',
+              label: 'Add new item',
+              icon: <Plus size={14} />,
+              onSelect: () => void handleAddChecklistItem(),
+              testId: 'todo-checklist-add-item',
+            },
+            {
+              id: 'rename',
+              label: 'Rename',
+              icon: <Pencil size={14} />,
+              onSelect: () => {
+                setChecklistTitleDraft(checklist.title);
+                setIsEditingChecklistTitle(true);
+              },
+              testId: 'todo-checklist-title-edit',
+            },
+            {
+              id: 'delete',
+              label: 'Delete',
+              icon: <Trash2 size={14} />,
+              variant: 'danger',
+              onSelect: () => void handleDeleteChecklist(),
+              testId: 'todo-checklist-delete',
+            },
+          ]}
+        />
       </div>
+
+      {showDeleteChecklistWarning && (
+        <div className="mb-2 rounded-md border border-amber-300/40 bg-amber-300/10 p-2 text-xs text-amber-100" data-testid="todo-checklist-delete-warning">
+          <p className="mb-2">This checklist has unfinished items. Delete it anyway?</p>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                void handleDeleteChecklist();
+              }}
+              data-testid="todo-checklist-delete-confirm"
+            >
+              Delete checklist
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowDeleteChecklistWarning(false)}
+              data-testid="todo-checklist-delete-cancel"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       <ul className="space-y-1.5">
         {checklist.items.map((item) => (
@@ -276,7 +350,7 @@ export const TodoChecklistSection = ({
               }}
               data-testid={`todo-checklist-delete-${item.id}`}
             >
-              <X size={12} />
+              <Trash2 size={12} />
             </IconButton>
           </li>
         ))}
