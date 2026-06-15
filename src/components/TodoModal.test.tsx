@@ -854,6 +854,44 @@ describe('TodoModal', () => {
     });
   });
 
+  it('does not persist empty checklist items when saving checklist title', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'My checklist',
+        items: [
+          { id: 'item-1', title: 'first item', checked: false },
+          { id: 'item-empty', title: '   ', checked: false },
+        ],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
+    fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Renamed checklist' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'Renamed checklist',
+          items: [{ id: 'item-1', title: 'first item', checked: false }],
+        },
+      });
+    });
+  });
+
   it('focuses new checklist item input and keeps it empty after adding item', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
@@ -920,6 +958,43 @@ describe('TodoModal', () => {
     const newItemInput = await screen.findByTestId(`todo-checklist-item-input-${String(addedItemId)}`);
     expect(newItemInput).toHaveFocus();
     expect(newItemInput).toHaveValue('');
+  });
+
+  it('saves current checklist item text and adds a new empty item on Shift+Enter', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: '', checked: false }],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'edited item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter', shiftKey: true });
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [
+            { id: 'item-1', title: 'edited item', checked: false },
+            expect.objectContaining({ title: '', checked: false }),
+          ],
+        },
+      });
+    });
   });
 
   it('creates multiple checklist items when list text is pasted into item input', async () => {
