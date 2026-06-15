@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { getEllipsisMenuItemClassName } from '../ui/ellipsisMenuStyles';
 import { IconButton } from '../ui/IconButton';
+import { InlineEditableHeading } from '../ui/InlineEditableHeading';
 import { Input } from '../ui/Input';
 import { getDueDateState } from '../../utils/dueDate';
 import { TodoChecklistSection } from './TodoChecklistSection';
@@ -375,30 +376,7 @@ export const TodoModalDetailsPanel = ({
         ) : !isEditing && (
           <div className="mb-4 flex items-start justify-between gap-3 pr-10">
              <h2 className="text-xl font-bold leading-tight text-white">
-               {/* Render all but last word as normal, last word + pencil in nowrap span */}
-               {(() => {
-                 const words = title.trim().split(/\s+/);
-                 if (words.length === 0) return null;
-                 if (words.length === 1) {
-                   return (
-                     <span className="inline-flex items-center whitespace-nowrap">
-                       {words[0]}
-                       <IconButton variant="neutral" size="md" label="Edit title" onClick={onStartEditTitle} className="ml-2 align-middle">
-                         <Pencil size={14} />
-                       </IconButton>
-                     </span>
-                   );
-                 }
-                 return [
-                   words.slice(0, -1).join(' ') + ' ',
-                   <span key="nowrap" className="inline-flex items-center whitespace-nowrap">
-                     {words[words.length - 1]}
-                     <IconButton variant="neutral" size="md" label="Edit title" onClick={onStartEditTitle} className="ml-2 align-middle">
-                       <Pencil size={14} />
-                     </IconButton>
-                   </span>,
-                 ];
-               })()}
+               <InlineEditableHeading text={title} onStartEdit={onStartEditTitle} editLabel="Edit title" />
              </h2>
           </div>
         )}

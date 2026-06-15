@@ -605,7 +605,7 @@ describe('TodoModal', () => {
     expect(checklistSection.compareDocumentPosition(filesLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(checklistSection.compareDocumentPosition(linksLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    fireEvent.click(screen.getByTestId('todo-checklist-title'));
+    fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
     fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Sprint checklist' } });
     fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
 
@@ -698,7 +698,7 @@ describe('TodoModal', () => {
       />,
     );
 
-    fireEvent.click(screen.getByTestId('todo-checklist-title'));
+    fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
     fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: '   ' } });
     fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
 
