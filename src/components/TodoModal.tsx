@@ -50,6 +50,13 @@ const createChecklistItemId = () => (
     : `check-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 );
 
+const sanitizeChecklistItemsForPersist = <T extends { title: string }>(items: T[]): T[] => items
+  .map((item) => ({
+    ...item,
+    title: item.title.trim(),
+  }))
+  .filter((item) => item.title.length > 0);
+
 const isEditableTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -446,11 +453,14 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
               const targetChecklist = currentChecklists[checklistIndex];
               if (!targetChecklist) return;
 
+              const nextItems = sanitizeChecklistItemsForPersist(targetChecklist.items);
+
               const nextChecklists = currentChecklists.map((checklist, index) => (
                 index === checklistIndex
                   ? {
                     ...targetChecklist,
                     title: nextTitle.trim() || DEFAULT_CHECKLIST_TITLE,
+                    items: nextItems,
                   }
                   : checklist
               ));

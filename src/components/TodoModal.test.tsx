@@ -854,6 +854,44 @@ describe('TodoModal', () => {
     });
   });
 
+  it('does not persist empty checklist items when saving checklist title', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'My checklist',
+        items: [
+          { id: 'item-1', title: 'first item', checked: false },
+          { id: 'item-empty', title: '   ', checked: false },
+        ],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
+    fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Renamed checklist' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'Renamed checklist',
+          items: [{ id: 'item-1', title: 'first item', checked: false }],
+        },
+      });
+    });
+  });
+
   it('focuses new checklist item input and keeps it empty after adding item', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
