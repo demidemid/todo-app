@@ -515,6 +515,40 @@ describe('TodoModal', () => {
     });
   });
 
+  it('creates another checklist when one already exists', async () => {
+    render(
+      <TodoModal
+        todo={{
+          ...todo,
+          checklist: {
+            title: 'Existing checklist',
+            items: [{ id: 'item-1', title: 'old', checked: false }],
+          },
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-checklist'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith(
+        'todo-1',
+        expect.objectContaining({
+          checklists: expect.arrayContaining([
+            expect.objectContaining({ title: 'Existing checklist' }),
+            expect.objectContaining({ title: 'check list' }),
+          ]),
+        })
+      );
+    });
+  });
+
   it('focuses first checklist item input when checklist is created from plus actions menu', async () => {
     const { rerender } = render(
       <TodoModal
@@ -565,6 +599,98 @@ describe('TodoModal', () => {
     expect(firstItemInput).toHaveValue('');
   });
 
+  it('focuses first item of newly created second checklist', async () => {
+    const existingChecklistTodo: Todo = {
+      ...todo,
+      checklist: {
+        title: 'Existing checklist',
+        items: [{ id: 'item-1', title: 'old item', checked: false }],
+      },
+    };
+
+    const { rerender } = render(
+      <TodoModal
+        todo={existingChecklistTodo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-actions-checklist'));
+
+    const checklistUpdateCall = await waitFor(() => {
+      const call = updateTodo.mock.calls.find(([, payload]) => {
+        const updates = payload as Partial<Todo> | undefined;
+        return Array.isArray(updates?.checklists) && updates.checklists.length === 2;
+      });
+
+      expect(call).toBeDefined();
+      return call as [string, Partial<Todo>];
+    });
+
+    const nextChecklists = checklistUpdateCall[1].checklists;
+    const secondChecklistFirstItemId = nextChecklists?.[1]?.items?.[0]?.id;
+    expect(typeof secondChecklistFirstItemId).toBe('string');
+
+    rerender(
+      <TodoModal
+        todo={{
+          ...existingChecklistTodo,
+          checklist: nextChecklists?.[0],
+          checklists: nextChecklists,
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    const newChecklistInput = await screen.findByTestId(`todo-checklist-item-input-${String(secondChecklistFirstItemId)}`);
+    expect(newChecklistInput).toHaveFocus();
+    expect(newChecklistInput).toHaveValue('');
+  });
+
+  it('shows warning and deletes checklist after confirmation when there are unfinished items', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'unfinished', checked: false }],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
+    fireEvent.click(screen.getByTestId('todo-checklist-delete'));
+
+    expect(screen.getByTestId('todo-checklist-delete-warning')).toBeInTheDocument();
+    expect(updateTodo).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId('todo-checklist-delete-confirm'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklists: [],
+      });
+    });
+  });
+
   it('renders checklist above files and links and allows title/item edit and checkbox toggle', async () => {
     const todoWithChecklist: Todo = {
       ...todo,
@@ -605,6 +731,7 @@ describe('TodoModal', () => {
     expect(checklistSection.compareDocumentPosition(filesLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(checklistSection.compareDocumentPosition(linksLabel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
     fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
     fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Sprint checklist' } });
     fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
@@ -663,6 +790,7 @@ describe('TodoModal', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
     fireEvent.click(screen.getByTestId('todo-checklist-add-item'));
 
     await waitFor(() => {
@@ -698,6 +826,7 @@ describe('TodoModal', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
     fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
     fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: '   ' } });
     fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
@@ -745,6 +874,7 @@ describe('TodoModal', () => {
       />,
     );
 
+    fireEvent.click(screen.getByTestId('todo-checklist-actions-trigger'));
     fireEvent.click(screen.getByTestId('todo-checklist-add-item'));
 
     await waitFor(() => {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
-import { normalizeTodoChecklist } from '../../utils/todoChecklist';
+import { normalizeTodoChecklists } from '../../utils/todoChecklist';
 import { getDueDateState } from '../../utils/dueDate';
 import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
@@ -348,7 +348,9 @@ export const DashboardSection = ({
     : null;
   const touchPreviewDueState = touchPreviewTodo ? getDueDateState(touchPreviewTodo, new Date()) : null;
   const touchPreviewDueLabel = formatDueDateBadgeLabel(touchPreviewTodo?.dueDate);
-  const touchPreviewChecklist = touchPreviewTodo ? normalizeTodoChecklist(touchPreviewTodo.checklist) : null;
+  const touchPreviewChecklist = touchPreviewTodo
+    ? (normalizeTodoChecklists(touchPreviewTodo.checklists, touchPreviewTodo.checklist)[0] ?? null)
+    : null;
   const touchPreviewChecklistClosed = touchPreviewChecklist
     ? touchPreviewChecklist.items.filter((item) => item.checked).length
     : 0;
@@ -867,25 +869,32 @@ export const DashboardSection = ({
                                   </span>
                                 )}
                                 {(() => {
-                                  const checklist = normalizeTodoChecklist(todo.checklist);
-                                  if (!checklist) return null;
-
-                                  const checklistTitle = checklist.title;
-                                  const totalItems = checklist.items.length;
-                                  const closedItems = checklist.items.filter((item) => item.checked).length;
-                                  const checklistBadgePalette = getChecklistBadgePalette(closedItems, totalItems);
+                                  const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
+                                  if (checklists.length === 0) return null;
 
                                   return (
-                                    <div
-                                      className={`mt-2 inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${checklistBadgePalette}`}
-                                      data-testid={`card-checklist-badge-${todo.id}`}
-                                    >
-                                      <span className="truncate" data-testid={`card-checklist-title-${todo.id}`}>
-                                        {checklistTitle}
-                                      </span>
-                                      <span className="shrink-0" data-testid={`card-checklist-progress-${todo.id}`}>
-                                        {closedItems}/{totalItems}
-                                      </span>
+                                    <div className="mt-2 space-y-1.5">
+                                      {checklists.map((checklist, checklistIndex) => {
+                                        const totalItems = checklist.items.length;
+                                        const closedItems = checklist.items.filter((item) => item.checked).length;
+                                        const checklistBadgePalette = getChecklistBadgePalette(closedItems, totalItems);
+                                        const suffix = checklistIndex === 0 ? '' : `-${checklistIndex}`;
+
+                                        return (
+                                          <div
+                                            key={`checklist-badge-${todo.id}-${checklistIndex}`}
+                                            className={`inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${checklistBadgePalette}`}
+                                            data-testid={`card-checklist-badge-${todo.id}${suffix}`}
+                                          >
+                                            <span className="truncate" data-testid={`card-checklist-title-${todo.id}${suffix}`}>
+                                              {checklist.title}
+                                            </span>
+                                            <span className="shrink-0" data-testid={`card-checklist-progress-${todo.id}${suffix}`}>
+                                              {closedItems}/{totalItems}
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
                                     </div>
                                   );
                                 })()}
