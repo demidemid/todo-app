@@ -13,6 +13,7 @@ interface TodoChecklistSectionProps {
   onChecklistTitleChange?: (title: string) => Promise<void> | void;
   onChecklistAddItem?: () => Promise<void> | void;
   onChecklistItemChange?: (itemId: string, updates: { title?: string; checked?: boolean }) => Promise<void> | void;
+  onChecklistItemSaveAndAddNext?: (itemId: string, title: string) => Promise<void> | void;
   onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
   onChecklistDelete?: () => Promise<void> | void;
@@ -25,6 +26,7 @@ export const TodoChecklistSection = ({
   onChecklistTitleChange,
   onChecklistAddItem,
   onChecklistItemChange,
+  onChecklistItemSaveAndAddNext,
   onChecklistPasteItems,
   onChecklistDeleteItem,
   onChecklistDelete,
@@ -76,6 +78,41 @@ export const TodoChecklistSection = ({
     cancelChecklistItemEdit();
   };
 
+  const saveChecklistItemTitleAndCreateNext = async () => {
+    if (!editingChecklistItemId) return;
+
+    if (onChecklistItemSaveAndAddNext) {
+      setFocusNewChecklistItem(true);
+
+      try {
+        await onChecklistItemSaveAndAddNext(editingChecklistItemId, checklistItemTitleDraft);
+      } catch {
+        setFocusNewChecklistItem(false);
+      }
+      return;
+    }
+
+    if (!onChecklistItemChange) {
+      cancelChecklistItemEdit();
+      return;
+    }
+
+    await onChecklistItemChange(editingChecklistItemId, { title: checklistItemTitleDraft });
+    cancelChecklistItemEdit();
+
+    if (!onChecklistAddItem) {
+      return;
+    }
+
+    setFocusNewChecklistItem(true);
+
+    try {
+      await onChecklistAddItem();
+    } catch {
+      setFocusNewChecklistItem(false);
+    }
+  };
+
   const handleChecklistTitleEnter = useHotkeyHandler('enter', (event) => {
     event.preventDefault();
     void saveChecklistTitle();
@@ -94,6 +131,12 @@ export const TodoChecklistSection = ({
 
   const handleChecklistItemEnter = useHotkeyHandler('enter', (event) => {
     event.preventDefault();
+
+    if (event.shiftKey) {
+      void saveChecklistItemTitleAndCreateNext();
+      return;
+    }
+
     void saveChecklistItemTitle();
   });
 

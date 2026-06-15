@@ -9,6 +9,50 @@ const checklist: NonNullable<Todo['checklist']> = {
 };
 
 describe('TodoChecklistSection paste behavior', () => {
+  it('saves checklist item on Enter', async () => {
+    const onChecklistItemChange = vi.fn().mockResolvedValue(undefined);
+    const onChecklistAddItem = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        onChecklistItemChange={onChecklistItemChange}
+        onChecklistAddItem={onChecklistAddItem}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'edited item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(onChecklistItemChange).toHaveBeenCalledWith('item-1', { title: 'edited item' });
+    });
+    expect(onChecklistAddItem).not.toHaveBeenCalled();
+  });
+
+  it('saves checklist item and creates next one on Shift+Enter', async () => {
+    const onChecklistItemChange = vi.fn().mockResolvedValue(undefined);
+    const onChecklistAddItem = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        onChecklistItemChange={onChecklistItemChange}
+        onChecklistAddItem={onChecklistAddItem}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-title-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'edited item' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter', shiftKey: true });
+
+    await waitFor(() => {
+      expect(onChecklistItemChange).toHaveBeenCalledWith('item-1', { title: 'edited item' });
+      expect(onChecklistAddItem).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('parses semicolon-separated pasted text and forwards multiple items', async () => {
     const onChecklistPasteItems = vi.fn().mockResolvedValue(undefined);
 
