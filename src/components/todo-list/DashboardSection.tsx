@@ -3,10 +3,9 @@ import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklists } from '../../utils/todoChecklist';
 import { formatDueDateBadgeLabel, getDueDateState } from '../../utils/dueDate';
-import { EllipsisMenu } from '../ui/EllipsisMenu';
-import { IconButton } from '../ui/IconButton';
-import { Archive, Pencil, Share2, Trash2 } from 'lucide-react';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
+import { DashboardColumn as DashboardColumnSection } from './DashboardColumn';
+import { DashboardSectionHeader } from './DashboardSectionHeader';
 import { DashboardTodoCardContent } from './DashboardTodoCardContent';
 import { DashboardTouchDragPreview } from './DashboardTouchDragPreview';
 import { getChecklistBadgePalette } from './checklistBadgePalette';
@@ -402,96 +401,22 @@ export const DashboardSection = ({
       onDragOver={onDashboardDragOver}
       onDrop={onDashboardDrop}
     >
-      <div
-        className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3"
-        role="button"
-        tabIndex={0}
-        aria-expanded={isExpanded}
-        onClick={toggleDashboard}
+      <DashboardSectionHeader
+        dashboardId={dashboard.id}
+        dashboardName={dashboard.name}
+        dashboardsLength={dashboardsLength}
+        canManageDashboard={canManageDashboard}
+        isExpanded={isExpanded}
+        completedCount={completedCount}
+        onToggle={toggleDashboard}
         onKeyDown={handleHeaderKeyDown}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <IconButton
-            variant="neutral"
-            size="sm"
-            label="Drag dashboard"
-            data-testid={`dashboard-drag-handle-${dashboard.id}`}
-            className={canManageDashboard ? 'cursor-grab active:cursor-grabbing' : 'cursor-not-allowed opacity-60'}
-            draggable={canManageDashboard}
-            disabled={!canManageDashboard}
-            onDragStart={(event) => {
-              if (!canManageDashboard) {
-                event.preventDefault();
-                return;
-              }
-
-              event.stopPropagation();
-              if (event.dataTransfer) {
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', dashboard.id);
-              }
-              onDashboardDragStart?.();
-            }}
-            onDragEnd={() => {
-              onDashboardDragEnd?.();
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </IconButton>
-
-          <span className="truncate text-sm font-semibold text-slate-100">{dashboard.name}</span>
-        </div>
-
-        {canManageDashboard && (
-          <EllipsisMenu
-            trigger={{
-              label: 'Open dashboard actions',
-              testId: `dashboard-actions-trigger-${dashboard.id}`,
-            }}
-            menu={{
-              testId: `dashboard-actions-menu-${dashboard.id}`,
-              ariaLabel: `Dashboard actions for ${dashboard.name}`,
-            }}
-            stopPropagation
-            items={[
-              {
-                id: 'share',
-                label: 'Share',
-                icon: <Share2 size={14} aria-hidden="true" />,
-                onSelect: () => onOpenShareDashboard?.(dashboard.id),
-                testId: `share-dashboard-button-${dashboard.id}`,
-              },
-              {
-                id: 'edit',
-                label: 'Edit',
-                icon: <Pencil size={14} aria-hidden="true" />,
-                onSelect: () => onOpenEditDashboard(dashboard.id),
-                testId: `edit-dashboard-button-${dashboard.id}`,
-              },
-              {
-                id: 'archive-all-completed',
-                label: 'Archive all completed',
-                icon: <Archive size={14} aria-hidden="true" />,
-                onSelect: () => onArchiveAllCompleted?.(dashboard.id),
-                testId: `archive-completed-dashboard-button-${dashboard.id}`,
-                disabled: !isExpanded || completedCount === 0,
-              },
-              {
-                id: 'delete',
-                label: 'Delete',
-                icon: <Trash2 size={14} aria-hidden="true" />,
-                onSelect: () => onDeleteDashboard(dashboard.id, dashboard.name),
-                testId: `delete-dashboard-button-${dashboard.id}`,
-                variant: 'danger',
-                disabled: dashboardsLength <= 1,
-              },
-            ]}
-          />
-        )}
-
-      </div>
+        onDashboardDragStart={onDashboardDragStart}
+        onDashboardDragEnd={onDashboardDragEnd}
+        onOpenEditDashboard={onOpenEditDashboard}
+        onDeleteDashboard={onDeleteDashboard}
+        onOpenShareDashboard={onOpenShareDashboard}
+        onArchiveAllCompleted={onArchiveAllCompleted}
+      />
 
       {isExpanded && (
         <div className="border-t border-white/10 p-4">
@@ -504,59 +429,19 @@ export const DashboardSection = ({
               const columnTodos = groupedTodos[column.id] ?? [];
 
               return (
-                <section
+                <DashboardColumnSection
                   key={column.id}
-                  data-testid={`column-${column.id}`}
-                  data-touch-column-id={column.id}
-                  data-touch-column-length={columnTodos.length}
-                  className={`rounded-xl border bg-slate-800/50 p-3 transition-colors ${
-                    dropTarget?.columnId === column.id
-                      ? 'border-cyan-200/70'
-                      : 'border-white/10'
-                  }`}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    if (!dragState) return;
-
-                    onSetDropTarget({ columnId: column.id, index: columnTodos.length });
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    if (!dragState) return;
-
-                    const targetIndex =
-                      dropTarget?.columnId === column.id
-                        ? dropTarget.index
-                        : columnTodos.length;
-
-                    void onMoveTodo(dragState.todoId, column.id, targetIndex);
-                    onSetDragState(null);
-                    onSetDropTarget(null);
-                  }}
+                  dashboardId={dashboard.id}
+                  column={column}
+                  columnTodos={columnTodos}
+                  dropTarget={dropTarget}
+                  dragState={dragState}
+                  onOpenCreateCard={onOpenCreateCard}
+                  onSetDropTarget={onSetDropTarget}
+                  onMoveTodo={onMoveTodo}
+                  onSetDragState={onSetDragState}
                 >
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">{column.name}</h3>
-                      <IconButton
-                        variant="primary"
-                        onClick={() => onOpenCreateCard(dashboard.id, column.id)}
-                        data-testid={`new-card-button-${dashboard.id}-${column.id}`}
-                        label={`Add card to ${column.name}`}
-                        size="sm"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M12 5v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                          <path d="M5 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                        </svg>
-                      </IconButton>
-                    </div>
-                    <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-xs text-slate-300">
-                      {columnTodos.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {columnTodos.map((todo, index) => {
+                  {columnTodos.map((todo, index) => {
                       const dueState = getDueDateState(todo, new Date());
                       const dueDateHint = todo.dueDate ? `The task must be completed before ${todo.dueDate}` : undefined;
                       const dueLabel = formatDueDateBadgeLabel(todo.dueDate);
@@ -745,26 +630,7 @@ export const DashboardSection = ({
                       </div>
                       );
                     })}
-
-                    <div
-                      data-testid={`drop-${column.id}-end`}
-                      className="h-0 overflow-hidden"
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                        onSetDropTarget({ columnId: column.id, index: columnTodos.length });
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (!dragState) return;
-
-                        void onMoveTodo(dragState.todoId, column.id, columnTodos.length);
-                        onSetDragState(null);
-                        onSetDropTarget(null);
-                      }}
-                    />
-                  </div>
-                </section>
+                </DashboardColumnSection>
               );
             })}
 
