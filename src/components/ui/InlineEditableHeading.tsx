@@ -9,10 +9,12 @@ interface InlineEditableHeadingProps {
 }
 
 export const InlineEditableHeading = ({ text, onStartEdit, editLabel, editButtonTestId }: InlineEditableHeadingProps) => {
-  const words = text.trim().split(/\s+/);
-  if (words.length === 0) {
+  const trimmed = text.trim();
+  if (!trimmed) {
     return null;
   }
+
+  const words = trimmed.split(/\s+/);
 
   const editButton = (
     <IconButton
