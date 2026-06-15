@@ -1,6 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
-import { connectFirestoreEmulator, enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 import { connectStorageEmulator, getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -15,11 +21,19 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+const useFirebaseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+const supportsIndexedDb = typeof window !== 'undefined' && 'indexedDB' in window;
+
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = !useFirebaseEmulators && supportsIndexedDb
+  ? initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    })
+  : getFirestore(app);
 export const storage = getStorage(app);
 
-const useFirebaseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
 const emulatorHost = import.meta.env.VITE_FIREBASE_EMULATOR_HOST ?? '127.0.0.1';
 const firestoreEmulatorPort = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT ?? 8080);
 const authEmulatorPort = Number(import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_PORT ?? 9099);
@@ -37,13 +51,3 @@ if (useFirebaseEmulators) {
   }
 }
 
-// Включити offline persistence для Firestore
-if (!useFirebaseEmulators) {
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-    } else if (err.code === 'unimplemented') {
-      console.log('The current browser does not support all of the features required to enable persistence');
-    }
-  });
-}

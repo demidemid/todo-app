@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc, type FirestoreError } from 'firebase/firestore'
 import { useSearchParams } from 'react-router-dom'
@@ -22,6 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [authActionError, setAuthActionError] = useState('')
+  const syncedProfileKeyRef = useRef<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
 
@@ -46,13 +47,38 @@ function App() {
       setLoading(false)
 
       if (currentUser?.email) {
+        const normalizedEmail = currentUser.email.trim().toLowerCase()
+        const profileKey = `${currentUser.uid}:${normalizedEmail}`
+
+        if (syncedProfileKeyRef.current === profileKey) {
+          return
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          return
+        }
+
+        syncedProfileKeyRef.current = profileKey
+
         void setDoc(
           doc(db, 'users', currentUser.uid),
           {
-            email: currentUser.email.trim().toLowerCase(),
+            email: normalizedEmail,
             updatedAt: serverTimestamp(),
           }
         ).catch((profileError) => {
+          if (profileError instanceof Error) {
+            const normalizedMessage = profileError.message.toLowerCase()
+
+            if (
+              normalizedMessage.includes('network-request-failed')
+              || normalizedMessage.includes('err_connection_closed')
+              || normalizedMessage.includes('securetoken.googleapis.com')
+            ) {
+              return
+            }
+          }
+
           if (profileError instanceof Error && profileError.message.includes('ERR_BLOCKED_BY_CLIENT')) {
             return
           }
@@ -61,8 +87,11 @@ function App() {
             return
           }
 
+          syncedProfileKeyRef.current = null
           console.warn('Failed to sync user profile to Firestore', profileError)
         })
+      } else {
+        syncedProfileKeyRef.current = null
       }
     })
 
