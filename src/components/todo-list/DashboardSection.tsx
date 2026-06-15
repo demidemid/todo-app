@@ -8,7 +8,7 @@ import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
-import { Archive, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
+import { Archive, CalendarDays, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
 
@@ -70,6 +70,27 @@ const getChecklistBadgePalette = (closedItems: number, totalItems: number): stri
   }
 
   return 'border-emerald-300/35 bg-emerald-300/15 text-emerald-100';
+};
+
+const DUE_DATE_MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatDueDateBadgeLabel = (dueDate: string | null | undefined): string | null => {
+  if (!dueDate) {
+    return null;
+  }
+
+  const match = dueDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return dueDate;
+  }
+
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (Number.isNaN(day) || monthIndex < 0 || monthIndex >= DUE_DATE_MONTHS_EN.length) {
+    return dueDate;
+  }
+
+  return `${day} ${DUE_DATE_MONTHS_EN[monthIndex]}`;
 };
 
 interface DragState {
@@ -326,13 +347,7 @@ export const DashboardSection = ({
     ? (todoById.get(touchDragPreview.todoId) ?? null)
     : null;
   const touchPreviewDueState = touchPreviewTodo ? getDueDateState(touchPreviewTodo, new Date()) : null;
-  const touchPreviewDueLabel = touchPreviewDueState === 'due_today'
-    ? 'Today'
-    : touchPreviewDueState === 'due_tomorrow'
-      ? 'Tomorrow'
-      : touchPreviewDueState === 'overdue'
-        ? 'Overdue'
-        : null;
+  const touchPreviewDueLabel = formatDueDateBadgeLabel(touchPreviewTodo?.dueDate);
   const touchPreviewChecklist = touchPreviewTodo ? normalizeTodoChecklist(touchPreviewTodo.checklist) : null;
   const touchPreviewChecklistClosed = touchPreviewChecklist
     ? touchPreviewChecklist.items.filter((item) => item.checked).length
@@ -624,13 +639,7 @@ export const DashboardSection = ({
                     {columnTodos.map((todo, index) => {
                       const dueState = getDueDateState(todo, new Date());
                       const dueDateHint = todo.dueDate ? `Due date: ${todo.dueDate}` : undefined;
-                      const dueLabel = dueState === 'due_today'
-                        ? 'Today'
-                        : dueState === 'due_tomorrow'
-                          ? 'Tomorrow'
-                          : dueState === 'overdue'
-                            ? 'Overdue'
-                            : null;
+                      const dueLabel = formatDueDateBadgeLabel(todo.dueDate);
 
                       return (
                       <div
@@ -846,11 +855,14 @@ export const DashboardSection = ({
                                     className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
                                       dueState === 'overdue'
                                         ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
-                                        : 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                                        : dueState === 'due_today' || dueState === 'due_tomorrow'
+                                          ? 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                                          : 'border-slate-300/25 bg-slate-300/10 text-slate-200'
                                     }`}
                                     data-testid={`card-due-badge-${todo.id}`}
                                     title={dueDateHint}
                                   >
+                                    <CalendarDays size={12} className="mr-1" aria-hidden="true" />
                                     {dueLabel}
                                   </span>
                                 )}
@@ -1018,9 +1030,12 @@ export const DashboardSection = ({
                   className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
                     touchPreviewDueState === 'overdue'
                       ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
-                      : 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                      : touchPreviewDueState === 'due_today' || touchPreviewDueState === 'due_tomorrow'
+                        ? 'border-amber-300/35 bg-amber-300/15 text-amber-100'
+                        : 'border-slate-300/25 bg-slate-300/10 text-slate-200'
                   }`}
                 >
+                  <CalendarDays size={12} className="mr-1" aria-hidden="true" />
                   {touchPreviewDueLabel}
                 </span>
               )}

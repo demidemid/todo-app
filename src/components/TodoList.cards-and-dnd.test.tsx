@@ -98,7 +98,12 @@ describe('TodoList cards and dnd', () => {
     expect(screen.getByTestId('card-t-1')).toHaveTextContent('2');
   });
 
-  it('renders due date badges for today and tomorrow', () => {
+  const dueDateBadgeLabel = (value: Date) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${value.getDate()} ${months[value.getMonth()]}`;
+  };
+
+  it('renders due date badges as day and month for today and tomorrow', () => {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
@@ -116,8 +121,8 @@ describe('TodoList cards and dnd', () => {
 
     renderTodoList();
 
-    expect(screen.getByTestId('card-due-badge-due-today')).toHaveTextContent('Today');
-    expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveTextContent('Tomorrow');
+    expect(screen.getByTestId('card-due-badge-due-today')).toHaveTextContent(dueDateBadgeLabel(today));
+    expect(screen.getByTestId('card-due-badge-due-tomorrow')).toHaveTextContent(dueDateBadgeLabel(tomorrow));
   });
 
   it('highlights overdue cards in dashboard list', () => {
@@ -134,7 +139,7 @@ describe('TodoList cards and dnd', () => {
 
     const card = screen.getByTestId('card-overdue-card');
     expect(card.className).toContain('border-rose-300/45');
-    expect(screen.getByTestId('card-due-badge-overdue-card')).toHaveTextContent('Overdue');
+    expect(screen.getByTestId('card-due-badge-overdue-card')).toHaveTextContent('1 Jan');
   });
 
   it('highlights target column on drag over', () => {

@@ -4,6 +4,7 @@ import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist, parseChecklistItemTitles } from '../../utils/todoChecklist';
 import { IconButton } from '../ui/IconButton';
 import { Input } from '../ui/Input';
+import { InlineEditableHeading } from '../ui/InlineEditableHeading';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
 
 interface TodoChecklistSectionProps {
@@ -177,17 +178,19 @@ export const TodoChecklistSection = ({
             data-testid="todo-checklist-title-input"
           />
         ) : (
-          <button
-            type="button"
-            className="text-left text-xs font-semibold uppercase tracking-wide text-slate-300 hover:text-cyan-200"
-            onClick={() => {
-              setChecklistTitleDraft(checklist.title);
-              setIsEditingChecklistTitle(true);
-            }}
-            data-testid="todo-checklist-title"
-          >
-            {checklist.title}
-          </button>
+          <div className="flex items-center gap-2">
+            <h3 className="text-left text-xs font-semibold uppercase tracking-wide text-slate-300" data-testid="todo-checklist-title">
+              <InlineEditableHeading
+                text={checklist.title}
+                onStartEdit={() => {
+                  setChecklistTitleDraft(checklist.title);
+                  setIsEditingChecklistTitle(true);
+                }}
+                editLabel="Edit checklist title"
+                editButtonTestId="todo-checklist-title-edit"
+              />
+            </h3>
+          </div>
         )}
 
         <IconButton

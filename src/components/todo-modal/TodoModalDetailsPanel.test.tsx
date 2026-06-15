@@ -152,7 +152,7 @@ describe('TodoModalDetailsPanel', () => {
 
     render(<TodoModalDetailsPanel {...props} />);
 
-    fireEvent.click(screen.getByTestId('todo-checklist-title'));
+    fireEvent.click(screen.getByTestId('todo-checklist-title-edit'));
     fireEvent.change(screen.getByTestId('todo-checklist-title-input'), { target: { value: 'Sprint checklist' } });
     fireEvent.keyDown(screen.getByTestId('todo-checklist-title-input'), { key: 'Enter' });
 
