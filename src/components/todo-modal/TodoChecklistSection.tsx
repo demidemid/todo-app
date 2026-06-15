@@ -261,7 +261,6 @@ export const TodoChecklistSection = ({
           <p className="mb-2">This checklist has unfinished items. Delete it anyway?</p>
           <div className="flex items-center gap-2">
             <Button
-              type="button"
               size="sm"
               onClick={() => {
                 void handleDeleteChecklist();
@@ -271,7 +270,6 @@ export const TodoChecklistSection = ({
               Delete checklist
             </Button>
             <Button
-              type="button"
               size="sm"
               variant="ghost"
               onClick={() => setShowDeleteChecklistWarning(false)}

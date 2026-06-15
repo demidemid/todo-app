@@ -134,8 +134,6 @@ interface TodoModalDetailsPanelProps {
   onArchive?: () => void;
   focusChecklistIndex?: number | null;
   onChecklistAutoFocusHandled?: () => void;
-  focusChecklistIndex?: number | null;
-  onChecklistAutoFocusHandled?: () => void;
 }
 
 export const TodoModalDetailsPanel = ({
@@ -480,7 +478,6 @@ export const TodoModalDetailsPanel = ({
                           className="mb-2 w-full"
                         />
                         <Button
-                          type="button"
                           size="sm"
                           className="mb-2 w-full"
                           onClick={() => {
@@ -500,7 +497,6 @@ export const TodoModalDetailsPanel = ({
                           OK
                         </Button>
                         <Button
-                          type="button"
                           variant="ghost"
                           size="sm"
                           className="mb-2 w-full"
@@ -547,7 +543,6 @@ export const TodoModalDetailsPanel = ({
                         />
                         {linkError && <p className="mb-2 text-xs text-rose-300">{linkError}</p>}
                         <Button
-                          type="button"
                           size="sm"
                           className="w-full"
                           onClick={() => {
@@ -572,7 +567,6 @@ export const TodoModalDetailsPanel = ({
                 return (
                   <div className="relative z-10 mx-4 rounded-full bg-slate-900/95 px-1">
                     <Button
-                      type="button"
                       variant="secondary"
                       size="md"
                       className="px-3"
@@ -891,10 +885,10 @@ export const TodoModalDetailsPanel = ({
         <div className="mt-4 border-t border-white/10 bg-slate-900/95 pt-4">
           {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onCancelEdit} disabled={saving}>
+            <Button variant="ghost" onClick={onCancelEdit} disabled={saving}>
               Cancel
             </Button>
-            <Button type="button" onClick={onSave} disabled={saving}>
+            <Button onClick={onSave} disabled={saving}>
               Save
             </Button>
           </div>

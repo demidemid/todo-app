@@ -144,7 +144,7 @@ const DashboardColumnsEditor = ({
             onChange={(event) => onColumnNameChange(index, event.target.value)}
             data-testid={`${testIdPrefix}-${index}`}
           />
-          <Button type="button" variant="danger" size="sm" onClick={() => onRemoveColumn(index)}>
+          <Button variant="danger" size="sm" onClick={() => onRemoveColumn(index)}>
             Remove
           </Button>
         </li>
@@ -273,7 +273,7 @@ export const CreateDashboardModal = ({
             placeholder="Backlog"
             data-testid="create-dashboard-column-draft"
           />
-          <Button type="button" variant="ghost" size="sm" onClick={onAddColumn}>
+          <Button variant="ghost" size="sm" onClick={onAddColumn}>
             Add
           </Button>
         </div>
@@ -295,7 +295,7 @@ export const CreateDashboardModal = ({
         {formError && <p className="mb-3 text-sm text-rose-300">{formError}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit">
@@ -371,7 +371,7 @@ export const CreateCardModal = ({
         />
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose} data-testid="create-card-cancel">
+          <Button variant="ghost" onClick={onClose} data-testid="create-card-cancel">
             Cancel
           </Button>
           <Button type="submit" data-testid="create-card-submit">
@@ -472,7 +472,7 @@ export const EditDashboardModal = ({
             onChange={(event) => onColumnDraftChange(event.target.value)}
             placeholder="Add column"
           />
-          <Button type="button" variant="ghost" onClick={onAddColumn}>
+          <Button variant="ghost" onClick={onAddColumn}>
             Add
           </Button>
         </div>
@@ -480,7 +480,7 @@ export const EditDashboardModal = ({
         {actionError && <p className="mb-3 text-sm text-rose-300">{actionError}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit">
@@ -610,7 +610,7 @@ export const ShareDashboardModal = ({
         {actionError && <p className="mb-3 text-sm text-rose-300">{actionError}</p>}
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={isSaveDisabled}>

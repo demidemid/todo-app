@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatDueDateBadgeLabel,
   getDueDateState,
   getReminderTriggerDate,
   resolveReminderScheduledAt,
@@ -20,6 +21,15 @@ const createTask = (overrides: Partial<DueDateTaskLike> = {}): DueDateTaskLike =
 });
 
 describe('dueDate utils', () => {
+  it('formats due date badge label as day and english short month', () => {
+    expect(formatDueDateBadgeLabel('2026-06-15')).toBe('15 Jun');
+  });
+
+  it('returns original value for invalid due date label input', () => {
+    expect(formatDueDateBadgeLabel('invalid-date')).toBe('invalid-date');
+    expect(formatDueDateBadgeLabel(null)).toBeNull();
+  });
+
   it('returns without_due_date when task has no due date', () => {
     expect(getDueDateState(createTask(), now)).toBe('without_due_date');
   });

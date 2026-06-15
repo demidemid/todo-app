@@ -2,6 +2,7 @@ export type DueDateState = 'without_due_date' | 'due_today' | 'due_tomorrow' | '
 
 const LOCAL_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ONE_DAY_REMINDER_HOUR = 9;
+const DUE_DATE_MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export interface DueDateTaskLike {
   dueDate?: string | null;
@@ -55,6 +56,25 @@ const addLocalDays = (value: Date, days: number): Date => {
   const next = new Date(value);
   next.setDate(next.getDate() + days);
   return next;
+};
+
+export const formatDueDateBadgeLabel = (dueDate: string | null | undefined): string | null => {
+  if (!dueDate) {
+    return null;
+  }
+
+  const match = dueDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    return dueDate;
+  }
+
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (Number.isNaN(day) || monthIndex < 0 || monthIndex >= DUE_DATE_MONTHS_EN.length) {
+    return dueDate;
+  }
+
+  return `${day} ${DUE_DATE_MONTHS_EN[monthIndex]}`;
 };
 
 export const getDueDateState = (task: DueDateTaskLike, now: Date = new Date()): DueDateState => {

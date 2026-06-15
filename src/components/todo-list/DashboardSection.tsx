@@ -2,15 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklists } from '../../utils/todoChecklist';
-import { getDueDateState } from '../../utils/dueDate';
+import { formatDueDateBadgeLabel, getDueDateState } from '../../utils/dueDate';
 import { Button } from '../ui/Button';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { Input } from '../ui/Input';
 import { IconButton } from '../ui/IconButton';
 import { RichTextEditor } from '../todo-modal/RichTextEditor';
-import { Archive, CalendarDays, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
+import { Archive, MessageCircle, Pencil, Share2, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
+import { TodoCardDueDateBadge } from './TodoCardDueDateBadge';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -70,27 +71,6 @@ const getChecklistBadgePalette = (closedItems: number, totalItems: number): stri
   }
 
   return 'border-emerald-300/35 bg-emerald-300/15 text-emerald-100';
-};
-
-const DUE_DATE_MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-const formatDueDateBadgeLabel = (dueDate: string | null | undefined): string | null => {
-  if (!dueDate) {
-    return null;
-  }
-
-  const match = dueDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) {
-    return dueDate;
-  }
-
-  const monthIndex = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  if (Number.isNaN(day) || monthIndex < 0 || monthIndex >= DUE_DATE_MONTHS_EN.length) {
-    return dueDate;
-  }
-
-  return `${day} ${DUE_DATE_MONTHS_EN[monthIndex]}`;
 };
 
 interface DragState {
@@ -830,7 +810,6 @@ export const DashboardSection = ({
 
                               <div className="flex justify-end gap-2">
                                 <Button
-                                  type="button"
                                   onClick={onCancelEdit}
                                   data-testid={`edit-cancel-${todo.id}`}
                                   variant="ghost"
@@ -839,7 +818,6 @@ export const DashboardSection = ({
                                   Cancel
                                 </Button>
                                 <Button
-                                  type="button"
                                   onClick={() => onSaveEdit(todo.id)}
                                   data-testid={`edit-save-${todo.id}`}
                                   size="sm"
@@ -852,22 +830,6 @@ export const DashboardSection = ({
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
-                                {dueLabel && (
-                                  <span
-                                    className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                                      dueState === 'overdue'
-                                        ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
-                                        : dueState === 'due_today' || dueState === 'due_tomorrow'
-                                          ? 'border-amber-300/35 bg-amber-300/15 text-amber-100'
-                                          : 'border-slate-300/25 bg-slate-300/10 text-slate-200'
-                                    }`}
-                                    data-testid={`card-due-badge-${todo.id}`}
-                                    title={dueDateHint}
-                                  >
-                                    <CalendarDays size={12} className="mr-1" aria-hidden="true" />
-                                    {dueLabel}
-                                  </span>
-                                )}
                                 {(() => {
                                   const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
                                   if (checklists.length === 0) return null;
@@ -976,9 +938,17 @@ export const DashboardSection = ({
                                   },
                                 ]}
                               />
-                              <div className="pointer-events-none absolute bottom-2 left-3 inline-flex items-center gap-1 text-[11px] font-medium text-white">
-                                <MessageCircle size={12} className="text-white" aria-hidden="true" />
-                                <span>{todo.comments?.length ?? 0}</span>
+                              <div className="pointer-events-none absolute bottom-1 left-3 right-3 inline-flex items-center justify-between gap-2 text-[11px] font-medium text-white">
+                                <span className="inline-flex items-center gap-1">
+                                  <MessageCircle size={12} className="text-white" aria-hidden="true" />
+                                  <span>{todo.comments?.length ?? 0}</span>
+                                </span>
+                                <TodoCardDueDateBadge
+                                  dueLabel={dueLabel}
+                                  dueState={dueState}
+                                  testId={`card-due-badge-${todo.id}`}
+                                  title={dueDateHint}
+                                />
                               </div>
                             </div>
                           )}
@@ -1034,20 +1004,9 @@ export const DashboardSection = ({
           <div className="flex h-full flex-col justify-between">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-tight text-slate-100">{touchPreviewTitle}</p>
-              {touchPreviewDueLabel && (
-                <span
-                  className={`mt-2 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                    touchPreviewDueState === 'overdue'
-                      ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
-                      : touchPreviewDueState === 'due_today' || touchPreviewDueState === 'due_tomorrow'
-                        ? 'border-amber-300/35 bg-amber-300/15 text-amber-100'
-                        : 'border-slate-300/25 bg-slate-300/10 text-slate-200'
-                  }`}
-                >
-                  <CalendarDays size={12} className="mr-1" aria-hidden="true" />
-                  {touchPreviewDueLabel}
-                </span>
-              )}
+              <div className="mt-2">
+                <TodoCardDueDateBadge dueLabel={touchPreviewDueLabel} dueState={touchPreviewDueState} />
+              </div>
               {touchPreviewChecklist && touchPreviewChecklistPalette && (
                 <div
                   className={`mt-2 inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${touchPreviewChecklistPalette}`}

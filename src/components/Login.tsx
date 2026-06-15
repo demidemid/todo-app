@@ -106,7 +106,7 @@ export const Login = ({ user }: LoginProps) => {
         <p className="text-sm text-emerald-100">
           Logged in as <strong>{user.email}</strong>
         </p>
-        <Button type="button" variant="danger" size="sm" className="mt-3" onClick={handleLogout}>
+        <Button variant="danger" size="sm" className="mt-3" onClick={handleLogout}>
           Logout
         </Button>
       </div>
@@ -154,13 +154,12 @@ export const Login = ({ user }: LoginProps) => {
           {loading ? 'Please wait...' : isSignUp ? 'Create account' : 'Sign in'}
         </Button>
 
-        <Button type="button" variant="secondary" className="mt-3 w-full" onClick={() => setIsSignUp((prev) => !prev)}>
+        <Button variant="secondary" className="mt-3 w-full" onClick={() => setIsSignUp((prev) => !prev)}>
           {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
         </Button>
 
         {!isSignUp && (
           <Button
-            type="button"
             variant="link"
             className="mt-4 block w-full text-center text-xs font-medium"
             onClick={handleResetPassword}
