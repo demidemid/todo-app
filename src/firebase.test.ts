@@ -78,13 +78,13 @@ describe('firebase module', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
-    (globalThis as { window?: Window }).window = undefined;
+    (globalThis as unknown as { window?: Window }).window = undefined;
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
-    (globalThis as { window?: Window }).window = originalWindow;
+    (globalThis as unknown as { window?: Window }).window = originalWindow;
   });
 
   it('initializes app services with default firestore when indexedDb is unavailable', async () => {
@@ -101,7 +101,7 @@ describe('firebase module', () => {
   });
 
   it('initializes firestore with persistent local cache when indexedDb is available', async () => {
-    (globalThis as { window?: { indexedDB: Record<string, never> } }).window = {
+    (globalThis as unknown as { window?: { indexedDB: Record<string, never> } }).window = {
       indexedDB: {},
     };
 
