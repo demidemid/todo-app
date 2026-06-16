@@ -13,12 +13,15 @@ const signUp = async (page: Page, email: string, password: string) => {
 
 test.describe('Create card offline flow', () => {
   test.beforeEach(async ({ request }) => {
-    await request
-      .delete(`http://127.0.0.1:8080/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`)
-      .catch(() => undefined);
-    await request
-      .delete(`http://127.0.0.1:9099/emulator/v1/projects/${PROJECT_ID}/accounts`)
-      .catch(() => undefined);
+    const documentsResponse = await request.delete(
+      `http://127.0.0.1:8080/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`
+    );
+    expect(documentsResponse.ok()).toBeTruthy();
+
+    const accountsResponse = await request.delete(
+      `http://127.0.0.1:9099/emulator/v1/projects/${PROJECT_ID}/accounts`
+    );
+    expect(accountsResponse.ok()).toBeTruthy();
   });
 
   test('closes create-card modal while offline and shows created card after reconnect', async ({ page }) => {
