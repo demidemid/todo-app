@@ -50,13 +50,18 @@ vi.mock('../firebase', () => ({
 type SnapshotDoc = {
   id: string;
   data: () => Record<string, unknown>;
-  metadata?: { hasPendingWrites?: boolean };
+  metadata?: { hasPendingWrites?: boolean; fromCache?: boolean };
 };
 
-const makeDoc = (id: string, data: Record<string, unknown>, hasPendingWrites = false): SnapshotDoc => ({
+const makeDoc = (
+  id: string,
+  data: Record<string, unknown>,
+  hasPendingWrites = false,
+  fromCache = false,
+): SnapshotDoc => ({
   id,
   data: () => data,
-  metadata: { hasPendingWrites },
+  metadata: { hasPendingWrites, fromCache },
 });
 
 describe('useTodos', () => {
@@ -255,6 +260,45 @@ describe('useTodos', () => {
         expect.objectContaining({ id: 'todo-committed', columnId: 'todo', status: 'todo' }),
       ])
     );
+  });
+
+  it('keeps todos visible for cache-only snapshots without pending writes', async () => {
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    act(() => {
+      snapshotNext?.({
+        docs: [
+          makeDoc(
+            'todo-cached',
+            {
+              entityType: 'todo',
+              userId: 'user-1',
+              title: 'Cached card',
+              boardId: 'board-1',
+              status: 'todo',
+              columnId: 'todo',
+              createdAt: new Date('2026-01-01T00:00:00Z'),
+              updatedAt: new Date('2026-01-01T00:01:00Z'),
+            },
+            false,
+            true,
+          ),
+        ],
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0]).toMatchObject({
+      id: 'todo-cached',
+      title: 'Cached card',
+      columnId: 'todo',
+      status: 'todo',
+    });
   });
 
   it('maps permission-denied snapshot errors to user-friendly message', async () => {
@@ -519,6 +563,30 @@ describe('useTodos', () => {
     );
   });
 
+  it('addTodo propagates permission-denied write errors', async () => {
+    mockAddDoc.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    await expect(
+      result.current.addTodo(
+        {
+          title: 'Denied card',
+          description: 'Denied description',
+        },
+        { boardId: 'board-1', columnId: 'todo' }
+      )
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    expect(mockAddDoc).toHaveBeenCalledTimes(1);
+  });
+
   it('addTodo throws when user is not authenticated', async () => {
     const { result } = renderHook(() => useTodos(null));
 
@@ -549,6 +617,24 @@ describe('useTodos', () => {
         updatedAt: expect.any(Object),
       })
     );
+  });
+
+  it('updateTodo propagates permission-denied errors', async () => {
+    mockUpdateDoc.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    await expect(
+      result.current.updateTodo('todo-1', {
+        title: 'Blocked update',
+      })
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
   });
 
     it('updateTodo persists due date and reminder fields', async () => {
@@ -603,5 +689,19 @@ describe('useTodos', () => {
     });
 
     expect(mockDeleteDoc).toHaveBeenCalledWith({ path: 'todos/todo-5' });
+  });
+
+  it('deleteTodo propagates permission-denied errors', async () => {
+    mockDeleteDoc.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    await expect(result.current.deleteTodo('todo-5')).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
   });
 });

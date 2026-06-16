@@ -573,4 +573,99 @@ describe('useTodoListController', () => {
 
     expect(result.current.dashboardActionError).toBe('Failed to reorder dashboards');
   });
+
+  it('closes create card modal on transient addTodo error', async () => {
+    const { args, mocks } = createArgs();
+    mocks.addTodo.mockRejectedValueOnce({
+      code: 'auth/network-request-failed',
+      message: 'POST https://securetoken.googleapis.com/v1/token net::ERR_CONNECTION_CLOSED',
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setIsCreateModalOpen(true);
+      result.current.setCreateCardDashboardId('board-a');
+      result.current.setCreateCardColumnId('todo');
+      result.current.setTitle('Network todo');
+      result.current.setDescription('Body');
+    });
+
+    await act(async () => {
+      await result.current.handleAddTodo({ preventDefault() {} } as React.FormEvent);
+    });
+
+    expect(mocks.addTodo).toHaveBeenCalled();
+    expect(result.current.isCreateModalOpen).toBe(false);
+    expect(result.current.createCardDashboardId).toBeNull();
+    expect(result.current.createCardColumnId).toBeNull();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('keeps create card modal open on non-transient addTodo error', async () => {
+    const { args, mocks } = createArgs();
+    mocks.addTodo.mockRejectedValueOnce({
+      code: 'permission-denied',
+      message: 'Missing or insufficient permissions.',
+    });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setIsCreateModalOpen(true);
+      result.current.setCreateCardDashboardId('board-a');
+      result.current.setCreateCardColumnId('todo');
+      result.current.setTitle('Denied todo');
+      result.current.setDescription('Denied description');
+    });
+
+    await act(async () => {
+      await result.current.handleAddTodo({ preventDefault() {} } as React.FormEvent);
+    });
+
+    expect(result.current.isCreateModalOpen).toBe(true);
+    expect(result.current.createCardDashboardId).toBe('board-a');
+    expect(result.current.createCardColumnId).toBe('todo');
+    expect(result.current.title).toBe('Denied todo');
+    expect(result.current.description).toBe('Denied description');
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('closes create card modal immediately while addTodo is still pending', async () => {
+    const { args, mocks } = createArgs();
+    let resolveAddTodo: ((value: string) => void) | null = null;
+
+    mocks.addTodo.mockImplementationOnce(() => new Promise<string>((resolve) => {
+      resolveAddTodo = resolve;
+    }));
+
+    const { result } = renderHook(() => useTodoListController(args));
+
+    act(() => {
+      result.current.setIsCreateModalOpen(true);
+      result.current.setCreateCardDashboardId('board-a');
+      result.current.setCreateCardColumnId('todo');
+      result.current.setTitle('Pending todo');
+      result.current.setDescription('Pending description');
+    });
+
+    act(() => {
+      void result.current.handleAddTodo({ preventDefault() {} } as React.FormEvent);
+    });
+
+    expect(result.current.isCreateModalOpen).toBe(false);
+    expect(result.current.createCardDashboardId).toBeNull();
+    expect(result.current.createCardColumnId).toBeNull();
+    expect(result.current.title).toBe('');
+    expect(result.current.description).toBe('');
+
+    await act(async () => {
+      resolveAddTodo?.('created-id');
+      await Promise.resolve();
+    });
+
+    expect(mocks.addTodo).toHaveBeenCalledTimes(1);
+  });
 });

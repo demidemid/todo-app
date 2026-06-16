@@ -59,6 +59,33 @@ const reorderByIndex = <T,>(items: T[], sourceIndex: number, targetIndex: number
   return nextItems;
 };
 
+const isTransientCreateCardError = (error: unknown): boolean => {
+  const errorCode =
+    typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code)
+      : '';
+
+  const errorMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: unknown }).message)
+        : '';
+
+  const normalizedCode = errorCode.toLowerCase();
+  const normalizedMessage = errorMessage.toLowerCase();
+
+  return (
+    normalizedCode.includes('network-request-failed')
+    || normalizedCode.includes('unavailable')
+    || normalizedCode.includes('deadline-exceeded')
+    || normalizedCode.includes('internal')
+    || normalizedMessage.includes('err_connection_closed')
+    || normalizedMessage.includes('network')
+    || normalizedMessage.includes('securetoken.googleapis.com')
+  );
+};
+
 export const useTodoListController = ({
   todos,
   dashboards,
@@ -154,23 +181,40 @@ export const useTodoListController = ({
     const targetColumnId = hasSelectedColumn ? (ui.createCardColumnId ?? undefined) : targetColumns[0]?.id;
     if (!targetColumnId) return;
 
-    try {
-      await addTodo(
-        {
-          title: normalizedTitle,
-          description: normalizedDescription,
-        },
-        {
-          boardId: targetDashboard.id,
-          columnId: targetColumnId,
-        }
-      );
-      ui.setTitle('');
-      ui.setDescription('');
+    const draftTitle = normalizedTitle;
+    const draftDescription = normalizedDescription;
+    const draftDashboardId = targetDashboard.id;
+    const draftColumnId = targetColumnId;
+
+    const closeCreateCardModal = () => {
       ui.setIsCreateModalOpen(false);
       ui.setCreateCardDashboardId(null);
       ui.setCreateCardColumnId(null);
+    };
+
+    closeCreateCardModal();
+    ui.setTitle('');
+    ui.setDescription('');
+
+    try {
+      await addTodo(
+        {
+          title: draftTitle,
+          description: draftDescription,
+        },
+        {
+          boardId: draftDashboardId,
+          columnId: draftColumnId,
+        }
+      );
     } catch (error) {
+      if (!isTransientCreateCardError(error)) {
+        ui.setTitle(draftTitle);
+        ui.setDescription(draftDescription);
+        ui.setCreateCardDashboardId(draftDashboardId);
+        ui.setCreateCardColumnId(draftColumnId);
+        ui.setIsCreateModalOpen(true);
+      }
       console.error('Error adding todo:', error);
     }
   };
