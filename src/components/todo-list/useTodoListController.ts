@@ -82,7 +82,6 @@ const isTransientCreateCardError = (error: unknown): boolean => {
     || normalizedCode.includes('internal')
     || normalizedMessage.includes('err_connection_closed')
     || normalizedMessage.includes('network')
-    || normalizedMessage.includes('token')
     || normalizedMessage.includes('securetoken.googleapis.com')
   );
 };
