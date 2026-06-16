@@ -42,11 +42,15 @@ test.describe('Create card offline flow', () => {
     await page.getByTestId('create-card-title').fill(cardTitle);
 
     await page.context().setOffline(true);
-    await page.getByTestId('create-card-submit').click();
 
-    await expect(page.getByTestId('create-card-modal')).toHaveCount(0);
+    try {
+      await page.getByTestId('create-card-submit').click();
 
-    await page.context().setOffline(false);
+      await expect(page.getByTestId('create-card-modal')).toHaveCount(0);
+    } finally {
+      await page.context().setOffline(false);
+    }
+
     await expect(page.getByText(cardTitle).first()).toBeVisible({ timeout: 20_000 });
   });
 });
