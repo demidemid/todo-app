@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FC, type ChangeEvent } from 'react';
+import { deleteField } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
@@ -383,9 +384,9 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
               onClose();
             },
             onBlock: async (reason) => {
-              await updateTodo(todo.id, {
-                blockedReason: reason,
-              });
+              await updateTodo(todo.id, reason === null
+                ? { blockedReason: deleteField() as unknown as Todo['blockedReason'] }
+                : { blockedReason: reason });
             },
             onStartEditTitle: () => {
               setIsEditingTitle(true);

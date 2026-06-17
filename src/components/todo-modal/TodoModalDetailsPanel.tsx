@@ -97,7 +97,7 @@ interface TodoModalDetailsPanelProps {
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
     onArchive?: () => void;
-    onBlock?: (reason: string) => Promise<void> | void;
+    onBlock?: (reason: string | null) => Promise<void> | void;
   };
   files?: TodoFile[];
   filesUploading?: boolean;
@@ -135,7 +135,7 @@ interface TodoModalDetailsPanelProps {
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   onArchive?: () => void;
-  onBlock?: (reason: string) => Promise<void> | void;
+  onBlock?: (reason: string | null) => Promise<void> | void;
   focusChecklistIndex?: number | null;
   onChecklistAutoFocusHandled?: () => void;
 }
@@ -223,7 +223,7 @@ export const TodoModalDetailsPanel = ({
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
     onArchive: legacyOnArchive ?? (() => {}),
-    onBlock: legacyOnBlock ?? ((reason: string) => {
+    onBlock: legacyOnBlock ?? ((reason: string | null) => {
       void reason;
     }),
   };
@@ -282,6 +282,7 @@ export const TodoModalDetailsPanel = ({
   const [blockReasonDraft, setBlockReasonDraft] = useState(todo.blockedReason ?? '');
   const [blockError, setBlockError] = useState('');
   const [blockSaving, setBlockSaving] = useState(false);
+  const blockedReason = todo.blockedReason?.trim() ?? '';
 
   useEffect(() => {
     if (isActionMenuOpen) return;
@@ -396,6 +397,34 @@ export const TodoModalDetailsPanel = ({
     } finally {
       setBlockSaving(false);
     }
+  };
+
+  const handleRemoveBlockReason = async () => {
+    if (!onBlock) {
+      setBlockError('Block handler is not available');
+      return;
+    }
+
+    setBlockSaving(true);
+    setBlockError('');
+
+    try {
+      await onBlock(null);
+      setBlockReasonDraft('');
+      setIsBlockFormOpen(false);
+      setIsActionMenuOpen(false);
+    } catch (blockReasonError) {
+      const message = blockReasonError instanceof Error ? blockReasonError.message : 'Failed to clear block reason';
+      setBlockError(message);
+    } finally {
+      setBlockSaving(false);
+    }
+  };
+
+  const openBlockReasonForm = (reason: string) => {
+    setBlockReasonDraft(reason);
+    setBlockError('');
+    setIsBlockFormOpen(true);
   };
 
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
@@ -676,9 +705,50 @@ export const TodoModalDetailsPanel = ({
           </div>
         )}
 
+        {blockedReason && !isBlockFormOpen && (
+          <div className="mb-4 rounded-md border border-rose-400/30 bg-rose-400/10 p-3" data-testid="todo-block-reason-metadata">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-rose-100">
+                <Hand size={14} aria-hidden="true" />
+                Block reason
+              </div>
+              <div className="flex items-center gap-1">
+                <IconButton
+                  variant="neutral"
+                  size="sm"
+                  label="Edit block reason"
+                  className="h-7! w-7! rounded-full! p-0! text-rose-100 hover:text-white"
+                  onClick={() => openBlockReasonForm(blockedReason)}
+                  data-testid="todo-block-reason-edit"
+                >
+                  <Pencil size={12} />
+                </IconButton>
+                <IconButton
+                  variant="danger"
+                  size="sm"
+                  label="Remove block reason"
+                  className="h-7! w-7! rounded-full! p-0!"
+                  onClick={() => {
+                    void handleRemoveBlockReason();
+                  }}
+                  disabled={blockSaving}
+                  data-testid="todo-block-reason-remove"
+                >
+                  <Trash2 size={12} />
+                </IconButton>
+              </div>
+            </div>
+            <p className="text-sm leading-5 text-rose-50" data-testid="todo-block-reason-text">
+              {blockedReason}
+            </p>
+          </div>
+        )}
+
         {!isEditing && isBlockFormOpen && (
           <div className="mb-4 rounded-md border border-rose-400/30 bg-rose-400/10 p-3" data-testid="todo-block-reason-form">
-            <label className="mb-2 block text-xs uppercase tracking-wide text-rose-100">Block reason</label>
+            <label className="mb-2 block text-xs uppercase tracking-wide text-rose-100">
+              {blockedReason ? 'Edit block reason' : 'Block reason'}
+            </label>
             <Input
               type="text"
               value={blockReasonDraft}
@@ -700,6 +770,19 @@ export const TodoModalDetailsPanel = ({
               >
                 Cancel
               </Button>
+              {blockedReason && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void handleRemoveBlockReason();
+                  }}
+                  disabled={blockSaving}
+                  data-testid="todo-block-reason-clear"
+                >
+                  Remove
+                </Button>
+              )}
               <Button
                 size="sm"
                 onClick={() => {
