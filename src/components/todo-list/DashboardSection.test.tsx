@@ -154,8 +154,8 @@ describe('DashboardSection', () => {
     render(<DashboardSection {...props} />);
 
     expect(screen.getByTestId('card-blocked-reason-todo-1')).toHaveTextContent('Waiting for backend fix');
-    expect(screen.getByTestId('card-todo-1')).toHaveClass('rounded-t-none');
-    expect(screen.getByTestId('card-todo-1')).toHaveClass('border-t-0');
+    expect(screen.getByTestId('card-surface-todo-1')).toHaveClass('rounded-t-none');
+    expect(screen.getByTestId('card-surface-todo-1')).toHaveClass('border-t-0');
   });
 
   it('opens todo modal when blocked reason plate is clicked', () => {

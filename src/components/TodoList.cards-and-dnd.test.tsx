@@ -137,8 +137,8 @@ describe('TodoList cards and dnd', () => {
 
     renderTodoList();
 
-    const card = screen.getByTestId('card-overdue-card');
-    expect(card.className).toContain('border-rose-300/45');
+    const cardSurface = screen.getByTestId('card-surface-overdue-card');
+    expect(cardSurface.className).toContain('border-rose-300/45');
     expect(screen.getByTestId('card-due-badge-overdue-card')).toHaveTextContent('1 Jan');
   });
 
