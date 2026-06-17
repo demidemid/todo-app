@@ -129,127 +129,127 @@ export const DashboardTodoCardContent = ({
   }
 
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
-        {(() => {
-          const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
-          if (checklists.length === 0) return null;
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+          {(() => {
+            const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
+            if (checklists.length === 0) return null;
 
-          return (
-            <div className="mt-2 space-y-1.5">
-              {checklists.map((checklist, checklistIndex) => {
-                const totalItems = checklist.items.length;
-                const closedItems = checklist.items.filter((item) => item.checked).length;
-                const checklistBadgePalette = getChecklistBadgePalette(closedItems, totalItems);
-                const suffix = checklistIndex === 0 ? '' : `-${checklistIndex}`;
+            return (
+              <div className="mt-2 space-y-1.5">
+                {checklists.map((checklist, checklistIndex) => {
+                  const totalItems = checklist.items.length;
+                  const closedItems = checklist.items.filter((item) => item.checked).length;
+                  const checklistBadgePalette = getChecklistBadgePalette(closedItems, totalItems);
+                  const suffix = checklistIndex === 0 ? '' : `-${checklistIndex}`;
 
-                return (
-                  <div
-                    key={`checklist-badge-${todo.id}-${checklistIndex}`}
-                    className={`inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${checklistBadgePalette}`}
-                    data-testid={`card-checklist-badge-${todo.id}${suffix}`}
-                  >
-                    <span className="truncate" data-testid={`card-checklist-title-${todo.id}${suffix}`}>
-                      {checklist.title}
-                    </span>
-                    <span className="shrink-0" data-testid={`card-checklist-progress-${todo.id}${suffix}`}>
-                      {closedItems}/{totalItems}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })()}
-        {Array.isArray(todo.files) && todo.files.length > 0 && (
-          <ul className="mt-1 space-y-0.5">
-            {todo.files.map((file) => (
-              <li key={file.id} className="text-xs text-slate-300">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <FileTypeIcon fileName={file.name} />
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
-                    onClick={(event) => event.stopPropagation()}
-                    className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
-                  >
-                    {file.name}
-                  </a>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        {Array.isArray(todo.links) && todo.links.length > 0 && (
-          <ul className="mt-2 space-y-0.5">
-            {todo.links.map((link, i) => (
-              (() => {
-                const safeUrl = normalizeSafeUrl(link.url);
-                if (!safeUrl) return null;
-
-                return (
-                  <li key={safeUrl + i} className="flex items-center gap-1.5 text-xs text-cyan-200">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-cyan-300" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                      <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20" stroke="currentColor" strokeWidth="2" />
-                    </svg>
+                  return (
+                    <div
+                      key={`checklist-badge-${todo.id}-${checklistIndex}`}
+                      className={`inline-flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1 text-[11px] font-medium ${checklistBadgePalette}`}
+                      data-testid={`card-checklist-badge-${todo.id}${suffix}`}
+                    >
+                      <span className="truncate" data-testid={`card-checklist-title-${todo.id}${suffix}`}>
+                        {checklist.title}
+                      </span>
+                      <span className="shrink-0" data-testid={`card-checklist-progress-${todo.id}${suffix}`}>
+                        {closedItems}/{totalItems}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          {Array.isArray(todo.files) && todo.files.length > 0 && (
+            <ul className="mt-1 space-y-0.5">
+              {todo.files.map((file) => (
+                <li key={file.id} className="text-xs text-slate-300">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <FileTypeIcon fileName={file.name} />
                     <a
-                      href={safeUrl}
+                      href={file.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      download
                       onClick={(event) => event.stopPropagation()}
-                      className="truncate max-w-30 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
-                      title={safeUrl}
+                      className="truncate text-cyan-200 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
                     >
-                      {link.name ? link.name : safeUrl}
+                      {file.name}
                     </a>
-                  </li>
-                );
-              })()
-            ))}
-          </ul>
-        )}
-      </div>
-      <EllipsisMenu
-        trigger={{
-          label: `Open actions for ${todo.title}`,
-          testId: `card-menu-trigger-${todo.id}`,
-        }}
-        menu={{ testId: 'card-menu' }}
-        stopPropagation
-        items={[
-          {
-            id: 'archive',
-            label: 'Archive',
-            icon: <Archive size={14} aria-hidden="true" />,
-            onSelect: () => onMenuArchive(todo.id),
-            testId: 'card-menu-archive',
-          },
-          {
-            id: 'delete',
-            label: 'Delete',
-            icon: <Trash2 size={14} aria-hidden="true" />,
-            onSelect: () => onMenuDelete(todo.id),
-            testId: 'card-menu-delete',
-            variant: 'danger' as const,
-          },
-        ]}
-      />
-      <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
-        <span className="inline-flex items-center gap-1">
-          <MessageCircle size={12} className="text-white" aria-hidden="true" />
-          <span>{todo.comments?.length ?? 0}</span>
-        </span>
-        <TodoCardDueDateBadge
-          dueLabel={dueLabel}
-          dueState={dueState}
-          testId={`card-due-badge-${todo.id}`}
-          title={dueDateHint}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {Array.isArray(todo.links) && todo.links.length > 0 && (
+            <ul className="mt-2 space-y-0.5">
+              {todo.links.map((link, i) => (
+                (() => {
+                  const safeUrl = normalizeSafeUrl(link.url);
+                  if (!safeUrl) return null;
+
+                  return (
+                    <li key={safeUrl + i} className="flex items-center gap-1.5 text-xs text-cyan-200">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="shrink-0 text-cyan-300" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20M12 2a15.3 15.3 0 0 0 0 20" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                      <a
+                        href={safeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                        className="truncate max-w-30 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                        title={safeUrl}
+                      >
+                        {link.name ? link.name : safeUrl}
+                      </a>
+                    </li>
+                  );
+                })()
+              ))}
+            </ul>
+          )}
+        </div>
+        <EllipsisMenu
+          trigger={{
+            label: `Open actions for ${todo.title}`,
+            testId: `card-menu-trigger-${todo.id}`,
+          }}
+          menu={{ testId: 'card-menu' }}
+          stopPropagation
+          items={[
+            {
+              id: 'archive',
+              label: 'Archive',
+              icon: <Archive size={14} aria-hidden="true" />,
+              onSelect: () => onMenuArchive(todo.id),
+              testId: 'card-menu-archive',
+            },
+            {
+              id: 'delete',
+              label: 'Delete',
+              icon: <Trash2 size={14} aria-hidden="true" />,
+              onSelect: () => onMenuDelete(todo.id),
+              testId: 'card-menu-delete',
+              variant: 'danger' as const,
+            },
+          ]}
         />
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
+          <span className="inline-flex items-center gap-1">
+            <MessageCircle size={12} className="text-white" aria-hidden="true" />
+            <span>{todo.comments?.length ?? 0}</span>
+          </span>
+          <TodoCardDueDateBadge
+            dueLabel={dueLabel}
+            dueState={dueState}
+            testId={`card-due-badge-${todo.id}`}
+            title={dueDateHint}
+          />
+        </div>
       </div>
-    </div>
   );
 };

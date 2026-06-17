@@ -394,6 +394,32 @@ describe('TodoModal', () => {
     });
   });
 
+  it('blocks card from modal ellipsis menu', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-block'));
+    fireEvent.change(screen.getByTestId('todo-block-reason-input'), {
+      target: { value: 'Blocked by dependency' },
+    });
+    fireEvent.click(screen.getByTestId('todo-block-reason-save'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        blockedReason: 'Blocked by dependency',
+      });
+    });
+  });
+
   it('shows a readable error when moving card to next status fails', async () => {
     updateTodo.mockRejectedValueOnce({
       code: 'permission-denied',
