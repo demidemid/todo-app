@@ -1,0 +1,60 @@
+name: Setup Node and Yarn
+
+description: Setup Node.js, enable Corepack Yarn 4, restore caches, and install dependencies.
+
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: "20"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: yarn
+        cache-dependency-path: yarn.lock
+
+    - name: Enable Corepack
+      shell: bash
+      run: |
+        corepack enable
+        corepack prepare yarn@4.3.0 --activate
+
+    - name: Verify Yarn version
+      shell: bash
+      run: yarn --version
+
+    - name: Restore dependency cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          .yarn/cache
+          .yarn/install-state.gz
+          node_modules
+        key: ${{ runner.os }}-deps-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock', '.yarnrc.yml') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-node${{ inputs.node-version }}-
+
+    - name: Restore Vitest cache
+      uses: actions/cache@v4
+      with:
+        path: node_modules/.vitest
+        key: ${{ runner.os }}-vitest-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-vitest-node${{ inputs.node-version }}-
+
+    - name: Restore Playwright browsers cache
+      uses: actions/cache@v4
+      with:
+        path: .cache/ms-playwright
+        key: ${{ runner.os }}-playwright-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-node${{ inputs.node-version }}-
+
+    - name: Install dependencies
+      shell: bash
+      run: yarn install --immutable

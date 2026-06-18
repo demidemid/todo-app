@@ -12,6 +12,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  PLAYWRIGHT_BROWSERS_PATH: .cache/ms-playwright
+
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -24,18 +27,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.3.0 --activate
-
-      - name: Install dependencies
-        run: yarn install --immutable
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
 
       - name: Setup Pages
         id: pages

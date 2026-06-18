@@ -11,18 +11,35 @@ permissions:
   contents: read
   pull-requests: write
 
+env:
+  PLAYWRIGHT_BROWSERS_PATH: .cache/ms-playwright
+
 jobs:
-  quality:
+  lint:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
+
+      - name: Lint
+        run: yarn lint
+
+  firestore_rules:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -30,33 +47,47 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Enable Corepack
-        run: |
-          corepack enable
-          corepack prepare yarn@4.3.0 --activate
-
-      - name: Verify Yarn version
-        run: yarn --version
-
-      - name: Install dependencies
-        run: yarn install --immutable
-
-      - name: Lint
-        run: yarn lint
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
 
       - name: Firestore Rules Tests
         run: yarn test:rules
 
+  unit_tests:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
+        with:
+          node-version: ${{ matrix.node-version }}
+
       - name: Test
-        if: github.event_name != 'pull_request'
         run: yarn test
 
+  coverage:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
+
       - name: Test with coverage
-        if: github.event_name == 'pull_request'
         run: yarn test:coverage
 
       - name: Build coverage comment body
-        if: github.event_name == 'pull_request'
         run: |
           node <<'NODE'
           const fs = require('node:fs');
@@ -91,11 +122,27 @@ jobs:
           NODE
 
       - name: Comment coverage on PR
-        if: github.event_name == 'pull_request'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: coverage-report
           path: coverage-comment.md
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, firestore_rules, unit_tests, coverage]
+    if: >-
+      always() &&
+      needs.lint.result == 'success' &&
+      needs.firestore_rules.result == 'success' &&
+      (needs.unit_tests.result == 'success' || needs.unit_tests.result == 'skipped') &&
+      (needs.coverage.result == 'success' || needs.coverage.result == 'skipped')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node and Yarn
+        uses: ./.github/actions/setup-node-yarn
 
       - name: Build
         run: yarn build
