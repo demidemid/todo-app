@@ -28,7 +28,7 @@ runs:
       run: yarn --version
 
     - name: Restore dependency cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           .yarn/cache
@@ -39,7 +39,7 @@ runs:
           ${{ runner.os }}-deps-node${{ inputs.node-version }}-
 
     - name: Restore Vitest cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: node_modules/.vitest
         key: ${{ runner.os }}-vitest-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock') }}
@@ -47,7 +47,7 @@ runs:
           ${{ runner.os }}-vitest-node${{ inputs.node-version }}-
 
     - name: Restore Playwright browsers cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: .cache/ms-playwright
         key: ${{ runner.os }}-playwright-node${{ inputs.node-version }}-${{ hashFiles('yarn.lock') }}
