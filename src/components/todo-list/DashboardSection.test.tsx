@@ -177,6 +177,25 @@ describe('DashboardSection', () => {
     expect(props.onOpenTodoModal).toHaveBeenCalledWith(expect.objectContaining({ id: 'todo-1' }));
   });
 
+  it('renders todo tags as pills on dashboard card', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      ...props.groupedTodos,
+      todo: [
+        {
+          ...todo,
+          tags: ['backend', 'urgent'],
+        },
+      ],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-tags-todo-1')).toBeInTheDocument();
+    expect(screen.getByTestId('card-tag-pill-todo-1-backend')).toHaveTextContent('backend');
+    expect(screen.getByTestId('card-tag-pill-todo-1-urgent')).toHaveTextContent('urgent');
+  });
+
   it('disables archive-all-completed action when last status has no cards', () => {
     const props = createProps();
 

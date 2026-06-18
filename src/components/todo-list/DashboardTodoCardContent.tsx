@@ -52,6 +52,33 @@ const normalizeSafeUrl = (rawUrl: string): string | null => {
   }
 };
 
+const normalizeTags = (tags: string[] | undefined): string[] => {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  const normalizedTags = tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  return Array.from(new Set(normalizedTags));
+};
+
+const getTagToneClassName = (tag: string): string => {
+  const palette = [
+    'border-cyan-300/35 bg-cyan-400/15 text-cyan-100',
+    'border-emerald-300/35 bg-emerald-400/15 text-emerald-100',
+    'border-amber-300/35 bg-amber-400/15 text-amber-100',
+    'border-rose-300/35 bg-rose-400/15 text-rose-100',
+    'border-indigo-300/35 bg-indigo-400/15 text-indigo-100',
+    'border-fuchsia-300/35 bg-fuchsia-400/15 text-fuchsia-100',
+    'border-lime-300/35 bg-lime-400/15 text-lime-100',
+  ];
+
+  const hash = Array.from(tag).reduce((acc, char) => (acc + char.charCodeAt(0)) % palette.length, 0);
+  return palette[hash];
+};
+
 interface DashboardTodoCardContentProps {
   todo: Todo;
   editing: boolean;
@@ -85,6 +112,8 @@ export const DashboardTodoCardContent = ({
   onMenuArchive,
   onMenuDelete,
 }: DashboardTodoCardContentProps) => {
+  const tags = normalizeTags(todo.tags);
+
   if (editing) {
     return (
       <div>
@@ -132,6 +161,19 @@ export const DashboardTodoCardContent = ({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
+          {tags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5" data-testid={`card-tags-${todo.id}`}>
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getTagToneClassName(tag)}`}
+                  data-testid={`card-tag-pill-${todo.id}-${tag}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
           {(() => {
             const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
             if (checklists.length === 0) return null;
