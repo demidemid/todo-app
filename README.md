@@ -20,7 +20,8 @@ A modern offline-first todo application built with React, TypeScript, Vite, and 
 
 ## Prerequisites
 
-- Node.js 16+ and npm
+- Node.js 22+
+- Corepack enabled (Yarn 4.3.0 is defined in `packageManager`)
 - Firebase account (free tier available at [firebase.google.com](https://firebase.google.com))
 
 ## Setup Instructions
@@ -35,7 +36,8 @@ cd todo-app
 ### 2. Install dependencies
 
 ```bash
-npm install
+corepack enable
+yarn install
 ```
 
 ### 3. Set up Firebase project
