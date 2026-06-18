@@ -44,6 +44,7 @@ const createProps = (): TodoModalDetailsPanelProps => ({
   onDeleteLink: vi.fn(),
   onDueDateChange: vi.fn(),
   onRemindOneDayBeforeChange: vi.fn(),
+  onBlock: vi.fn(),
 });
 
 describe('TodoModalDetailsPanel', () => {
@@ -107,9 +108,10 @@ describe('TodoModalDetailsPanel', () => {
     expect(props.onOpenFilePicker).toHaveBeenCalledTimes(1);
   });
 
-  it('shows card ellipsis menu with archive and delete actions', () => {
+  it('shows card ellipsis menu with archive, block and delete actions', async () => {
     const props = createProps();
     props.onArchive = vi.fn();
+    props.onBlock = vi.fn().mockResolvedValue(undefined);
 
     render(<TodoModalDetailsPanel {...props} />);
 
@@ -120,8 +122,85 @@ describe('TodoModalDetailsPanel', () => {
     expect(props.onArchive).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-block'));
+    expect(screen.getByTestId('todo-block-reason-form')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId('todo-block-reason-input'), {
+      target: { value: 'Blocked by API limits' },
+    });
+    fireEvent.click(screen.getByTestId('todo-block-reason-save'));
+
+    await waitFor(() => {
+      expect(props.onBlock).toHaveBeenCalledWith('Blocked by API limits');
+    });
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
     fireEvent.click(screen.getByTestId('todo-card-menu-delete'));
     expect(props.onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an existing block reason and lets you edit it', async () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      blockedReason: 'Waiting for review',
+    };
+    props.onBlock = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-block-reason-metadata')).toHaveTextContent('Waiting for review');
+
+    fireEvent.click(screen.getByTestId('todo-block-reason-edit'));
+    expect(screen.getByTestId('todo-block-reason-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('todo-block-reason-metadata')).not.toBeInTheDocument();
+    expect(screen.getByTestId('todo-block-reason-input')).toHaveValue('Waiting for review');
+
+    fireEvent.change(screen.getByTestId('todo-block-reason-input'), {
+      target: { value: 'Waiting for updated design' },
+    });
+    fireEvent.click(screen.getByTestId('todo-block-reason-save'));
+
+    await waitFor(() => {
+      expect(props.onBlock).toHaveBeenCalledWith('Waiting for updated design');
+    });
+  });
+
+  it('removes an existing block reason', async () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      blockedReason: 'Waiting for review',
+    };
+    props.onBlock = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-block-reason-remove'));
+
+    await waitFor(() => {
+      expect(props.onBlock).toHaveBeenCalledWith(null);
+    });
+  });
+
+  it('requires a non-empty block reason before saving', async () => {
+    const props = createProps();
+    props.onBlock = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-block'));
+    fireEvent.change(screen.getByTestId('todo-block-reason-input'), {
+      target: { value: '   ' },
+    });
+    fireEvent.click(screen.getByTestId('todo-block-reason-save'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Enter block reason')).toBeInTheDocument();
+    });
+
+    expect(props.onBlock).not.toHaveBeenCalled();
   });
 
   it('shows checklist action in plus menu and triggers create checklist handler', () => {

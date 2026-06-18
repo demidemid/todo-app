@@ -9,9 +9,14 @@ const mockStorageRef = vi.fn();
 const mockUploadBytes = vi.fn();
 const mockGetDownloadURL = vi.fn();
 const mockDeleteObject = vi.fn();
+const mockDeleteField = vi.fn();
 
 vi.mock('../firebase', () => ({
   storage: {},
+}));
+
+vi.mock('firebase/firestore', () => ({
+  deleteField: () => mockDeleteField(),
 }));
 
 vi.mock('firebase/storage', () => ({
@@ -100,6 +105,7 @@ describe('TodoModal', () => {
     mockUploadBytes.mockResolvedValue(undefined);
     mockGetDownloadURL.mockResolvedValue('https://example.com/uploaded.pdf');
     mockDeleteObject.mockResolvedValue(undefined);
+    mockDeleteField.mockReturnValue({ __deleteField: true });
     updateTodo.mockResolvedValue(undefined);
     deleteTodo.mockResolvedValue(undefined);
   });
@@ -391,6 +397,56 @@ describe('TodoModal', () => {
     await waitFor(() => {
       expect(updateTodo).toHaveBeenCalledWith('todo-1', { archived: true });
       expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('blocks card from modal ellipsis menu', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-card-menu-trigger'));
+    fireEvent.click(screen.getByTestId('todo-card-menu-block'));
+    fireEvent.change(screen.getByTestId('todo-block-reason-input'), {
+      target: { value: 'Blocked by dependency' },
+    });
+    fireEvent.click(screen.getByTestId('todo-block-reason-save'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        blockedReason: 'Blocked by dependency',
+      });
+    });
+  });
+
+  it('clears an existing block reason from the modal', async () => {
+    render(
+      <TodoModal
+        todo={{
+          ...todo,
+          blockedReason: 'Blocked by dependency',
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-block-reason-remove'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        blockedReason: { __deleteField: true },
+      });
     });
   });
 

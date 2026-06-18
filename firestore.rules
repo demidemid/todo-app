@@ -55,6 +55,7 @@ service cloud.firestore {
           'title',
           'description',
           'archived',
+          'blockedReason',
           'dueDate',
           'isCompleted',
           'completedAt',
@@ -77,6 +78,7 @@ service cloud.firestore {
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
         && (!('archived' in data) || data.archived is bool)
+        && (!('blockedReason' in data) || data.blockedReason == null || data.blockedReason is string)
         && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
         && (!('isCompleted' in data) || data.isCompleted is bool)
         && (!('completedAt' in data) || data.completedAt == null || data.completedAt is string)
@@ -112,6 +114,7 @@ service cloud.firestore {
           'title',
           'description',
           'archived',
+          'blockedReason',
           'dueDate',
           'isCompleted',
           'completedAt',
@@ -134,6 +137,7 @@ service cloud.firestore {
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
         && (!('archived' in data) || data.archived is bool)
+        && (!('blockedReason' in data) || data.blockedReason == null || data.blockedReason is string)
         && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
         && (!('isCompleted' in data) || data.isCompleted is bool)
         && (!('completedAt' in data) || data.completedAt == null || data.completedAt is string)
@@ -221,6 +225,7 @@ service cloud.firestore {
           'title',
           'description',
           'archived',
+          'blockedReason',
           'comments',
           'files',
           'links',
@@ -240,6 +245,7 @@ service cloud.firestore {
         && (!('title' in nextData) || isNonEmptyString(nextData.title))
         && (!('description' in nextData) || nextData.description is string)
         && (!('archived' in nextData) || nextData.archived is bool)
+        && (!('blockedReason' in nextData) || nextData.blockedReason == null || nextData.blockedReason is string)
         && (!('comments' in nextData) || nextData.comments is list)
         && (!('files' in nextData) || isTodoFilesList(nextData.files))
         && (!('links' in nextData) || isTodoLinksList(nextData.links))
@@ -281,6 +287,7 @@ service cloud.firestore {
           'checklist',
           'checklists',
           'archived',
+          'blockedReason',
           'dueDate',
           'isCompleted',
           'completedAt',
@@ -297,6 +304,7 @@ service cloud.firestore {
         && (!('checklist' in nextData) || isTodoChecklist(nextData.checklist))
         && (!('checklists' in nextData) || isTodoChecklistsList(nextData.checklists))
         && (!('archived' in nextData) || nextData.archived is bool)
+        && (!('blockedReason' in nextData) || nextData.blockedReason == null || nextData.blockedReason is string)
         && (!('dueDate' in nextData) || nextData.dueDate == null || nextData.dueDate is string)
         && (!('isCompleted' in nextData) || nextData.isCompleted is bool)
         && (!('completedAt' in nextData) || nextData.completedAt == null || nextData.completedAt is string)

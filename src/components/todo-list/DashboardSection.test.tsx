@@ -139,6 +139,44 @@ describe('DashboardSection', () => {
     expect(props.onArchiveAllCompleted).toHaveBeenCalledWith('board-1');
   });
 
+  it('renders blocked reason badge on card when reason is present', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      ...props.groupedTodos,
+      todo: [
+        {
+          ...todo,
+          blockedReason: 'Waiting for backend fix',
+        },
+      ],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    expect(screen.getByTestId('card-blocked-reason-todo-1')).toHaveTextContent('Waiting for backend fix');
+    expect(screen.getByTestId('card-surface-todo-1')).toHaveClass('rounded-t-none');
+    expect(screen.getByTestId('card-surface-todo-1')).toHaveClass('border-t-0');
+  });
+
+  it('opens todo modal when blocked reason plate is clicked', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      ...props.groupedTodos,
+      todo: [
+        {
+          ...todo,
+          blockedReason: 'Waiting for backend fix',
+        },
+      ],
+    };
+
+    render(<DashboardSection {...props} />);
+
+    fireEvent.click(screen.getByTestId('card-blocked-reason-todo-1'));
+
+    expect(props.onOpenTodoModal).toHaveBeenCalledWith(expect.objectContaining({ id: 'todo-1' }));
+  });
+
   it('disables archive-all-completed action when last status has no cards', () => {
     const props = createProps();
 

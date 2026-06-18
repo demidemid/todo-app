@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2 } from 'lucide-react';
+import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2, Hand } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import { Button } from '../ui/Button';
@@ -97,6 +97,7 @@ interface TodoModalDetailsPanelProps {
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
     onArchive?: () => void;
+    onBlock?: (reason: string | null) => Promise<void> | void;
   };
   files?: TodoFile[];
   filesUploading?: boolean;
@@ -134,6 +135,7 @@ interface TodoModalDetailsPanelProps {
   columns?: { id: string; name: string }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   onArchive?: () => void;
+  onBlock?: (reason: string | null) => Promise<void> | void;
   focusChecklistIndex?: number | null;
   onChecklistAutoFocusHandled?: () => void;
 }
@@ -145,6 +147,7 @@ export const TodoModalDetailsPanel = ({
   columns = [],
   onMoveToNextStatus: legacyOnMoveToNextStatus,
   onArchive: legacyOnArchive,
+  onBlock: legacyOnBlock,
   files: legacyFiles,
   filesUploading: legacyFilesUploading,
   deletingFileIds: legacyDeletingFileIds,
@@ -220,6 +223,9 @@ export const TodoModalDetailsPanel = ({
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
     onMoveToNextStatus: legacyOnMoveToNextStatus,
     onArchive: legacyOnArchive ?? (() => {}),
+    onBlock: legacyOnBlock ?? ((reason: string | null) => {
+      void reason;
+    }),
   };
 
   const {
@@ -261,6 +267,7 @@ export const TodoModalDetailsPanel = ({
     onRemindOneDayBeforeChange,
     onMoveToNextStatus,
     onArchive,
+    onBlock,
   } = resolvedActions;
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -271,17 +278,27 @@ export const TodoModalDetailsPanel = ({
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
   const [linkSaving, setLinkSaving] = useState(false);
+  const [isBlockFormOpen, setIsBlockFormOpen] = useState(false);
+  const [blockReasonDraft, setBlockReasonDraft] = useState(todo.blockedReason ?? '');
+  const [blockError, setBlockError] = useState('');
+  const [blockSaving, setBlockSaving] = useState(false);
+  const blockedReason = todo.blockedReason?.trim() ?? '';
 
   useEffect(() => {
     if (isActionMenuOpen) return;
     setIsLinksFormOpen(false);
     setIsDueDateFormOpen(false);
     setLinkError('');
+    setBlockError('');
   }, [isActionMenuOpen]);
 
   useEffect(() => {
     setDueDateDraft(todo.dueDate ?? '');
   }, [todo.dueDate]);
+
+  useEffect(() => {
+    setBlockReasonDraft(todo.blockedReason ?? '');
+  }, [todo.blockedReason]);
 
   const dueDateState = getDueDateState(todo, new Date());
   const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
@@ -352,6 +369,62 @@ export const TodoModalDetailsPanel = ({
     setIsDueDateFormOpen(false);
     setIsActionMenuOpen(false);
     void onDueDateChange?.(null);
+  };
+
+  const handleSaveBlockReason = async () => {
+    const normalizedReason = blockReasonDraft.trim();
+
+    if (!normalizedReason) {
+      setBlockError('Enter block reason');
+      return;
+    }
+
+    if (!onBlock) {
+      setBlockError('Block handler is not available');
+      return;
+    }
+
+    setBlockSaving(true);
+    setBlockError('');
+
+    try {
+      await onBlock(normalizedReason);
+      setIsBlockFormOpen(false);
+      setIsActionMenuOpen(false);
+    } catch (blockReasonError) {
+      const message = blockReasonError instanceof Error ? blockReasonError.message : 'Failed to block card';
+      setBlockError(message);
+    } finally {
+      setBlockSaving(false);
+    }
+  };
+
+  const handleRemoveBlockReason = async () => {
+    if (!onBlock) {
+      setBlockError('Block handler is not available');
+      return;
+    }
+
+    setBlockSaving(true);
+    setBlockError('');
+
+    try {
+      await onBlock(null);
+      setBlockReasonDraft('');
+      setIsBlockFormOpen(false);
+      setIsActionMenuOpen(false);
+    } catch (blockReasonError) {
+      const message = blockReasonError instanceof Error ? blockReasonError.message : 'Failed to clear block reason';
+      setBlockError(message);
+    } finally {
+      setBlockSaving(false);
+    }
+  };
+
+  const openBlockReasonForm = (reason: string) => {
+    setBlockReasonDraft(reason);
+    setBlockError('');
+    setIsBlockFormOpen(true);
   };
 
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
@@ -605,6 +678,18 @@ export const TodoModalDetailsPanel = ({
                   testId: 'todo-card-menu-archive',
                   disabled: saving,
                 },
+                {
+                  id: 'block',
+                  label: 'Block',
+                  icon: <Hand size={14} aria-hidden="true" />,
+                  onSelect: () => {
+                    setBlockReasonDraft(todo.blockedReason ?? '');
+                    setBlockError('');
+                    setIsBlockFormOpen(true);
+                  },
+                  testId: 'todo-card-menu-block',
+                  disabled: saving,
+                },
                   {
                     id: 'delete',
                     label: 'Delete',
@@ -616,6 +701,98 @@ export const TodoModalDetailsPanel = ({
                   },
                 ]}
               />
+            </div>
+          </div>
+        )}
+
+        {blockedReason && !isBlockFormOpen && (
+          <div className="mb-4 rounded-md border border-rose-400/30 bg-rose-400/10 p-3" data-testid="todo-block-reason-metadata">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-rose-100">
+                <Hand size={14} aria-hidden="true" />
+                Block reason
+              </div>
+              <div className="flex items-center gap-1">
+                <IconButton
+                  variant="neutral"
+                  size="sm"
+                  label="Edit block reason"
+                  className="h-7! w-7! rounded-full! p-0! text-rose-100 hover:text-white"
+                  onClick={() => openBlockReasonForm(blockedReason)}
+                  data-testid="todo-block-reason-edit"
+                >
+                  <Pencil size={12} />
+                </IconButton>
+                <IconButton
+                  variant="danger"
+                  size="sm"
+                  label="Remove block reason"
+                  className="h-7! w-7! rounded-full! p-0!"
+                  onClick={() => {
+                    void handleRemoveBlockReason();
+                  }}
+                  disabled={blockSaving}
+                  data-testid="todo-block-reason-remove"
+                >
+                  <Trash2 size={12} />
+                </IconButton>
+              </div>
+            </div>
+            <p className="text-sm leading-5 text-rose-50" data-testid="todo-block-reason-text">
+              {blockedReason}
+            </p>
+          </div>
+        )}
+
+        {!isEditing && isBlockFormOpen && (
+          <div className="mb-4 rounded-md border border-rose-400/30 bg-rose-400/10 p-3" data-testid="todo-block-reason-form">
+            <label className="mb-2 block text-xs uppercase tracking-wide text-rose-100">
+              {blockedReason ? 'Edit block reason' : 'Block reason'}
+            </label>
+            <Input
+              type="text"
+              value={blockReasonDraft}
+              onChange={(event) => setBlockReasonDraft(event.target.value)}
+              placeholder="Describe why this card is blocked"
+              className="mb-2"
+              data-testid="todo-block-reason-input"
+            />
+            {blockError && <p className="mb-2 text-xs text-rose-200">{blockError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsBlockFormOpen(false);
+                  setBlockError('');
+                }}
+                data-testid="todo-block-reason-cancel"
+              >
+                Cancel
+              </Button>
+              {blockedReason && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void handleRemoveBlockReason();
+                  }}
+                  disabled={blockSaving}
+                  data-testid="todo-block-reason-clear"
+                >
+                  Remove
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => {
+                  void handleSaveBlockReason();
+                }}
+                disabled={blockSaving}
+                data-testid="todo-block-reason-save"
+              >
+                {blockSaving ? 'Saving...' : 'Save'}
+              </Button>
             </div>
           </div>
         )}

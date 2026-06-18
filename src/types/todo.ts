@@ -34,6 +34,7 @@ export interface Todo {
   title: string;
   description?: string;
   archived?: boolean;
+  blockedReason?: string | null;
   dueDate?: string | null;
   isCompleted?: boolean;
   completedAt?: string | null;

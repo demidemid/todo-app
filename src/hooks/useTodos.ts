@@ -283,6 +283,9 @@ const parseSnapshotTodos = (docs: SnapshotTodoDoc[]): Todo[] => {
       const status = columnId;
       const isCompleted = typeof data.isCompleted === 'boolean' ? data.isCompleted : status === 'done';
       const completedAt = parseIsoString(data.completedAt);
+      const blockedReason = typeof data.blockedReason === 'string'
+        ? data.blockedReason.trim() || null
+        : null;
       const dueDate = parseLocalDateString(data.dueDate);
       const remindOneDayBefore = typeof data.remindOneDayBefore === 'boolean' ? data.remindOneDayBefore : false;
       const reminderScheduledAt = parseIsoString(data.reminderScheduledAt);
@@ -325,6 +328,7 @@ const parseSnapshotTodos = (docs: SnapshotTodoDoc[]): Todo[] => {
           ...(data as Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>),
           id: item.id,
           archived: typeof data.archived === 'boolean' ? data.archived : false,
+          blockedReason,
           dueDate,
           isCompleted,
           completedAt,

@@ -254,6 +254,32 @@ describeRules('firestore rules', () => {
     )
   })
 
+  it('allows owner to block todo with blockedReason', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        status: 'blocked',
+        columnId: 'blocked',
+        blockedReason: 'Waiting for backend API',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows shared member to block shared todo with blockedReason', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        status: 'blocked',
+        columnId: 'blocked',
+        blockedReason: 'Blocked by dependency',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
   it('allows a shared member to create checklist on a todo they did not create', async () => {
     const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
 
