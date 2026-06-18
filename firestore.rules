@@ -25,6 +25,10 @@ service cloud.firestore {
       return value is list;
     }
 
+    function isTodoTagsList(value) {
+      return value is list;
+    }
+
     function isTodoChecklist(value) {
       return value is map
         && value.keys().hasAll(['title', 'items'])
@@ -54,6 +58,7 @@ service cloud.firestore {
           'userId',
           'title',
           'description',
+          'tags',
           'archived',
           'blockedReason',
           'dueDate',
@@ -77,6 +82,7 @@ service cloud.firestore {
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
+        && (!('tags' in data) || isTodoTagsList(data.tags))
         && (!('archived' in data) || data.archived is bool)
         && (!('blockedReason' in data) || data.blockedReason == null || data.blockedReason is string)
         && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
@@ -113,6 +119,7 @@ service cloud.firestore {
           'userId',
           'title',
           'description',
+          'tags',
           'archived',
           'blockedReason',
           'dueDate',
@@ -136,6 +143,7 @@ service cloud.firestore {
         && isNonEmptyString(data.userId)
         && isNonEmptyString(data.title)
         && (!('description' in data) || data.description is string)
+        && (!('tags' in data) || isTodoTagsList(data.tags))
         && (!('archived' in data) || data.archived is bool)
         && (!('blockedReason' in data) || data.blockedReason == null || data.blockedReason is string)
         && (!('dueDate' in data) || data.dueDate == null || data.dueDate is string)
@@ -167,6 +175,8 @@ service cloud.firestore {
         && (!('createdAt' in data) || isTimestamp(data.createdAt))
         && (!('updatedAt' in data) || isTimestamp(data.updatedAt));
     }
+
+    // (removed unused isDashboardLikePayload helper)
 
     function isValidPayload(data) {
       return data.entityType == 'todo'
@@ -209,7 +219,7 @@ service cloud.firestore {
       let dashboardDoc = get(/databases/$(database)/documents/todos/$(dashboardId));
       return isSignedIn()
         && dashboardDoc.data != null
-        && dashboardDoc.data.entityType == 'dashboard'
+        && (!('entityType' in dashboardDoc.data) || dashboardDoc.data.entityType == 'dashboard')
         && isDashboardMember(dashboardDoc.data);
     }
 
@@ -224,6 +234,7 @@ service cloud.firestore {
         && changedKeys.hasOnly([
           'title',
           'description',
+          'tags',
           'archived',
           'blockedReason',
           'comments',
@@ -244,6 +255,7 @@ service cloud.firestore {
         ])
         && (!('title' in nextData) || isNonEmptyString(nextData.title))
         && (!('description' in nextData) || nextData.description is string)
+        && (!('tags' in nextData) || isTodoTagsList(nextData.tags))
         && (!('archived' in nextData) || nextData.archived is bool)
         && (!('blockedReason' in nextData) || nextData.blockedReason == null || nextData.blockedReason is string)
         && (!('comments' in nextData) || nextData.comments is list)
@@ -284,6 +296,7 @@ service cloud.firestore {
           'comments',
           'files',
           'links',
+          'tags',
           'checklist',
           'checklists',
           'archived',
@@ -301,6 +314,7 @@ service cloud.firestore {
         && (!('comments' in nextData) || nextData.comments is list)
         && (!('files' in nextData) || nextData.files is list)
         && (!('links' in nextData) || nextData.links is list)
+        && (!('tags' in nextData) || isTodoTagsList(nextData.tags))
         && (!('checklist' in nextData) || isTodoChecklist(nextData.checklist))
         && (!('checklists' in nextData) || isTodoChecklistsList(nextData.checklists))
         && (!('archived' in nextData) || nextData.archived is bool)

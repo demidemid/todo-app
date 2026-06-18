@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2, Hand } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
@@ -14,6 +14,7 @@ import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -57,6 +58,29 @@ const normalizeSafeUrl = (rawUrl: string): string | null => {
   }
 };
 
+const normalizeTags = (tags: string[]): string[] => {
+  const normalized = tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  return Array.from(new Set(normalized));
+};
+
+const getTagToneClassName = (tag: string): string => {
+  const palette = [
+    'border-cyan-300/35 bg-cyan-400/15 text-cyan-100',
+    'border-emerald-300/35 bg-emerald-400/15 text-emerald-100',
+    'border-amber-300/35 bg-amber-400/15 text-amber-100',
+    'border-rose-300/35 bg-rose-400/15 text-rose-100',
+    'border-indigo-300/35 bg-indigo-400/15 text-indigo-100',
+    'border-fuchsia-300/35 bg-fuchsia-400/15 text-fuchsia-100',
+    'border-lime-300/35 bg-lime-400/15 text-lime-100',
+  ];
+
+  const hash = Array.from(tag).reduce((acc, char) => (acc + char.charCodeAt(0)) % palette.length, 0);
+  return palette[hash];
+};
+
 interface TodoModalDetailsPanelProps {
   todo: Todo;
   state?: {
@@ -98,7 +122,9 @@ interface TodoModalDetailsPanelProps {
     onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
     onArchive?: () => void;
     onBlock?: (reason: string | null) => Promise<void> | void;
+    onUpdateTags?: (tags: string[]) => Promise<void> | void;
   };
+  availableTags?: string[];
   files?: TodoFile[];
   filesUploading?: boolean;
   deletingFileIds?: string[];
@@ -136,6 +162,7 @@ interface TodoModalDetailsPanelProps {
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   onArchive?: () => void;
   onBlock?: (reason: string | null) => Promise<void> | void;
+  onUpdateTags?: (tags: string[]) => Promise<void> | void;
   focusChecklistIndex?: number | null;
   onChecklistAutoFocusHandled?: () => void;
 }
@@ -144,10 +171,12 @@ export const TodoModalDetailsPanel = ({
   todo,
   state,
   actions,
+  availableTags = [],
   columns = [],
   onMoveToNextStatus: legacyOnMoveToNextStatus,
   onArchive: legacyOnArchive,
   onBlock: legacyOnBlock,
+  onUpdateTags: legacyOnUpdateTags,
   files: legacyFiles,
   filesUploading: legacyFilesUploading,
   deletingFileIds: legacyDeletingFileIds,
@@ -226,6 +255,7 @@ export const TodoModalDetailsPanel = ({
     onBlock: legacyOnBlock ?? ((reason: string | null) => {
       void reason;
     }),
+    onUpdateTags: legacyOnUpdateTags,
   };
 
   const {
@@ -268,6 +298,7 @@ export const TodoModalDetailsPanel = ({
     onMoveToNextStatus,
     onArchive,
     onBlock,
+    onUpdateTags,
   } = resolvedActions;
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
@@ -282,7 +313,14 @@ export const TodoModalDetailsPanel = ({
   const [blockReasonDraft, setBlockReasonDraft] = useState(todo.blockedReason ?? '');
   const [blockError, setBlockError] = useState('');
   const [blockSaving, setBlockSaving] = useState(false);
+  const [isTagsSelectorOpen, setIsTagsSelectorOpen] = useState(false);
+  const [tagQuery, setTagQuery] = useState('');
+  const [tagsSaving, setTagsSaving] = useState(false);
+  const [tagsError, setTagsError] = useState('');
+  const tagsSelectorRef = useRef<HTMLDivElement | null>(null);
   const blockedReason = todo.blockedReason?.trim() ?? '';
+  const selectedTags = normalizeTags(todo.tags ?? []);
+  const normalizedAvailableTags = normalizeTags(availableTags);
 
   useEffect(() => {
     if (isActionMenuOpen) return;
@@ -300,6 +338,15 @@ export const TodoModalDetailsPanel = ({
     setBlockReasonDraft(todo.blockedReason ?? '');
   }, [todo.blockedReason]);
 
+  useEffect(() => {
+    if (!isTagsSelectorOpen) {
+      setTagQuery('');
+      setTagsError('');
+    }
+  }, [isTagsSelectorOpen]);
+
+  useClickOutside(tagsSelectorRef, () => setIsTagsSelectorOpen(false), { enabled: isTagsSelectorOpen });
+
   const dueDateState = getDueDateState(todo, new Date());
   const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
   const primaryChecklist = Array.isArray(todo.checklists) ? todo.checklists[0] : todo.checklist;
@@ -314,6 +361,59 @@ export const TodoModalDetailsPanel = ({
   const dueStateClassName = dueDateState === 'overdue'
     ? 'border-rose-300/35 bg-rose-400/15 text-rose-100'
     : 'border-amber-300/35 bg-amber-300/15 text-amber-100';
+  const tagQueryTrimmed = tagQuery.trim();
+  const tagQueryLower = tagQueryTrimmed.toLowerCase();
+  const availableTagSuggestions = normalizedAvailableTags.filter((tag) => {
+    if (selectedTags.includes(tag)) {
+      return false;
+    }
+
+    if (!tagQueryLower) {
+      return true;
+    }
+
+    return tag.toLowerCase().includes(tagQueryLower);
+  });
+  const hasExactSuggestion = availableTagSuggestions.some((tag) => tag.toLowerCase() === tagQueryLower);
+  const canCreateTag = tagQueryTrimmed.length > 0 && !hasExactSuggestion && !selectedTags.some(
+    (tag) => tag.toLowerCase() === tagQueryLower,
+  );
+
+  const persistTags = async (nextTags: string[]) => {
+    if (!onUpdateTags) {
+      setTagsError('Tag update handler is not available');
+      return;
+    }
+
+    if (tagsSaving) {
+      return;
+    }
+
+    setTagsSaving(true);
+    setTagsError('');
+    try {
+      await onUpdateTags(normalizeTags(nextTags));
+    } catch (updateTagsError) {
+      const message = updateTagsError instanceof Error ? updateTagsError.message : 'Failed to update tags';
+      setTagsError(message);
+    } finally {
+      setTagsSaving(false);
+    }
+  };
+
+  const handleAddTag = async (tag: string) => {
+    const normalizedTag = tag.trim();
+    if (!normalizedTag || selectedTags.includes(normalizedTag)) {
+      return;
+    }
+
+    await persistTags([...selectedTags, normalizedTag]);
+    setTagQuery('');
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    await persistTags(selectedTags.filter((tag) => tag !== tagToRemove));
+  };
 
   const handleTitleEnter = useHotkeyHandler('enter', (event) => {
     event.preventDefault();
@@ -804,6 +904,120 @@ export const TodoModalDetailsPanel = ({
             <span>
               Status: <b className="text-slate-200 uppercase">{resolvedStatusLabel}</b>
             </span>
+            <div className="flex flex-col gap-2" data-testid="todo-tags-field">
+              <div className="flex items-center gap-2">
+                <span>
+                  Tags:
+                </span>
+                <div ref={tagsSelectorRef} className="relative">
+                  <IconButton
+                    variant="neutral"
+                    size="sm"
+                    label="Add tag"
+                    className="h-6! w-6! rounded-full! p-0! text-slate-300 hover:text-white"
+                    onClick={() => setIsTagsSelectorOpen((prev) => !prev)}
+                    data-testid="todo-tags-toggle"
+                  >
+                    <Plus size={12} />
+                  </IconButton>
+                  {isTagsSelectorOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-2 w-[min(26rem,calc(100vw-4rem))] rounded-xl border border-white/15 bg-slate-900/95 p-3 shadow-xl shadow-slate-950/40 backdrop-blur" data-testid="todo-tags-selector">
+                      <Input
+                        type="text"
+                        placeholder="Search or create tag"
+                        value={tagQuery}
+                        onChange={(event) => setTagQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          const existing = availableTagSuggestions.find(
+                            (tag) => tag.toLowerCase() === tagQueryLower,
+                          );
+
+                          if (existing) {
+                            void handleAddTag(existing);
+                            return;
+                          }
+
+                          if (canCreateTag) {
+                            void handleAddTag(tagQueryTrimmed);
+                          }
+                        }}
+                        className="mb-2"
+                        data-testid="todo-tags-search-input"
+                      />
+                      <div className="max-h-32 overflow-y-auto">
+                        {availableTagSuggestions.slice(0, 8).map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className="mb-1 inline-flex w-full items-center rounded-md border border-transparent px-2 py-1 text-left text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/70"
+                            onClick={() => {
+                              void handleAddTag(tag);
+                            }}
+                            data-testid={`todo-tag-option-${tag}`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                        {canCreateTag && (
+                          <button
+                            type="button"
+                            className="inline-flex w-full items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-left text-xs text-cyan-100 hover:bg-cyan-500/15"
+                            onClick={() => {
+                              void handleAddTag(tagQueryTrimmed);
+                            }}
+                            data-testid="todo-tag-create-option"
+                          >
+                            Create "{tagQueryTrimmed}"
+                          </button>
+                        )}
+                        {!canCreateTag && availableTagSuggestions.length === 0 && (
+                          <p className="px-2 py-1 text-xs text-slate-500" data-testid="todo-tags-no-results">
+                            No matching tags
+                          </p>
+                        )}
+                      </div>
+                      {tagsError && (
+                        <p className="mt-2 text-xs text-rose-300" data-testid="todo-tags-error">
+                          {tagsError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {selectedTags.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5" data-testid="todo-tags-list">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getTagToneClassName(tag)}`}
+                      data-testid={`todo-tag-pill-${tag}`}
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        className="text-current/90 hover:text-current"
+                        onClick={() => {
+                          void handleRemoveTag(tag);
+                        }}
+                        disabled={tagsSaving}
+                        aria-label={`Remove tag ${tag}`}
+                        data-testid={`todo-tag-remove-${tag}`}
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-[11px] text-slate-500" data-testid="todo-tags-empty">No tags</span>
+              )}
+            </div>
             {todo.dueDate && (
               <span className="inline-flex w-fit items-center gap-1" title={dueDateHint} data-testid="todo-due-date-metadata">
                 <span>Due date:</span>{' '}

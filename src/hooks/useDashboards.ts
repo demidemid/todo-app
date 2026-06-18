@@ -130,9 +130,14 @@ export const useDashboards = (userId: string | null, userEmail?: string | null, 
           try {
             const dashboardSnapshot = await getDoc(doc(db, 'todos', targetDashboardIdRef.current));
             if (dashboardSnapshot.exists()) {
+              const dashboardData = dashboardSnapshot.data() as Record<string, unknown>;
+              if (dashboardData.entityType === 'todo') {
+                throw new Error('Requested dashboard id points to todo document');
+              }
+
               docsById.set(dashboardSnapshot.id, {
                 id: dashboardSnapshot.id,
-                data: () => dashboardSnapshot.data() as Record<string, unknown>,
+                data: () => dashboardData,
               });
             }
           } catch {
@@ -140,7 +145,9 @@ export const useDashboards = (userId: string | null, userEmail?: string | null, 
           }
         }
 
-        const itemsFromAllQueries: Dashboard[] = Array.from(docsById.values()).map((item) => {
+        const itemsFromAllQueries: Dashboard[] = Array.from(docsById.values())
+          .filter((item) => item.data().entityType !== 'todo')
+          .map((item) => {
             const data = item.data();
             const columns = Array.isArray(data.columns)
               ? data.columns

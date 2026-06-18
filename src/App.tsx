@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc, type FirestoreError } from 'firebase/firestore'
 import { useSearchParams } from 'react-router-dom'
@@ -17,27 +17,52 @@ const isFirestorePermissionDenied = (error: unknown): error is FirestoreError =>
   )
 }
 
+const areSameStringArray = (left: string[], right: string[]) => {
+  if (left.length !== right.length) {
+    return false
+  }
+
+  return left.every((item, index) => item === right[index])
+}
+
+const normalizeTags = (rawTags: string[]) => {
+  const normalized = rawTags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
+
+  return Array.from(new Set(normalized)).sort((left, right) => left.localeCompare(right))
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [logoutLoading, setLogoutLoading] = useState(false)
   const [authActionError, setAuthActionError] = useState('')
+  const [availableTags, setAvailableTags] = useState<string[]>([])
   const syncedProfileKeyRef = useRef<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
+  const selectedTagFilters = normalizeTags(searchParams.getAll('tags'))
+
+  const updateSearch = useCallback((updater: (nextParams: URLSearchParams) => void) => {
+    const nextParams = new URLSearchParams(searchParams)
+    updater(nextParams)
+
+    if (nextParams.toString() === searchParams.toString()) {
+      return
+    }
+
+    setSearchParams(nextParams)
+  }, [searchParams, setSearchParams])
 
   const setSectionMode = (nextMode: AppSectionMode) => {
-    setSearchParams((prevParams) => {
-      const nextParams = new URLSearchParams(prevParams)
-
+    updateSearch((nextParams) => {
       if (nextMode === 'archive') {
         nextParams.set('section', 'archive')
         nextParams.delete('card')
-        return nextParams
+      } else {
+        nextParams.delete('section')
       }
-
-      nextParams.delete('section')
-      return nextParams
     })
   }
 
@@ -115,6 +140,65 @@ function App() {
     }
   }
 
+  const toggleTagFilter = (tag: string) => {
+    const normalizedTag = tag.trim()
+
+    if (!normalizedTag) {
+      return
+    }
+
+    const nextTags = selectedTagFilters.includes(normalizedTag)
+      ? selectedTagFilters.filter((item) => item !== normalizedTag)
+      : [...selectedTagFilters, normalizedTag]
+
+    updateSearch((nextParams) => {
+      nextParams.delete('tags')
+      normalizeTags(nextTags).forEach((nextTag) => nextParams.append('tags', nextTag))
+    })
+  }
+
+  const addTagFilter = (tag: string) => {
+    const normalizedTag = tag.trim()
+
+    if (!normalizedTag || selectedTagFilters.includes(normalizedTag)) {
+      return
+    }
+
+    updateSearch((nextParams) => {
+      nextParams.delete('tags')
+      normalizeTags([...selectedTagFilters, normalizedTag]).forEach((nextTag) => nextParams.append('tags', nextTag))
+    })
+  }
+
+  const removeTagFilter = (tag: string) => {
+    const normalizedTag = tag.trim()
+
+    if (!normalizedTag || !selectedTagFilters.includes(normalizedTag)) {
+      return
+    }
+
+    updateSearch((nextParams) => {
+      nextParams.delete('tags')
+      selectedTagFilters
+        .filter((item) => item !== normalizedTag)
+        .forEach((nextTag) => nextParams.append('tags', nextTag))
+    })
+  }
+
+  const handleAvailableTagsChange = useCallback((nextTags: string[]) => {
+    setAvailableTags((prev) => (areSameStringArray(prev, nextTags) ? prev : nextTags))
+    const filtered = selectedTagFilters.filter((tag) => nextTags.includes(tag))
+
+    if (areSameStringArray(selectedTagFilters, filtered)) {
+      return
+    }
+
+    updateSearch((nextParams) => {
+      nextParams.delete('tags')
+      filtered.forEach((tag) => nextParams.append('tags', tag))
+    })
+  }, [selectedTagFilters, updateSearch])
+
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center bg-slate-950 text-slate-100">
@@ -129,6 +213,10 @@ function App() {
         user={user}
         sectionMode={sectionMode}
         onSectionModeChange={setSectionMode}
+        availableTags={availableTags}
+        selectedTags={selectedTagFilters}
+        onToggleTagFilter={toggleTagFilter}
+        onRemoveTagFilter={removeTagFilter}
         onLogout={handleLogout}
         logoutLoading={logoutLoading}
       />
@@ -145,6 +233,9 @@ function App() {
               userId={user.uid}
               userEmail={user.email ?? undefined}
               viewMode={sectionMode}
+              tagFilters={selectedTagFilters}
+              onAddTagFilter={addTagFilter}
+              onAvailableTagsChange={handleAvailableTagsChange}
             />
           ) : (
             <Login user={user} />

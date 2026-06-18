@@ -93,6 +93,19 @@ describeRules('firestore rules', () => {
       })
 
       await setDoc(doc(db, 'todos', 'shared-board'), dashboardPayload())
+      await setDoc(
+        doc(db, 'todos', 'legacy-board'),
+        {
+          userId: 'owner-1',
+          name: 'Legacy board',
+          order: 1,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          sharedWith: ['recipient-1'],
+          sharedWithEmails: ['recipient@example.com'],
+          createdAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+          updatedAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+        }
+      )
       await setDoc(doc(db, 'todos', 'owner-todo'), todoPayload())
       await setDoc(
         doc(db, 'todos', 'owner-legacy-todo'),
@@ -167,6 +180,17 @@ describeRules('firestore rules', () => {
       setDoc(
         doc(db, 'todos', 'recipient-created'),
         todoPayload({ userId: 'recipient-1', title: 'Recipient created' })
+      )
+    )
+  })
+
+  it('allows recipient to create a todo on a legacy shared dashboard without entityType', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      setDoc(
+        doc(db, 'todos', 'recipient-created-legacy-board'),
+        todoPayload({ userId: 'recipient-1', title: 'Recipient legacy board task', boardId: 'legacy-board' })
       )
     )
   })
@@ -275,6 +299,28 @@ describeRules('firestore rules', () => {
         status: 'blocked',
         columnId: 'blocked',
         blockedReason: 'Blocked by dependency',
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows owner to update todo tags', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        tags: ['backend', 'urgent'],
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows shared member to update tags on a shared todo', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        tags: ['design', 'review'],
         updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
       })
     )

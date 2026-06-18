@@ -123,6 +123,7 @@ describe('useTodos', () => {
             entityType: 'todo',
             userId: 'user-1',
             title: 'Valid item',
+            tags: ['backend', ' backend ', ''],
             description: 'desc',
             archived: true,
             dueDate: '2026-02-01',
@@ -155,6 +156,7 @@ describe('useTodos', () => {
     expect(result.current.todos).toHaveLength(1);
     expect(result.current.todos[0]).toMatchObject({
       id: 'todo-1',
+      tags: ['backend'],
       archived: true,
       status: 'in_progress',
       columnId: 'in_progress',
@@ -526,6 +528,7 @@ describe('useTodos', () => {
         userId: 'user-1',
         title: 'Card',
         description: 'Desc',
+        tags: [],
         boardId: 'board-1',
         dueDate: null,
         isCompleted: false,
@@ -614,6 +617,24 @@ describe('useTodos', () => {
       { path: 'todos/todo-1' },
       expect.objectContaining({
         title: 'Updated',
+        updatedAt: expect.any(Object),
+      })
+    );
+  });
+
+  it('updateTodo normalizes tags before persisting', async () => {
+    const { result } = renderHook(() => useTodos('user-1'));
+
+    await act(async () => {
+      await result.current.updateTodo('todo-1', {
+        tags: ['backend', ' backend ', '', 'api'],
+      });
+    });
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(
+      { path: 'todos/todo-1' },
+      expect.objectContaining({
+        tags: ['backend', 'api'],
         updatedAt: expect.any(Object),
       })
     );
