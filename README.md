@@ -20,7 +20,7 @@ A modern offline-first todo application built with React, TypeScript, Vite, and 
 
 ## Prerequisites
 
-- Node.js 22+
+- Node.js 24+
 - Corepack enabled (Yarn 4.3.0 is defined in `packageManager`)
 - Firebase account (free tier available at [firebase.google.com](https://firebase.google.com))
 
