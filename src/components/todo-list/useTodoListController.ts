@@ -5,6 +5,7 @@ import type { Todo } from '../../types/todo';
 import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
 import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
 import { resolveReminderScheduledAt } from '../../utils/dueDate';
+import { hasIncompleteChecklistItems } from '../../utils/todoChecklist';
 import {
   useHasTodoListStoresProvider,
   useTodoListControllerStoreScoped,
@@ -90,6 +91,10 @@ const getBlockedMoveErrorMessage = (todo: Todo, targetColumnName: string): strin
   const blockedReason = todo.blockedReason?.trim() ?? 'Unknown block reason';
   return `Card "${todo.title}" can't be moved to ${targetColumnName} because it is blocked: ${blockedReason}`;
 };
+
+const getIncompleteChecklistMoveErrorMessage = (todo: Todo, targetColumnName: string): string => (
+  `Card "${todo.title}" can't be moved to ${targetColumnName} because it has unfinished checklist items.`
+);
 
 export const useTodoListController = ({
   todos,
@@ -234,6 +239,11 @@ export const useTodoListController = ({
 
     if (targetColumn?.isDone && draggedTodo.blockedReason?.trim()) {
       ui.setDashboardActionError(getBlockedMoveErrorMessage(draggedTodo, targetColumn.name));
+      return;
+    }
+
+    if (targetColumn?.isDone && hasIncompleteChecklistItems(draggedTodo)) {
+      ui.setDashboardActionError(getIncompleteChecklistMoveErrorMessage(draggedTodo, targetColumn.name));
       return;
     }
 

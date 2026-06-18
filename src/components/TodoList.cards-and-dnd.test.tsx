@@ -221,6 +221,38 @@ describe('TodoList cards and dnd', () => {
     expect(mockUpdateTodo).not.toHaveBeenCalled();
   });
 
+  it('shows unfinished-checklist error when dragging card with open checklist into done column', async () => {
+    setTodosState([
+      createTodo({
+        id: 'todo-open-checklist',
+        title: 'Checklist todo',
+        status: 'todo',
+        columnId: 'todo',
+        checklist: {
+          title: 'Checklist',
+          items: [{ id: 'item-1', title: 'Open item', checked: false }],
+        },
+      }),
+    ]);
+
+    renderTodoList();
+
+    const draggedCard = screen.getByTestId('card-todo-open-checklist');
+    const doneColumnEndDrop = screen.getByTestId('drop-done-end');
+
+    fireEvent.dragStart(draggedCard);
+    fireEvent.dragOver(doneColumnEndDrop);
+    fireEvent.drop(doneColumnEndDrop);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Card "Checklist todo" can\'t be moved to Done because it has unfinished checklist items.')
+      ).toBeInTheDocument();
+    });
+
+    expect(mockUpdateTodo).not.toHaveBeenCalled();
+  });
+
   it('auto-closes blocked-move error banner after timeout', async () => {
     vi.useFakeTimers();
 

@@ -501,6 +501,37 @@ describe('TodoModal', () => {
     expect(updateTodo).not.toHaveBeenCalled();
   });
 
+  it('shows error when moving card with unfinished checklist to done from next-status action', async () => {
+    render(
+      <TodoModal
+        todo={{
+          ...todo,
+          checklist: {
+            title: 'Checklist',
+            items: [{ id: 'item-1', title: 'Open item', checked: false }],
+          },
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+        columns={[
+          { id: 'todo', name: 'Todo' },
+          { id: 'done', name: 'Done', isDone: true },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-next-status-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Card "Title" can\'t be moved to Done because it has unfinished checklist items.')).toBeInTheDocument();
+    });
+
+    expect(updateTodo).not.toHaveBeenCalled();
+  });
+
   it('persists due date changes from the modal details panel', async () => {
     render(
       <TodoModal

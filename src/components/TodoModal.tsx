@@ -4,7 +4,7 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import type { Todo } from '../types/todo';
 import type { TodoFile } from '../types/todo';
 import { storage } from '../firebase';
-import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklists } from '../utils/todoChecklist';
+import { DEFAULT_CHECKLIST_TITLE, hasIncompleteChecklistItems, normalizeTodoChecklists } from '../utils/todoChecklist';
 import { resolveReminderScheduledAt } from '../utils/dueDate';
 import { TodoModalCommentsPanel } from './todo-modal/TodoModalCommentsPanel';
 import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
@@ -57,6 +57,10 @@ const sanitizeChecklistItemsForPersist = <T extends { title: string }>(items: T[
     title: item.title.trim(),
   }))
   .filter((item) => item.title.length > 0);
+
+const getIncompleteChecklistMoveErrorMessage = (todo: Todo, targetColumnName: string): string => (
+  `Card "${todo.title}" can't be moved to ${targetColumnName} because it has unfinished checklist items.`
+);
 
 const isEditableTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) {
@@ -666,6 +670,10 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
                 setQuickActionError('');
                 const nextColumn = (columns ?? []).find((column) => column.id === nextColumnId);
                 if (nextColumn?.isDone && todo.blockedReason?.trim()) {
+                  return;
+                }
+                if (nextColumn?.isDone && hasIncompleteChecklistItems(todo)) {
+                  setQuickActionError(getIncompleteChecklistMoveErrorMessage(todo, nextColumn.name));
                   return;
                 }
                 const isCompleted = Boolean(nextColumn?.isDone);

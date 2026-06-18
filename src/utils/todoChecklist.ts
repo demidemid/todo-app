@@ -70,3 +70,8 @@ export const normalizeTodoChecklists = (
   const normalizedFallback = normalizeTodoChecklist(fallbackChecklist, options);
   return normalizedFallback ? [normalizedFallback] : [];
 };
+
+export const hasIncompleteChecklistItems = (
+  todo: Pick<Todo, 'checklists' | 'checklist'>,
+): boolean => normalizeTodoChecklists(todo.checklists, todo.checklist)
+  .some((checklist) => checklist.items.some((item) => !item.checked));
