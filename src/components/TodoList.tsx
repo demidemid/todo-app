@@ -82,9 +82,29 @@ interface TodoListProps {
   userId: string;
   userEmail?: string;
   viewMode?: TodoListViewMode;
+  tagFilters?: string[];
+  onAddTagFilter?: (tag: string) => void;
+  onAvailableTagsChange?: (tags: string[]) => void;
 }
 
-const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoListProps) => {
+const normalizeTags = (tags: string[] | undefined): string[] => {
+  if (!Array.isArray(tags)) return [];
+
+  const normalizedTags = tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  return Array.from(new Set(normalizedTags));
+};
+
+const TodoListContent = ({
+  userId,
+  userEmail,
+  viewMode = 'dashboards',
+  tagFilters = [],
+  onAddTagFilter,
+  onAvailableTagsChange,
+}: TodoListProps) => {
   const {
     dashboardParamId,
     modalTodoId,
@@ -132,15 +152,40 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
     [dashboards, userId]
   );
   const { todos, loading, error, addTodo, updateTodo, deleteTodo } = useTodos(userId, boardAccess);
+  const normalizedSelectedTagFilters = useMemo(() => normalizeTags(tagFilters), [tagFilters]);
+  const allAvailableTags = useMemo(() => {
+    const normalizedTags = todos
+      .flatMap((item) => item.tags ?? [])
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+
+    return Array.from(new Set(normalizedTags)).sort((left, right) => left.localeCompare(right));
+  }, [todos]);
+
+  useEffect(() => {
+    onAvailableTagsChange?.(allAvailableTags);
+  }, [allAvailableTags, onAvailableTagsChange]);
+
+  const todosWithTagFilter = useMemo(() => {
+    if (normalizedSelectedTagFilters.length === 0) {
+      return todos;
+    }
+
+    return todos.filter((todo) => {
+      const todoTags = normalizeTags(todo.tags);
+      return normalizedSelectedTagFilters.some((tag) => todoTags.includes(tag));
+    });
+  }, [todos, normalizedSelectedTagFilters]);
+
   useDueDateReminders({ todos, updateTodo });
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
   const dashboardsById = useMemo(
     () => new Map(dashboards.map((dashboard) => [dashboard.id, dashboard])),
     [dashboards]
   );
-  const { archivedTodos, dueHighlights } = useTodoListDerivedData({ todos, dashboardsById });
+  const { archivedTodos, dueHighlights } = useTodoListDerivedData({ todos: todosWithTagFilter, dashboardsById });
 
-  const { columns, groupedTodos } = useTodoListBoardData({ todos, activeDashboard });
+  const { columns, groupedTodos } = useTodoListBoardData({ todos: todosWithTagFilter, activeDashboard });
   const manageableDashboardIds = useMemo(
     () => dashboards.filter((dashboard) => dashboard.userId === userId).map((dashboard) => dashboard.id),
     [dashboards, userId]
@@ -151,7 +196,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   );
 
   const controller = useTodoListController({
-    todos,
+    todos: todosWithTagFilter,
     dashboards,
     activeDashboard,
     groupedTodos,
@@ -320,6 +365,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
               dashboardsLength={dashboardsLength}
               columns={columns}
               groupedTodos={groupedTodos}
+              onAddTagFilter={onAddTagFilter}
               interactionState={interactionState}
               canManageDashboard={canManageDashboard}
               actions={actions}

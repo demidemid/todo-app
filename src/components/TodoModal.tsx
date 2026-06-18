@@ -11,6 +11,7 @@ import { TodoModalDetailsPanel } from './todo-modal/TodoModalDetailsPanel';
 import { useTodoModalEditor } from './todo-modal/useTodoModalEditor';
 import { useTodoModalController } from './todo-modal/useTodoModalController';
 import { useHotkey } from '../hooks/useHotkey';
+import { useClickOutside } from '../hooks/useClickOutside';
 import { IconButton } from './ui/IconButton';
 import { Input } from './ui/Input';
 
@@ -95,6 +96,7 @@ export const TodoModal: FC<TodoModalProps> = ({
   availableTags = [],
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
   const [filesUploading, setFilesUploading] = useState(false);
   const [deletingFileIds, setDeletingFileIds] = useState<string[]>([]);
   const [filesError, setFilesError] = useState('');
@@ -165,6 +167,8 @@ export const TodoModal: FC<TodoModalProps> = ({
     event.preventDefault();
     onClose();
   }, { skipIfDefaultPrevented: true });
+
+  useClickOutside(modalContentRef, onClose, { eventType: 'click' });
 
   const files = useMemo<TodoFile[]>(() => {
     if (!Array.isArray(todo.files)) return [];
@@ -353,12 +357,11 @@ export const TodoModal: FC<TodoModalProps> = ({
   return (
     <div
       className="fixed inset-0 z-50 grid place-items-center overflow-y-auto overscroll-contain bg-slate-950/70 p-0 backdrop-blur-sm md:p-4"
-      onClick={onClose}
       data-testid="todo-modal"
     >
       <div
+        ref={modalContentRef}
         className="relative flex h-dvh w-full max-w-5xl flex-col gap-6 overflow-x-hidden overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl md:overflow-hidden lg:h-[80vh] lg:flex-row"
-        onClick={(event) => event.stopPropagation()}
       >
         <IconButton
           variant="link"

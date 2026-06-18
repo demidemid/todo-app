@@ -575,25 +575,38 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
     const columnId = options.columnId ?? 'todo';
     const boardId = options.boardId;
 
-    const docRef = await addDoc(collection(db, 'todos'), {
-      entityType: 'todo',
-      ...todo,
-      userId,
-      tags: [],
-      dueDate: null,
-      isCompleted: false,
-      completedAt: null,
-      remindOneDayBefore: false,
-      reminderScheduledAt: null,
-      status: columnId,
-      boardId,
-      columnId,
-      weight: Date.now(),
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
+    try {
+      const docRef = await addDoc(collection(db, 'todos'), {
+        entityType: 'todo',
+        ...todo,
+        userId,
+        tags: [],
+        dueDate: null,
+        isCompleted: false,
+        completedAt: null,
+        remindOneDayBefore: false,
+        reminderScheduledAt: null,
+        status: columnId,
+        boardId,
+        columnId,
+        weight: Date.now(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
 
-    return docRef.id;
+      return docRef.id;
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        console.error('addTodo permission denied', {
+          userId,
+          boardId,
+          columnId,
+          title: todo.title,
+        });
+      }
+
+      throw error;
+    }
   };
 
   const updateTodo = async (id: string, updates: Partial<Todo>) => {

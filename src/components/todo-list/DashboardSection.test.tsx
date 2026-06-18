@@ -196,6 +196,27 @@ describe('DashboardSection', () => {
     expect(screen.getByTestId('card-tag-pill-todo-1-urgent')).toHaveTextContent('urgent');
   });
 
+  it('adds tag to filtering when clicking a card tag pill without opening modal', () => {
+    const props = createProps();
+    props.groupedTodos = {
+      ...props.groupedTodos,
+      todo: [
+        {
+          ...todo,
+          tags: ['backend'],
+        },
+      ],
+    };
+    props.onAddTagFilter = vi.fn();
+
+    render(<DashboardSection {...props} />);
+
+    fireEvent.click(screen.getByTestId('card-tag-pill-todo-1-backend'));
+
+    expect(props.onAddTagFilter).toHaveBeenCalledWith('backend');
+    expect(props.onOpenTodoModal).not.toHaveBeenCalled();
+  });
+
   it('disables archive-all-completed action when last status has no cards', () => {
     const props = createProps();
 

@@ -94,6 +94,7 @@ interface DashboardTodoCardContentProps {
   onSaveEdit: (todoId: string) => void;
   onMenuArchive: (todoId: string) => void;
   onMenuDelete: (todoId: string) => void;
+  onTagClick?: (tag: string) => void;
 }
 
 export const DashboardTodoCardContent = ({
@@ -111,6 +112,7 @@ export const DashboardTodoCardContent = ({
   onSaveEdit,
   onMenuArchive,
   onMenuDelete,
+  onTagClick,
 }: DashboardTodoCardContentProps) => {
   const tags = normalizeTags(todo.tags);
 
@@ -164,13 +166,18 @@ export const DashboardTodoCardContent = ({
           {tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5" data-testid={`card-tags-${todo.id}`}>
               {tags.map((tag) => (
-                <span
+                <button
                   key={tag}
+                  type="button"
                   className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getTagToneClassName(tag)}`}
                   data-testid={`card-tag-pill-${todo.id}-${tag}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onTagClick?.(tag);
+                  }}
                 >
                   {tag}
-                </span>
+                </button>
               ))}
             </div>
           )}

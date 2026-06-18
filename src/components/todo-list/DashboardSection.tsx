@@ -94,6 +94,7 @@ interface DashboardSectionProps {
   onMenuEdit?: (todo: Todo) => void;
   onMenuArchive?: (todoId: string) => void;
   onMenuDelete?: (todoId: string) => void;
+  onAddTagFilter?: (tag: string) => void;
 }
 
 export const DashboardSection = ({
@@ -135,6 +136,7 @@ export const DashboardSection = ({
   onMenuEdit: legacyOnMenuEdit,
   onMenuArchive: legacyOnMenuArchive,
   onMenuDelete: legacyOnMenuDelete,
+  onAddTagFilter,
 }: DashboardSectionProps) => {
   const resolvedState: DashboardSectionInteractionState = interactionState ?? {
     editingTodoId: legacyEditingTodoId ?? null,
@@ -387,6 +389,7 @@ export const DashboardSection = ({
                                 onSaveEdit={onSaveEdit}
                                 onMenuArchive={onMenuArchive}
                                 onMenuDelete={onMenuDelete}
+                                onTagClick={onAddTagFilter}
                               />
                             </div >
                           </article>

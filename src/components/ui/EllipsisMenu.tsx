@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { IconButton } from './IconButton';
 import { getEllipsisMenuItemClassName } from './ellipsisMenuStyles';
 import { useHotkey } from '../../hooks/useHotkey';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 export interface EllipsisMenuItem {
   id: string;
@@ -84,22 +85,7 @@ export const EllipsisMenu = ({
     setMenuOpen(false);
   }, { enabled: open, capture: true, preventDefault: true });
 
-  useEffect(() => {
-    if (!open) return;
-
-    const handleOutsidePointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) return;
-      if (!rootRef.current?.contains(event.target)) {
-        setMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsidePointer);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsidePointer);
-    };
-  }, [open, setMenuOpen]);
+  useClickOutside(rootRef, () => setMenuOpen(false), { enabled: open });
 
   const onContainerMouseDown = (event: ReactMouseEvent) => {
     if (stopPropagation) {

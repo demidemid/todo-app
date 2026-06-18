@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2, Hand } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
@@ -14,6 +14,7 @@ import { TodoChecklistSection } from './TodoChecklistSection';
 import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
+import { useClickOutside } from '../../hooks/useClickOutside';
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -316,6 +317,7 @@ export const TodoModalDetailsPanel = ({
   const [tagQuery, setTagQuery] = useState('');
   const [tagsSaving, setTagsSaving] = useState(false);
   const [tagsError, setTagsError] = useState('');
+  const tagsSelectorRef = useRef<HTMLDivElement | null>(null);
   const blockedReason = todo.blockedReason?.trim() ?? '';
   const selectedTags = normalizeTags(todo.tags ?? []);
   const normalizedAvailableTags = normalizeTags(availableTags);
@@ -342,6 +344,8 @@ export const TodoModalDetailsPanel = ({
       setTagsError('');
     }
   }, [isTagsSelectorOpen]);
+
+  useClickOutside(tagsSelectorRef, () => setIsTagsSelectorOpen(false), { enabled: isTagsSelectorOpen });
 
   const dueDateState = getDueDateState(todo, new Date());
   const checklists = normalizeTodoChecklists(todo.checklists, todo.checklist);
@@ -902,16 +906,86 @@ export const TodoModalDetailsPanel = ({
                 <span>
                   Tags:
                 </span>
-                <IconButton
-                  variant="neutral"
-                  size="sm"
-                  label="Add tag"
-                  className="h-6! w-6! rounded-full! p-0! text-slate-300 hover:text-white"
-                  onClick={() => setIsTagsSelectorOpen((prev) => !prev)}
-                  data-testid="todo-tags-toggle"
-                >
-                  <Plus size={12} />
-                </IconButton>
+                <div ref={tagsSelectorRef} className="relative">
+                  <IconButton
+                    variant="neutral"
+                    size="sm"
+                    label="Add tag"
+                    className="h-6! w-6! rounded-full! p-0! text-slate-300 hover:text-white"
+                    onClick={() => setIsTagsSelectorOpen((prev) => !prev)}
+                    data-testid="todo-tags-toggle"
+                  >
+                    <Plus size={12} />
+                  </IconButton>
+                  {isTagsSelectorOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-2 w-[min(26rem,calc(100vw-4rem))] rounded-xl border border-white/15 bg-slate-900/95 p-3 shadow-xl shadow-slate-950/40 backdrop-blur" data-testid="todo-tags-selector">
+                      <Input
+                        type="text"
+                        placeholder="Search or create tag"
+                        value={tagQuery}
+                        onChange={(event) => setTagQuery(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          const existing = availableTagSuggestions.find(
+                            (tag) => tag.toLowerCase() === tagQueryLower,
+                          );
+
+                          if (existing) {
+                            void handleAddTag(existing);
+                            return;
+                          }
+
+                          if (canCreateTag) {
+                            void handleAddTag(tagQueryTrimmed);
+                          }
+                        }}
+                        className="mb-2"
+                        data-testid="todo-tags-search-input"
+                      />
+                      <div className="max-h-32 overflow-y-auto">
+                        {availableTagSuggestions.slice(0, 8).map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className="mb-1 inline-flex w-full items-center rounded-md border border-transparent px-2 py-1 text-left text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/70"
+                            onClick={() => {
+                              void handleAddTag(tag);
+                            }}
+                            data-testid={`todo-tag-option-${tag}`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                        {canCreateTag && (
+                          <button
+                            type="button"
+                            className="inline-flex w-full items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-left text-xs text-cyan-100 hover:bg-cyan-500/15"
+                            onClick={() => {
+                              void handleAddTag(tagQueryTrimmed);
+                            }}
+                            data-testid="todo-tag-create-option"
+                          >
+                            Create "{tagQueryTrimmed}"
+                          </button>
+                        )}
+                        {!canCreateTag && availableTagSuggestions.length === 0 && (
+                          <p className="px-2 py-1 text-xs text-slate-500" data-testid="todo-tags-no-results">
+                            No matching tags
+                          </p>
+                        )}
+                      </div>
+                      {tagsError && (
+                        <p className="mt-2 text-xs text-rose-300" data-testid="todo-tags-error">
+                          {tagsError}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               {selectedTags.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5" data-testid="todo-tags-list">
@@ -939,74 +1013,6 @@ export const TodoModalDetailsPanel = ({
                 </div>
               ) : (
                 <span className="text-[11px] text-slate-500" data-testid="todo-tags-empty">No tags</span>
-              )}
-              {isTagsSelectorOpen && (
-                <div className="max-w-sm rounded-md border border-slate-700/80 bg-slate-950/60 p-2" data-testid="todo-tags-selector">
-                  <Input
-                    type="text"
-                    placeholder="Search or create tag"
-                    value={tagQuery}
-                    onChange={(event) => setTagQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Enter') {
-                        return;
-                      }
-
-                      event.preventDefault();
-                      const existing = availableTagSuggestions.find(
-                        (tag) => tag.toLowerCase() === tagQueryLower,
-                      );
-
-                      if (existing) {
-                        void handleAddTag(existing);
-                        return;
-                      }
-
-                      if (canCreateTag) {
-                        void handleAddTag(tagQueryTrimmed);
-                      }
-                    }}
-                    className="mb-2"
-                    data-testid="todo-tags-search-input"
-                  />
-                  <div className="max-h-32 overflow-y-auto">
-                    {availableTagSuggestions.slice(0, 8).map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        className="mb-1 inline-flex w-full items-center rounded-md border border-transparent px-2 py-1 text-left text-xs text-slate-200 hover:border-slate-600 hover:bg-slate-800/70"
-                        onClick={() => {
-                          void handleAddTag(tag);
-                        }}
-                        data-testid={`todo-tag-option-${tag}`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                    {canCreateTag && (
-                      <button
-                        type="button"
-                        className="inline-flex w-full items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-left text-xs text-cyan-100 hover:bg-cyan-500/15"
-                        onClick={() => {
-                          void handleAddTag(tagQueryTrimmed);
-                        }}
-                        data-testid="todo-tag-create-option"
-                      >
-                        Create "{tagQueryTrimmed}"
-                      </button>
-                    )}
-                    {!canCreateTag && availableTagSuggestions.length === 0 && (
-                      <p className="px-2 py-1 text-xs text-slate-500" data-testid="todo-tags-no-results">
-                        No matching tags
-                      </p>
-                    )}
-                  </div>
-                  {tagsError && (
-                    <p className="mt-2 text-xs text-rose-300" data-testid="todo-tags-error">
-                      {tagsError}
-                    </p>
-                  )}
-                </div>
               )}
             </div>
             {todo.dueDate && (

@@ -93,6 +93,19 @@ describeRules('firestore rules', () => {
       })
 
       await setDoc(doc(db, 'todos', 'shared-board'), dashboardPayload())
+      await setDoc(
+        doc(db, 'todos', 'legacy-board'),
+        {
+          userId: 'owner-1',
+          name: 'Legacy board',
+          order: 1,
+          columns: [{ id: 'todo', name: 'To do', order: 0, isDone: false }],
+          sharedWith: ['recipient-1'],
+          sharedWithEmails: ['recipient@example.com'],
+          createdAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+          updatedAt: Timestamp.fromDate(new Date('2026-01-01T00:00:00Z')),
+        }
+      )
       await setDoc(doc(db, 'todos', 'owner-todo'), todoPayload())
       await setDoc(
         doc(db, 'todos', 'owner-legacy-todo'),
@@ -167,6 +180,17 @@ describeRules('firestore rules', () => {
       setDoc(
         doc(db, 'todos', 'recipient-created'),
         todoPayload({ userId: 'recipient-1', title: 'Recipient created' })
+      )
+    )
+  })
+
+  it('allows recipient to create a todo on a legacy shared dashboard without entityType', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      setDoc(
+        doc(db, 'todos', 'recipient-created-legacy-board'),
+        todoPayload({ userId: 'recipient-1', title: 'Recipient legacy board task', boardId: 'legacy-board' })
       )
     )
   })

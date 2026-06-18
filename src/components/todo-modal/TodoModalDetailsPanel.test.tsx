@@ -208,6 +208,18 @@ describe('TodoModalDetailsPanel', () => {
     });
   });
 
+  it('closes tags selector on outside click', () => {
+    const props = createProps();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-tags-toggle'));
+    expect(screen.getByTestId('todo-tags-selector')).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByTestId('todo-tags-selector')).not.toBeInTheDocument();
+  });
+
   it('removes an existing tag using pill action', async () => {
     const props = createProps();
     props.todo = {

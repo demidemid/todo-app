@@ -18,13 +18,16 @@ export const useTodoListUrlState = (): UseTodoListUrlStateResult => {
 
   const updateSearch = useCallback(
     (updater: (nextParams: URLSearchParams) => void) => {
-      setSearchParams((prevParams) => {
-        const nextParams = new URLSearchParams(prevParams);
-        updater(nextParams);
-        return nextParams;
-      });
+      const nextParams = new URLSearchParams(searchParams);
+      updater(nextParams);
+
+      if (nextParams.toString() === searchParams.toString()) {
+        return;
+      }
+
+      setSearchParams(nextParams);
     },
-    [setSearchParams],
+    [searchParams, setSearchParams],
   );
 
   const openTodoByLink = useCallback((todoId: string, dashboardId: string) => {

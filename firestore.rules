@@ -176,6 +176,18 @@ service cloud.firestore {
         && (!('updatedAt' in data) || isTimestamp(data.updatedAt));
     }
 
+    function isDashboardLikePayload(data) {
+      return (!('entityType' in data) || data.entityType == 'dashboard')
+        && isNonEmptyString(data.userId)
+        && isNonEmptyString(data.name)
+        && (!('order' in data) || data.order is number)
+        && (!('columns' in data) || (data.columns is list && data.columns.size() > 0))
+        && (!('sharedWith' in data) || isStringList(data.sharedWith))
+        && (!('sharedWithEmails' in data) || isStringList(data.sharedWithEmails))
+        && (!('createdAt' in data) || isTimestamp(data.createdAt))
+        && (!('updatedAt' in data) || isTimestamp(data.updatedAt));
+    }
+
     function isValidPayload(data) {
       return data.entityType == 'todo'
         ? isTodoPayload(data)
@@ -217,7 +229,7 @@ service cloud.firestore {
       let dashboardDoc = get(/databases/$(database)/documents/todos/$(dashboardId));
       return isSignedIn()
         && dashboardDoc.data != null
-        && dashboardDoc.data.entityType == 'dashboard'
+        && (!('entityType' in dashboardDoc.data) || dashboardDoc.data.entityType == 'dashboard')
         && isDashboardMember(dashboardDoc.data);
     }
 
