@@ -166,6 +166,14 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
   });
 
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
+  const availableTags = useMemo(() => {
+    const normalizedTags = todos
+      .flatMap((item) => item.tags ?? [])
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0);
+
+    return Array.from(new Set(normalizedTags)).sort((left, right) => left.localeCompare(right));
+  }, [todos]);
   const modalColumns = modalTodo
     ? dashboardsById.get(modalTodo.boardId)?.columns ?? []
     : [];
@@ -341,6 +349,7 @@ const TodoListContent = ({ userId, userEmail, viewMode = 'dashboards' }: TodoLis
           updateTodo={updateTodo}
           deleteTodo={deleteTodo}
           columns={modalColumns}
+          availableTags={availableTags}
         />
       )}
     </div>

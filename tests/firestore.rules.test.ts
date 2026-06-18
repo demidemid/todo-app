@@ -280,6 +280,28 @@ describeRules('firestore rules', () => {
     )
   })
 
+  it('allows owner to update todo tags', async () => {
+    const db = testEnv.authenticatedContext('owner-1', { email: 'owner@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        tags: ['backend', 'urgent'],
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
+  it('allows shared member to update tags on a shared todo', async () => {
+    const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
+
+    await assertSucceeds(
+      updateDoc(doc(db, 'todos', 'owner-todo'), {
+        tags: ['design', 'review'],
+        updatedAt: Timestamp.fromDate(new Date('2026-01-03T00:00:00Z')),
+      })
+    )
+  })
+
   it('allows a shared member to create checklist on a todo they did not create', async () => {
     const db = testEnv.authenticatedContext('recipient-1', { email: 'recipient@example.com' }).firestore()
 

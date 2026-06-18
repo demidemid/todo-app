@@ -119,6 +119,19 @@ const parseIsoString = (value: unknown): string | null => {
   return parsed.toISOString();
 };
 
+const parseTags = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const normalizedTags = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return Array.from(new Set(normalizedTags));
+};
+
 const parseWeight = (weight: unknown, createdAt?: unknown): number => {
   if (typeof weight === 'number' && Number.isFinite(weight)) {
     return weight;
@@ -286,6 +299,7 @@ const parseSnapshotTodos = (docs: SnapshotTodoDoc[]): Todo[] => {
       const blockedReason = typeof data.blockedReason === 'string'
         ? data.blockedReason.trim() || null
         : null;
+      const tags = parseTags(data.tags);
       const dueDate = parseLocalDateString(data.dueDate);
       const remindOneDayBefore = typeof data.remindOneDayBefore === 'boolean' ? data.remindOneDayBefore : false;
       const reminderScheduledAt = parseIsoString(data.reminderScheduledAt);
@@ -329,6 +343,7 @@ const parseSnapshotTodos = (docs: SnapshotTodoDoc[]): Todo[] => {
           id: item.id,
           archived: typeof data.archived === 'boolean' ? data.archived : false,
           blockedReason,
+          tags,
           dueDate,
           isCompleted,
           completedAt,
@@ -564,6 +579,7 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
       entityType: 'todo',
       ...todo,
       userId,
+      tags: [],
       dueDate: null,
       isCompleted: false,
       completedAt: null,
@@ -583,8 +599,14 @@ export const useTodos = (userId: string | null, accessibleBoards?: AccessibleBoa
   const updateTodo = async (id: string, updates: Partial<Todo>) => {
     const todoRef = doc(db, 'todos', id);
 
+    const nextUpdates = { ...updates };
+    if ('tags' in nextUpdates) {
+      const normalizedTags = parseTags(nextUpdates.tags);
+      nextUpdates.tags = normalizedTags;
+    }
+
     await updateDoc(todoRef, {
-      ...updates,
+      ...nextUpdates,
       updatedAt: Timestamp.now(),
     });
   };

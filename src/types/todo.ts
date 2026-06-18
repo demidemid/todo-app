@@ -32,6 +32,7 @@ export interface TodoChecklist {
 export interface Todo {
   id: string;
   title: string;
+  tags?: string[];
   description?: string;
   archived?: boolean;
   blockedReason?: string | null;

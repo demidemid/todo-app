@@ -45,6 +45,8 @@ const createProps = (): TodoModalDetailsPanelProps => ({
   onDueDateChange: vi.fn(),
   onRemindOneDayBeforeChange: vi.fn(),
   onBlock: vi.fn(),
+  onUpdateTags: vi.fn(),
+  availableTags: ['backend', 'frontend', 'review'],
 });
 
 describe('TodoModalDetailsPanel', () => {
@@ -163,6 +165,63 @@ describe('TodoModalDetailsPanel', () => {
 
     await waitFor(() => {
       expect(props.onBlock).toHaveBeenCalledWith('Waiting for updated design');
+    });
+  });
+
+  it('renders tags field with empty state by default', () => {
+    const props = createProps();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-tags-field')).toBeInTheDocument();
+    expect(screen.getByTestId('todo-tags-empty')).toHaveTextContent('No tags');
+  });
+
+  it('adds an existing tag from selector options', async () => {
+    const props = createProps();
+    props.onUpdateTags = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-tags-toggle'));
+    fireEvent.click(screen.getByTestId('todo-tag-option-backend'));
+
+    await waitFor(() => {
+      expect(props.onUpdateTags).toHaveBeenCalledWith(['backend']);
+    });
+  });
+
+  it('creates a new tag when search has no exact match', async () => {
+    const props = createProps();
+    props.onUpdateTags = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-tags-toggle'));
+    fireEvent.change(screen.getByTestId('todo-tags-search-input'), {
+      target: { value: 'mobile' },
+    });
+    fireEvent.click(screen.getByTestId('todo-tag-create-option'));
+
+    await waitFor(() => {
+      expect(props.onUpdateTags).toHaveBeenCalledWith(['mobile']);
+    });
+  });
+
+  it('removes an existing tag using pill action', async () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      tags: ['backend', 'urgent'],
+    };
+    props.onUpdateTags = vi.fn().mockResolvedValue(undefined);
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    fireEvent.click(screen.getByTestId('todo-tag-remove-backend'));
+
+    await waitFor(() => {
+      expect(props.onUpdateTags).toHaveBeenCalledWith(['urgent']);
     });
   });
 

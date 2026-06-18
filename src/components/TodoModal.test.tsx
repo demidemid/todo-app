@@ -450,6 +450,27 @@ describe('TodoModal', () => {
     });
   });
 
+  it('updates todo tags from modal tags selector', async () => {
+    render(
+      <TodoModal
+        todo={todo}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+        availableTags={['backend', 'frontend']}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-tags-toggle'));
+    fireEvent.click(screen.getByTestId('todo-tag-option-backend'));
+
+    await waitFor(() => {
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', { tags: ['backend'] });
+    });
+  });
+
   it('shows a readable error when moving card to next status fails', async () => {
     updateTodo.mockRejectedValueOnce({
       code: 'permission-denied',

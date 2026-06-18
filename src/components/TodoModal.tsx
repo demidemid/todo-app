@@ -22,6 +22,7 @@ interface TodoModalProps {
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
   columns?: { id: string; name: string; isDone?: boolean }[];
+  availableTags?: string[];
 }
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -83,7 +84,16 @@ const isEditableTarget = (target: EventTarget | null): boolean => {
   return target.getAttribute('role') === 'textbox' || target.closest('[role="textbox"]') !== null;
 };
 
-export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose, updateTodo, deleteTodo, columns }) => {
+export const TodoModal: FC<TodoModalProps> = ({
+  todo,
+  userId,
+  userEmail,
+  onClose,
+  updateTodo,
+  deleteTodo,
+  columns,
+  availableTags = [],
+}) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [filesUploading, setFilesUploading] = useState(false);
   const [deletingFileIds, setDeletingFileIds] = useState<string[]>([]);
@@ -361,6 +371,7 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
         </IconButton>
         <TodoModalDetailsPanel
           todo={todo}
+          availableTags={availableTags}
           focusChecklistIndex={focusChecklistIndex}
           onChecklistAutoFocusHandled={() => setFocusChecklistIndex(null)}
           state={{
@@ -391,6 +402,9 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
               await updateTodo(todo.id, reason === null
                 ? { blockedReason: deleteField() as unknown as Todo['blockedReason'] }
                 : { blockedReason: reason });
+            },
+            onUpdateTags: async (nextTags) => {
+              await updateTodo(todo.id, { tags: nextTags });
             },
             onStartEditTitle: () => {
               setIsEditingTitle(true);
