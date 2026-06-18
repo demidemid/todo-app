@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_CHECKLIST_TITLE, normalizeTodoChecklist, normalizeTodoChecklists, parseChecklistItemTitles } from './todoChecklist';
+import { DEFAULT_CHECKLIST_TITLE, hasIncompleteChecklistItems, normalizeTodoChecklist, normalizeTodoChecklists, parseChecklistItemTitles } from './todoChecklist';
 
 describe('parseChecklistItemTitles', () => {
   it('splits multi-line text into checklist item titles', () => {
@@ -128,5 +128,32 @@ describe('normalizeTodoChecklists', () => {
     ).toEqual([
       { title: 'Legacy', items: [{ id: 'legacy-item', title: 'item', checked: false }] },
     ]);
+  });
+});
+
+describe('hasIncompleteChecklistItems', () => {
+  it('returns true when any checklist item is unchecked', () => {
+    expect(hasIncompleteChecklistItems({
+      checklist: {
+        title: 'Checklist',
+        items: [
+          { id: 'item-1', title: 'Done item', checked: true },
+          { id: 'item-2', title: 'Open item', checked: false },
+        ],
+      },
+    })).toBe(true);
+  });
+
+  it('returns false when all checklist items are checked or absent', () => {
+    expect(hasIncompleteChecklistItems({
+      checklists: [
+        {
+          title: 'Checklist',
+          items: [{ id: 'item-1', title: 'Done item', checked: true }],
+        },
+      ],
+    })).toBe(false);
+
+    expect(hasIncompleteChecklistItems({})).toBe(false);
   });
 });

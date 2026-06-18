@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 import {
   createTodo,
   mockDeleteTodo,
@@ -186,6 +188,107 @@ describe('TodoList cards and dnd', () => {
 
     expect(mockUpdateTodo).toHaveBeenCalledWith('todo-b', { weight: 1000 });
     expect(mockUpdateTodo).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows blocked-move error when dragging blocked card into done column', async () => {
+    setTodosState([
+      createTodo({
+        id: 'todo-blocked',
+        title: 'Blocked todo',
+        status: 'todo',
+        columnId: 'todo',
+        blockedReason: 'Waiting for backend fix',
+      }),
+    ]);
+
+    renderTodoList();
+
+    const draggedCard = screen.getByTestId('card-todo-blocked');
+    const doneColumnEndDrop = screen.getByTestId('drop-done-end');
+
+    fireEvent.dragStart(draggedCard);
+    fireEvent.dragOver(doneColumnEndDrop);
+    fireEvent.drop(doneColumnEndDrop);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Card "Blocked todo" can\'t be moved to Done because it is blocked: Waiting for backend fix')
+      ).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('dashboard-action-error-progress')).toBeInTheDocument();
+
+    expect(mockUpdateTodo).not.toHaveBeenCalled();
+  });
+
+  it('shows unfinished-checklist error when dragging card with open checklist into done column', async () => {
+    setTodosState([
+      createTodo({
+        id: 'todo-open-checklist',
+        title: 'Checklist todo',
+        status: 'todo',
+        columnId: 'todo',
+        checklist: {
+          title: 'Checklist',
+          items: [{ id: 'item-1', title: 'Open item', checked: false }],
+        },
+      }),
+    ]);
+
+    renderTodoList();
+
+    const draggedCard = screen.getByTestId('card-todo-open-checklist');
+    const doneColumnEndDrop = screen.getByTestId('drop-done-end');
+
+    fireEvent.dragStart(draggedCard);
+    fireEvent.dragOver(doneColumnEndDrop);
+    fireEvent.drop(doneColumnEndDrop);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Card "Checklist todo" can\'t be moved to Done because it has unfinished checklist items.')
+      ).toBeInTheDocument();
+    });
+
+    expect(mockUpdateTodo).not.toHaveBeenCalled();
+  });
+
+  it('auto-closes blocked-move error banner after timeout', async () => {
+    vi.useFakeTimers();
+
+    try {
+      setTodosState([
+        createTodo({
+          id: 'todo-blocked-timeout',
+          title: 'Blocked timeout todo',
+          status: 'todo',
+          columnId: 'todo',
+          blockedReason: 'Waiting for backend fix',
+        }),
+      ]);
+
+      renderTodoList();
+
+      fireEvent.dragStart(screen.getByTestId('card-todo-blocked-timeout'));
+      fireEvent.dragOver(screen.getByTestId('drop-done-end'));
+      fireEvent.drop(screen.getByTestId('drop-done-end'));
+
+      expect(screen.getByTestId('dashboard-action-error')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(10000);
+      });
+
+      expect(screen.getByTestId('dashboard-action-error')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
+      expect(screen.queryByTestId('dashboard-action-error')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reorders cards within one column and updates weights', async () => {

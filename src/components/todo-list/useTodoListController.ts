@@ -5,6 +5,7 @@ import type { Todo } from '../../types/todo';
 import { useTodoListControllerStore } from '../../stores/useTodoListControllerStore';
 import { useTodoListDndStore } from '../../stores/useTodoListDndStore';
 import { resolveReminderScheduledAt } from '../../utils/dueDate';
+import { hasIncompleteChecklistItems } from '../../utils/todoChecklist';
 import {
   useHasTodoListStoresProvider,
   useTodoListControllerStoreScoped,
@@ -85,6 +86,15 @@ const isTransientCreateCardError = (error: unknown): boolean => {
     || normalizedMessage.includes('securetoken.googleapis.com')
   );
 };
+
+const getBlockedMoveErrorMessage = (todo: Todo, targetColumnName: string): string => {
+  const blockedReason = todo.blockedReason?.trim() ?? 'Unknown block reason';
+  return `Card "${todo.title}" can't be moved to ${targetColumnName} because it is blocked: ${blockedReason}`;
+};
+
+const getIncompleteChecklistMoveErrorMessage = (todo: Todo, targetColumnName: string): string => (
+  `Card "${todo.title}" can't be moved to ${targetColumnName} because it has unfinished checklist items.`
+);
 
 export const useTodoListController = ({
   todos,
@@ -225,6 +235,19 @@ export const useTodoListController = ({
     if (!activeDashboard) return;
 
     const targetColumns = columns;
+    const targetColumn = targetColumns.find((column) => column.id === targetColumnId);
+
+    if (targetColumn?.isDone && draggedTodo.blockedReason?.trim()) {
+      ui.setDashboardActionError(getBlockedMoveErrorMessage(draggedTodo, targetColumn.name));
+      return;
+    }
+
+    if (targetColumn?.isDone && hasIncompleteChecklistItems(draggedTodo)) {
+      ui.setDashboardActionError(getIncompleteChecklistMoveErrorMessage(draggedTodo, targetColumn.name));
+      return;
+    }
+
+    ui.setDashboardActionError('');
 
     const sourceColumnId = draggedTodo.columnId;
     const sourceTodos = (groupedTodos[sourceColumnId] ?? []).filter((todo) => todo.id !== todoId);
@@ -242,7 +265,6 @@ export const useTodoListController = ({
       boardId: activeDashboard.id,
     };
 
-    const targetColumn = targetColumns.find((column) => column.id === targetColumnId);
     const isCompleted = Boolean(targetColumn?.isDone);
     const completedAt = isCompleted ? new Date().toISOString() : null;
     const reminderScheduledAt = resolveReminderScheduledAt(
