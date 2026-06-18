@@ -386,6 +386,30 @@ describe('useTodoListController', () => {
     expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: true });
   });
 
+  it('does not move blocked todo into done column', async () => {
+    const { args, mocks } = createArgs();
+    args.todos = [
+      {
+        ...todos[0],
+        blockedReason: 'Waiting for dependency',
+      },
+    ];
+    args.groupedTodos = {
+      todo: args.todos,
+      done: [],
+    };
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleMoveTodo('t-1', 'done', 0);
+    });
+
+    expect(mocks.updateTodo).not.toHaveBeenCalled();
+    expect(result.current.dashboardActionError).toBe(
+      'Card "Todo" can\'t be moved to Done because it is blocked: Waiting for dependency'
+    );
+  });
+
   it('archives all todos from the last dashboard status', async () => {
     const { args, mocks } = createArgs();
     args.todos = [

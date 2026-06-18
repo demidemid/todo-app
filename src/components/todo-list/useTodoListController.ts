@@ -86,6 +86,11 @@ const isTransientCreateCardError = (error: unknown): boolean => {
   );
 };
 
+const getBlockedMoveErrorMessage = (todo: Todo, targetColumnName: string): string => {
+  const blockedReason = todo.blockedReason?.trim() ?? 'Unknown block reason';
+  return `Card "${todo.title}" can't be moved to ${targetColumnName} because it is blocked: ${blockedReason}`;
+};
+
 export const useTodoListController = ({
   todos,
   dashboards,
@@ -225,6 +230,14 @@ export const useTodoListController = ({
     if (!activeDashboard) return;
 
     const targetColumns = columns;
+    const targetColumn = targetColumns.find((column) => column.id === targetColumnId);
+
+    if (targetColumn?.isDone && draggedTodo.blockedReason?.trim()) {
+      ui.setDashboardActionError(getBlockedMoveErrorMessage(draggedTodo, targetColumn.name));
+      return;
+    }
+
+    ui.setDashboardActionError('');
 
     const sourceColumnId = draggedTodo.columnId;
     const sourceTodos = (groupedTodos[sourceColumnId] ?? []).filter((todo) => todo.id !== todoId);
@@ -242,7 +255,6 @@ export const useTodoListController = ({
       boardId: activeDashboard.id,
     };
 
-    const targetColumn = targetColumns.find((column) => column.id === targetColumnId);
     const isCompleted = Boolean(targetColumn?.isDone);
     const completedAt = isCompleted ? new Date().toISOString() : null;
     const reminderScheduledAt = resolveReminderScheduledAt(

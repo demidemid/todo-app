@@ -478,6 +478,29 @@ describe('TodoModal', () => {
     });
   });
 
+  it('does not move blocked card to done from next-status action', () => {
+    render(
+      <TodoModal
+        todo={{
+          ...todo,
+          blockedReason: 'Waiting for dependency',
+        }}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+        columns={[
+          { id: 'todo', name: 'Todo' },
+          { id: 'done', name: 'Done', isDone: true },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('todo-next-status-btn')).toBeDisabled();
+    expect(updateTodo).not.toHaveBeenCalled();
+  });
+
   it('persists due date changes from the modal details panel', async () => {
     render(
       <TodoModal

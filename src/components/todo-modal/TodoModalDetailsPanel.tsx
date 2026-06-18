@@ -132,7 +132,7 @@ interface TodoModalDetailsPanelProps {
   onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
   onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
   onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
-  columns?: { id: string; name: string }[];
+  columns?: { id: string; name: string; isDone?: boolean }[];
   onMoveToNextStatus?: (todoId: string, nextColumnId: string) => void;
   onArchive?: () => void;
   onBlock?: (reason: string | null) => Promise<void> | void;
@@ -642,6 +642,7 @@ export const TodoModalDetailsPanel = ({
                 const idx = columns.findIndex((c) => c.id === todo.columnId);
                 const next = idx >= 0 && idx < columns.length - 1 ? columns[idx + 1] : null;
                 if (!next) return null;
+                const isBlockedFromNextStatus = Boolean(todo.blockedReason?.trim()) && Boolean(next.isDone);
                 return (
                   <div className="relative z-10 mx-4 rounded-full bg-slate-900/95 px-1">
                     <Button
@@ -649,7 +650,7 @@ export const TodoModalDetailsPanel = ({
                       size="md"
                       className="px-3"
                       style={{ minWidth: 0 }}
-                      disabled={saving}
+                      disabled={saving || isBlockedFromNextStatus}
                       onClick={() => onMoveToNextStatus && onMoveToNextStatus(todo.id, next.id)}
                       data-testid="todo-next-status-btn"
                       startIcon={<ArrowRight size={18} className="mr-2" />}

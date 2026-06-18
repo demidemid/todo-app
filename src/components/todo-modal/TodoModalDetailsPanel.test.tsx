@@ -478,6 +478,23 @@ describe('TodoModalDetailsPanel', () => {
     expect(props.onMoveToNextStatus).toHaveBeenCalledWith('todo-1', 'done');
   });
 
+  it('disables next-status button when blocked todo would move to done', () => {
+    const props = createProps();
+    props.todo = {
+      ...todo,
+      blockedReason: 'Waiting for dependency',
+    };
+    props.columns = [
+      { id: 'in_progress', name: 'In Progress' },
+      { id: 'done', name: 'Done', isDone: true },
+    ];
+    props.onMoveToNextStatus = vi.fn();
+
+    render(<TodoModalDetailsPanel {...props} />);
+
+    expect(screen.getByTestId('todo-next-status-btn')).toBeDisabled();
+  });
+
   it('hides next-status button when current column has no next column', () => {
     const props = createProps();
     props.todo = {

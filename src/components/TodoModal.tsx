@@ -665,6 +665,9 @@ export const TodoModal: FC<TodoModalProps> = ({ todo, userId, userEmail, onClose
               try {
                 setQuickActionError('');
                 const nextColumn = (columns ?? []).find((column) => column.id === nextColumnId);
+                if (nextColumn?.isDone && todo.blockedReason?.trim()) {
+                  return;
+                }
                 const isCompleted = Boolean(nextColumn?.isDone);
                 const completedAt = isCompleted ? new Date().toISOString() : null;
                 const reminderScheduledAt = resolveReminderScheduledAt(
