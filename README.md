@@ -37,7 +37,7 @@ cd todo-app
 
 ```bash
 corepack enable
-yarn install
+yarn install --immutable
 ```
 
 ### 3. Set up Firebase project
