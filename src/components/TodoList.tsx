@@ -211,14 +211,7 @@ const TodoListContent = ({
   });
 
   const modalTodo = modalTodoId ? todos.find((todo) => todo.id === modalTodoId) ?? null : null;
-  const availableTags = useMemo(() => {
-    const normalizedTags = todos
-      .flatMap((item) => item.tags ?? [])
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-
-    return Array.from(new Set(normalizedTags)).sort((left, right) => left.localeCompare(right));
-  }, [todos]);
+  const availableTags = allAvailableTags;
   const modalColumns = modalTodo
     ? dashboardsById.get(modalTodo.boardId)?.columns ?? []
     : [];
