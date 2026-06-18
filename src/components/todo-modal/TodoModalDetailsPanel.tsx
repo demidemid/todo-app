@@ -385,9 +385,12 @@ export const TodoModalDetailsPanel = ({
       return;
     }
 
+    if (tagsSaving) {
+      return;
+    }
+
     setTagsSaving(true);
     setTagsError('');
-
     try {
       await onUpdateTags(normalizeTags(nextTags));
     } catch (updateTagsError) {
