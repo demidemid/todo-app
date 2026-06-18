@@ -23,6 +23,7 @@ import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
 export type TodoListViewMode = 'dashboards' | 'archive';
 
 const DASHBOARD_ACTION_ERROR_TIMEOUT_MS = 10000;
+const DASHBOARD_ACTION_ERROR_EXIT_ANIMATION_MS = 300;
 
 interface DashboardActionErrorBannerProps {
   message: string;
@@ -31,26 +32,35 @@ interface DashboardActionErrorBannerProps {
 
 const DashboardActionErrorBanner = ({ message, onTimeout }: DashboardActionErrorBannerProps) => {
   const [progress, setProgress] = useState(100);
+  const [isVisible, setIsVisible] = useState(false);
   const handleTimeout = useEffectEvent(onTimeout);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
+      setIsVisible(true);
       setProgress(0);
     });
 
+    const startExitAfter = DASHBOARD_ACTION_ERROR_TIMEOUT_MS;
+
+    const exitTimer = window.setTimeout(() => {
+      setIsVisible(false);
+    }, startExitAfter);
+
     const closeTimer = window.setTimeout(() => {
       handleTimeout();
-    }, DASHBOARD_ACTION_ERROR_TIMEOUT_MS);
+    }, DASHBOARD_ACTION_ERROR_TIMEOUT_MS + DASHBOARD_ACTION_ERROR_EXIT_ANIMATION_MS);
 
     return () => {
       window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(exitTimer);
       window.clearTimeout(closeTimer);
     };
   }, []);
 
   return (
     <div
-      className="fixed left-1/2 top-4 z-50 w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-rose-300/30 bg-slate-950/80 text-sm text-rose-200 shadow-lg shadow-rose-950/20 ring-1 ring-black/10 backdrop-blur-md"
+      className={`fixed left-1/2 top-4 z-50 w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-rose-300/30 bg-slate-950/80 text-sm text-rose-200 shadow-lg shadow-rose-950/20 ring-1 ring-black/10 backdrop-blur-md transition-all duration-300 ease-out ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}`}
       data-testid="dashboard-action-error"
     >
       <div className="bg-rose-400/10 p-3">{message}</div>

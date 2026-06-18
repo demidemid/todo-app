@@ -279,6 +279,12 @@ describe('TodoList cards and dnd', () => {
         vi.advanceTimersByTime(10000);
       });
 
+      expect(screen.getByTestId('dashboard-action-error')).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
       expect(screen.queryByTestId('dashboard-action-error')).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
