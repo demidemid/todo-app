@@ -369,9 +369,7 @@ export const DashboardSection = ({
                             )}
                             <div
                               data-testid={`card-surface-${todo.id}`}
-                              className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-12 select-none transition-shadow duration-150 hover:shadow-lg ${todo.blockedReason?.trim() ? 'rounded-t-none border-t-0' : ''} ${dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'
-                                } 
-                                }`}
+                              className={`relative w-full rounded-lg border bg-slate-900/70 p-3 pb-12 select-none transition-shadow duration-150 hover:shadow-lg ${todo.blockedReason?.trim() ? 'rounded-t-none border-t-0' : ''} ${dueState === 'overdue' ? 'border-rose-300/45 ring-1 ring-rose-300/35' : 'border-white/10'}`}
                             >
 
                               <DashboardTodoCardContent
