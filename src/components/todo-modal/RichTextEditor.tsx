@@ -127,8 +127,10 @@ export const RichTextEditor = ({
       if (currentHtml !== nextHtml) {
         editor.commands.setContent(nextHtml, { emitUpdate: false });
       }
-    } catch {
-      // Editor might not be fully initialized yet, silently ignore
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to sync RichTextEditor content from value prop', error);
+      }
     }
   }, [value, editor]);
 
