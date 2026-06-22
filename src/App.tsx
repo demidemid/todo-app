@@ -145,9 +145,9 @@ function App() {
         return
       }
 
-      void import('./components/TodoModal')
-      void import('./components/todo-modal/RichTextEditor')
-    }
+      void import('./components/TodoModal').catch(() => {})
+      void import('./components/todo-modal/RichTextEditor').catch(() => {})
+    
 
     if (typeof idleWindow.requestIdleCallback === 'function') {
       const idleHandle = idleWindow.requestIdleCallback(() => {
