@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2, Hand } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
@@ -11,10 +11,14 @@ import { Input } from '../ui/Input';
 import { getDueDateState } from '../../utils/dueDate';
 import { normalizeTodoChecklists } from '../../utils/todoChecklist';
 import { TodoChecklistSection } from './TodoChecklistSection';
-import { RichTextEditor } from './RichTextEditor';
 import { sanitizeRichTextHtml } from './richText';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
 import { useClickOutside } from '../../hooks/useClickOutside';
+
+const RichTextEditor = lazy(async () => {
+  const module = await import('./RichTextEditor');
+  return { default: module.RichTextEditor };
+});
 
 const extensionFromFileName = (fileName: string): string => {
   const normalized = fileName.trim().toLowerCase();
@@ -1167,13 +1171,15 @@ export const TodoModalDetailsPanel = ({
             )}
 
             <div className="mb-2 text-xs uppercase tracking-wide text-slate-300">Description</div>
-            <RichTextEditor
-              value={description}
-              onChange={onDescriptionChange}
-              disabled={saving}
-              className="mb-4"
-              placeholder="Write a description with formatting..."
-            />
+            <Suspense fallback={<div className="mb-4 rounded-xl border border-white/10 bg-slate-900/40 p-3 text-sm text-slate-400">Loading editor...</div>}>
+              <RichTextEditor
+                value={description}
+                onChange={onDescriptionChange}
+                disabled={saving}
+                className="mb-4"
+                placeholder="Write a description with formatting..."
+              />
+            </Suspense>
           </>
         ) : (
           <div className="mb-4">

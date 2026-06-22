@@ -1,7 +1,6 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { useDashboards } from '../hooks/useDashboards';
 import { useUsers } from '../hooks/useUsers';
-import { TodoModal } from './TodoModal';
 import { ArchiveTodoListView } from './todo-list/ArchiveTodoListView';
 import { DashboardDndContainer } from './todo-list/DashboardDndContainer';
 import { DashboardSection } from './todo-list/DashboardSection';
@@ -19,6 +18,11 @@ import { useTodos } from '../hooks/useTodos.ts';
 import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
+
+const TodoModal = lazy(async () => {
+  const module = await import('./TodoModal');
+  return { default: module.TodoModal };
+});
 
 export type TodoListViewMode = 'dashboards' | 'archive';
 
@@ -380,16 +384,18 @@ const TodoListContent = ({
       )}
 
       {modalTodo && (
-        <TodoModal
-          todo={modalTodo}
-          userId={userId}
-          userEmail={userEmail}
-          onClose={closeTodoLink}
-          updateTodo={updateTodo}
-          deleteTodo={deleteTodo}
-          columns={modalColumns}
-          availableTags={availableTags}
-        />
+        <Suspense fallback={null}>
+          <TodoModal
+            todo={modalTodo}
+            userId={userId}
+            userEmail={userEmail}
+            onClose={closeTodoLink}
+            updateTodo={updateTodo}
+            deleteTodo={deleteTodo}
+            columns={modalColumns}
+            availableTags={availableTags}
+          />
+        </Suspense>
       )}
     </div>
   );
