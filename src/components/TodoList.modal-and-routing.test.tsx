@@ -47,7 +47,9 @@ describe('TodoList modal and routing', () => {
 
     await user.click(screen.getByTestId('card-t-1'));
 
-    expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-modal')).toBeInTheDocument();
+    });
     expect(screen.getByText('Comments')).toBeInTheDocument();
     expect(screen.getByText('user2@example.com')).toBeInTheDocument();
     expect(screen.getByText('Looks good')).toBeInTheDocument();
@@ -133,6 +135,15 @@ describe('TodoList modal and routing', () => {
 
     await user.click(screen.getByTestId('card-t-1'));
     await user.click(screen.getByRole('button', { name: 'Edit description' }));
+
+    await waitFor(
+      () => {
+        const editor = screen.getByTestId('rich-text-editor');
+        expect(editor).toBeInTheDocument();
+        expect(editor).not.toBeEmptyDOMElement();
+      },
+      { timeout: 3000 }
+    );
 
     const editor = screen.getByTestId('rich-text-editor');
     await user.click(editor);

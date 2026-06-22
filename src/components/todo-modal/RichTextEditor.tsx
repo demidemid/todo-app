@@ -121,10 +121,14 @@ export const RichTextEditor = ({
     if (!editor) return;
     if (editor.isFocused) return;
 
-    const nextHtml = value.trim() ? sanitizeRichTextHtml(value) : '<p></p>';
-    const currentHtml = editor.getHTML();
-    if (currentHtml !== nextHtml) {
-      editor.commands.setContent(nextHtml, { emitUpdate: false });
+    try {
+      const nextHtml = value.trim() ? sanitizeRichTextHtml(value) : '<p></p>';
+      const currentHtml = editor.getHTML();
+      if (currentHtml !== nextHtml) {
+        editor.commands.setContent(nextHtml, { emitUpdate: false });
+      }
+    } catch {
+      // Editor might not be fully initialized yet, silently ignore
     }
   }, [value, editor]);
 
