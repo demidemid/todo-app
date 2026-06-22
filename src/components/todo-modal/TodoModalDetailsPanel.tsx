@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pencil, Check, X, Plus, ArrowRight, Link2, ListChecks, CalendarDays, Bell, Archive, Trash2, Hand } from 'lucide-react';
 import type { Todo, TodoFile } from '../../types/todo';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
@@ -301,10 +301,9 @@ export const TodoModalDetailsPanel = ({
     onUpdateTags,
   } = resolvedActions;
 
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isLinksFormOpen, setIsLinksFormOpen] = useState(false);
   const [isDueDateFormOpen, setIsDueDateFormOpen] = useState(false);
-  const [dueDateDraft, setDueDateDraft] = useState('');
+  const [dueDateDraft, setDueDateDraft] = useState(todo.dueDate ?? '');
   const [linkName, setLinkName] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
@@ -317,33 +316,29 @@ export const TodoModalDetailsPanel = ({
   const [tagQuery, setTagQuery] = useState('');
   const [tagsSaving, setTagsSaving] = useState(false);
   const [tagsError, setTagsError] = useState('');
+  const prevTodoIdRef = useRef(todo.id);
+
   const tagsSelectorRef = useRef<HTMLDivElement | null>(null);
   const blockedReason = todo.blockedReason?.trim() ?? '';
   const selectedTags = normalizeTags(todo.tags ?? []);
   const normalizedAvailableTags = normalizeTags(availableTags);
 
+  // Sync draft state when switching to a different todo
   useEffect(() => {
-    if (isActionMenuOpen) return;
-    setIsLinksFormOpen(false);
-    setIsDueDateFormOpen(false);
-    setLinkError('');
-    setBlockError('');
-  }, [isActionMenuOpen]);
-
-  useEffect(() => {
-    setDueDateDraft(todo.dueDate ?? '');
-  }, [todo.dueDate]);
-
-  useEffect(() => {
-    setBlockReasonDraft(todo.blockedReason ?? '');
-  }, [todo.blockedReason]);
-
-  useEffect(() => {
-    if (!isTagsSelectorOpen) {
+    if (prevTodoIdRef.current !== todo.id) {
+      setDueDateDraft(todo.dueDate ?? '');
+      setBlockReasonDraft(todo.blockedReason ?? '');
       setTagQuery('');
       setTagsError('');
+      setLinkError('');
+      setBlockError('');
+      setIsLinksFormOpen(false);
+      setIsDueDateFormOpen(false);
+      setIsBlockFormOpen(false);
+      setIsTagsSelectorOpen(false);
+      prevTodoIdRef.current = todo.id;
     }
-  }, [isTagsSelectorOpen]);
+  }, [todo]);
 
   useClickOutside(tagsSelectorRef, () => setIsTagsSelectorOpen(false), { enabled: isTagsSelectorOpen });
 
@@ -454,7 +449,6 @@ export const TodoModalDetailsPanel = ({
       setLinkName('');
       setLinkUrl('');
       setIsLinksFormOpen(false);
-      setIsActionMenuOpen(false);
       closeMenu?.();
     } catch (addLinkError) {
       const message = addLinkError instanceof Error ? addLinkError.message : 'Failed to add link';
@@ -467,7 +461,6 @@ export const TodoModalDetailsPanel = ({
   const handleClearDueDate = () => {
     setDueDateDraft('');
     setIsDueDateFormOpen(false);
-    setIsActionMenuOpen(false);
     void onDueDateChange?.(null);
   };
 
@@ -490,7 +483,6 @@ export const TodoModalDetailsPanel = ({
     try {
       await onBlock(normalizedReason);
       setIsBlockFormOpen(false);
-      setIsActionMenuOpen(false);
     } catch (blockReasonError) {
       const message = blockReasonError instanceof Error ? blockReasonError.message : 'Failed to block card';
       setBlockError(message);
@@ -512,7 +504,6 @@ export const TodoModalDetailsPanel = ({
       await onBlock(null);
       setBlockReasonDraft('');
       setIsBlockFormOpen(false);
-      setIsActionMenuOpen(false);
     } catch (blockReasonError) {
       const message = blockReasonError instanceof Error ? blockReasonError.message : 'Failed to clear block reason';
       setBlockError(message);
@@ -526,6 +517,15 @@ export const TodoModalDetailsPanel = ({
     setBlockError('');
     setIsBlockFormOpen(true);
   };
+
+  const handleActionMenuOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) {
+      setIsLinksFormOpen(false);
+      setIsDueDateFormOpen(false);
+      setLinkError('');
+      setBlockError('');
+    }
+  }, []);
 
   const shouldShowFilesSection = files.length > 0 || filesUploading || deletingFileIds.length > 0 || Boolean(filesError);
   const shouldShowLinksSection = Array.isArray(todo.links) && todo.links.length > 0;
@@ -589,7 +589,7 @@ export const TodoModalDetailsPanel = ({
                   align: 'left',
                   offsetClassName: 'top-12',
                 }}
-                onOpenChange={setIsActionMenuOpen}
+                onOpenChange={handleActionMenuOpenChange}
                 menuContent={({ closeMenu }) => (
                   <>
                     <button
