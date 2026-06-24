@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc, type FirestoreError } from 'firebase/firestore'
 import { useSearchParams } from 'react-router-dom'
@@ -6,7 +6,11 @@ import { auth } from './firebase'
 import { db } from './firebase'
 import { AppHeader, type AppSectionMode } from './components/AppHeader'
 import { Login } from './components/Login'
-import { TodoList } from './components/TodoList'
+
+const TodoList = lazy(async () => {
+  const module = await import('./components/TodoList')
+  return { default: module.TodoList }
+})
 
 const isFirestorePermissionDenied = (error: unknown): error is FirestoreError => {
   return (
@@ -31,6 +35,11 @@ const normalizeTags = (rawTags: string[]) => {
     .filter((tag) => tag.length > 0)
 
   return Array.from(new Set(normalized)).sort((left, right) => left.localeCompare(right))
+}
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+  cancelIdleCallback?: (handle: number) => void
 }
 
 function App() {
@@ -122,6 +131,46 @@ function App() {
 
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    let cancelled = false
+    const idleWindow = window as IdleWindow
+
+    const prefetchSecondaryChunks = () => {
+      if (cancelled) {
+        return
+      }
+
+      void import('./components/TodoModal').catch(() => {})
+      void import('./components/todo-modal/RichTextEditor').catch(() => {})
+    }
+
+    if (typeof idleWindow.requestIdleCallback === 'function') {
+      const idleHandle = idleWindow.requestIdleCallback(() => {
+        prefetchSecondaryChunks()
+      }, { timeout: 1500 })
+
+      return () => {
+        cancelled = true
+        if (typeof idleWindow.cancelIdleCallback === 'function') {
+          idleWindow.cancelIdleCallback(idleHandle)
+        }
+      }
+    }
+
+    const timeoutHandle = window.setTimeout(() => {
+      prefetchSecondaryChunks()
+    }, 900)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeoutHandle)
+    }
+  }, [user])
 
   const handleLogout = async () => {
     setAuthActionError('')
@@ -229,14 +278,16 @@ function App() {
             </p>
           )}
           {user ? (
-            <TodoList
-              userId={user.uid}
-              userEmail={user.email ?? undefined}
-              viewMode={sectionMode}
-              tagFilters={selectedTagFilters}
-              onAddTagFilter={addTagFilter}
-              onAvailableTagsChange={handleAvailableTagsChange}
-            />
+            <Suspense fallback={<div className="py-8 text-center text-slate-300">Loading workspace...</div>}>
+              <TodoList
+                userId={user.uid}
+                userEmail={user.email ?? undefined}
+                viewMode={sectionMode}
+                tagFilters={selectedTagFilters}
+                onAddTagFilter={addTagFilter}
+                onAvailableTagsChange={handleAvailableTagsChange}
+              />
+            </Suspense>
           ) : (
             <Login user={user} />
           )}

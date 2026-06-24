@@ -121,10 +121,16 @@ export const RichTextEditor = ({
     if (!editor) return;
     if (editor.isFocused) return;
 
-    const nextHtml = value.trim() ? sanitizeRichTextHtml(value) : '<p></p>';
-    const currentHtml = editor.getHTML();
-    if (currentHtml !== nextHtml) {
-      editor.commands.setContent(nextHtml, { emitUpdate: false });
+    try {
+      const nextHtml = value.trim() ? sanitizeRichTextHtml(value) : '<p></p>';
+      const currentHtml = editor.getHTML();
+      if (currentHtml !== nextHtml) {
+        editor.commands.setContent(nextHtml, { emitUpdate: false });
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to sync RichTextEditor content from value prop', error);
+      }
     }
   }, [value, editor]);
 

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { Dashboard, DashboardColumn } from '../../types/dashboard';
 import type { Todo } from '../../types/todo';
@@ -113,11 +113,13 @@ export const useTodoListController = ({
   const hasScopedStores = useHasTodoListStoresProvider();
   const didInitFallbackRef = useRef(false);
 
-  if (!hasScopedStores && !didInitFallbackRef.current) {
-    useTodoListControllerStore.getState().resetControllerUiState();
-    useTodoListDndStore.getState().resetDndState();
-    didInitFallbackRef.current = true;
-  }
+  useEffect(() => {
+    if (!hasScopedStores && !didInitFallbackRef.current) {
+      useTodoListControllerStore.getState().resetControllerUiState();
+      useTodoListDndStore.getState().resetDndState();
+      didInitFallbackRef.current = true;
+    }
+  }, [hasScopedStores]);
 
   const ui = useTodoListControllerStoreScoped(useShallow((state) => ({
     title: state.title,
