@@ -390,6 +390,61 @@ export const useTodoListController = ({
     }
   };
 
+  const handleCloneTodo = async (id: string) => {
+    const todoToClone = todos.find((todo) => todo.id === id);
+    if (!todoToClone) return;
+
+    const dashboard = dashboards.find((d) => d.id === todoToClone.boardId);
+    if (!dashboard || dashboard.columns.length === 0) return;
+
+    const firstColumn = dashboard.columns.reduce((earliest, column) => (
+      column.order < earliest.order ? column : earliest
+    ));
+
+    try {
+      const clonedTodoId = await addTodo(
+        {
+          title: `[copy] ${todoToClone.title}`,
+          description: todoToClone.description || '',
+        },
+        {
+          boardId: todoToClone.boardId,
+          columnId: firstColumn.id,
+        }
+      );
+
+      // Update the cloned todo with additional fields
+      const updateData: Record<string, unknown> = {};
+      if (todoToClone.tags) {
+        updateData.tags = todoToClone.tags;
+      }
+      if (todoToClone.dueDate) {
+        updateData.dueDate = todoToClone.dueDate;
+      }
+      if (todoToClone.remindOneDayBefore) {
+        updateData.remindOneDayBefore = todoToClone.remindOneDayBefore;
+      }
+      if (todoToClone.files && todoToClone.files.length > 0) {
+        updateData.files = todoToClone.files;
+      }
+      if (todoToClone.links && todoToClone.links.length > 0) {
+        updateData.links = todoToClone.links;
+      }
+      if (todoToClone.checklists && todoToClone.checklists.length > 0) {
+        updateData.checklists = todoToClone.checklists;
+      }
+      if (todoToClone.checklist) {
+        updateData.checklist = todoToClone.checklist;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await updateTodo(clonedTodoId, updateData as Partial<Todo>);
+      }
+    } catch (error) {
+      console.error('Error cloning todo:', error);
+    }
+  };
+
   const handleArchiveAllCompleted = async (dashboardId: string) => {
     const dashboard = dashboards.find((item) => item.id === dashboardId);
     if (!dashboard || dashboard.columns.length === 0) return;
@@ -607,6 +662,7 @@ export const useTodoListController = ({
     handleSaveEdit,
     handleEditKeyDown,
     handleArchiveTodo,
+    handleCloneTodo,
     handleArchiveAllCompleted,
     handleUnarchiveTodo,
     handleDeleteTodo,

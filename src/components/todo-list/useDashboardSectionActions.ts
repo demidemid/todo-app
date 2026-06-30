@@ -111,6 +111,7 @@ export const useDashboardSectionActions = ({
     onEditKeyDown: controller.handleEditKeyDown,
     onMenuEdit: (todo: Todo) => controller.startEdit(todo),
     onMenuArchive: (todoId: string) => void controller.handleArchiveTodo(todoId),
+    onMenuClone: (todoId: string) => void controller.handleCloneTodo(todoId),
     onMenuDelete: (todoId: string) => void controller.handleDeleteTodo(todoId),
   }), [
     activeDashboardId,

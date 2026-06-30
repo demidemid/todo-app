@@ -1,4 +1,4 @@
-import { Archive, MessageCircle, Trash2 } from 'lucide-react';
+import { Archive, Copy, MessageCircle, Trash2 } from 'lucide-react';
 import { FaFile, FaFileArchive, FaFileAudio, FaFileCode, FaFileExcel, FaFileImage, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaFileWord } from 'react-icons/fa';
 import type { Todo } from '../../types/todo';
 import type { DueDateState } from '../../utils/dueDate';
@@ -93,6 +93,7 @@ interface DashboardTodoCardContentProps {
   onCancelEdit: () => void;
   onSaveEdit: (todoId: string) => void;
   onMenuArchive: (todoId: string) => void;
+  onMenuClone: (todoId: string) => void;
   onMenuDelete: (todoId: string) => void;
   onTagClick?: (tag: string) => void;
 }
@@ -111,6 +112,7 @@ export const DashboardTodoCardContent = ({
   onCancelEdit,
   onSaveEdit,
   onMenuArchive,
+  onMenuClone,
   onMenuDelete,
   onTagClick,
 }: DashboardTodoCardContentProps) => {
@@ -278,13 +280,20 @@ export const DashboardTodoCardContent = ({
               testId: 'card-menu-archive',
             },
             {
-              id: 'delete',
-              label: 'Delete',
-              icon: <Trash2 size={14} aria-hidden="true" />,
-              onSelect: () => onMenuDelete(todo.id),
-              testId: 'card-menu-delete',
-              variant: 'danger' as const,
-            },
+             id: 'clone',
+             label: 'Clone',
+             icon: <Copy size={14} aria-hidden="true" />,
+             onSelect: () => onMenuClone(todo.id),
+             testId: 'card-menu-clone',
+           },
+           {
+             id: 'delete',
+             label: 'Delete',
+             icon: <Trash2 size={14} aria-hidden="true" />,
+             onSelect: () => onMenuDelete(todo.id),
+             testId: 'card-menu-delete',
+             variant: 'danger' as const,
+           },
           ]}
         />
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
