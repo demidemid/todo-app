@@ -270,7 +270,7 @@ function App() {
         logoutLoading={logoutLoading}
       />
 
-      <main className="mx-auto flex w-full max-w-6xl px-3 py-6 sm:px-5 sm:py-10">
+      <main className="mx-auto flex w-full max-w-full px-3 py-6 sm:px-5 sm:py-10">
         <div className="min-w-0 w-full">
           {authActionError && (
             <p className="mb-4 rounded-lg border border-rose-300/30 bg-rose-400/10 p-2 text-sm text-rose-200">
