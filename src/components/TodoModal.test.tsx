@@ -48,6 +48,7 @@ const todo: Todo = {
 };
 
 const onClose = vi.fn();
+const addTodo = vi.fn<(...args: unknown[]) => Promise<string>>();
 const updateTodo = vi.fn<(...args: unknown[]) => Promise<void>>();
 const deleteTodo = vi.fn<(...args: unknown[]) => Promise<void>>();
 
@@ -106,6 +107,7 @@ describe('TodoModal', () => {
     mockGetDownloadURL.mockResolvedValue('https://example.com/uploaded.pdf');
     mockDeleteObject.mockResolvedValue(undefined);
     mockDeleteField.mockReturnValue({ __deleteField: true });
+    addTodo.mockResolvedValue('new-card-id');
     updateTodo.mockResolvedValue(undefined);
     deleteTodo.mockResolvedValue(undefined);
   });
@@ -644,6 +646,56 @@ describe('TodoModal', () => {
         },
       });
     });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('converts checklist item to a card in the first column and removes the item', async () => {
+    const todoWithChecklist: Todo = {
+      ...todo,
+      checklist: {
+        title: 'check list',
+        items: [{ id: 'item-1', title: 'Create follow-up card', checked: false }],
+      },
+    };
+
+    render(
+      <TodoModal
+        todo={todoWithChecklist}
+        userId="user-1"
+        userEmail="user@example.com"
+        onClose={onClose}
+        addTodo={addTodo}
+        updateTodo={updateTodo}
+        deleteTodo={deleteTodo}
+        columns={[
+          { id: 'todo', name: 'To do' },
+          { id: 'in-progress', name: 'In progress' },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-convert-item-1'));
+
+    await waitFor(() => {
+      expect(addTodo).toHaveBeenCalledWith(
+        {
+          title: 'Create follow-up card',
+          description: '',
+        },
+        {
+          boardId: 'board-1',
+          columnId: 'todo',
+        }
+      );
+      expect(updateTodo).toHaveBeenCalledWith('todo-1', {
+        checklist: {
+          title: 'check list',
+          items: [],
+        },
+      });
+    });
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('creates another checklist when one already exists', async () => {

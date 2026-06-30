@@ -120,6 +120,7 @@ interface TodoModalDetailsPanelProps {
     onChecklistItemSaveAndAddNext?: (itemId: string, title: string, checklistIndex?: number) => Promise<void> | void;
     onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
     onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
+    onChecklistConvertToMap?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
     onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
     onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
     onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
@@ -159,6 +160,7 @@ interface TodoModalDetailsPanelProps {
   onChecklistItemSaveAndAddNext?: (itemId: string, title: string, checklistIndex?: number) => Promise<void> | void;
   onChecklistPasteItems?: (itemId: string, itemTitles: string[], checklistIndex?: number) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
+  onChecklistConvertToMap?: (itemId: string, checklistIndex?: number) => Promise<void> | void;
   onChecklistDelete?: (checklistIndex?: number) => Promise<void> | void;
   onDueDateChange?: (dueDate: string | null) => Promise<void> | void;
   onRemindOneDayBeforeChange?: (enabled: boolean) => Promise<void> | void;
@@ -211,6 +213,7 @@ export const TodoModalDetailsPanel = ({
   onChecklistItemSaveAndAddNext: legacyOnChecklistItemSaveAndAddNext,
   onChecklistPasteItems: legacyOnChecklistPasteItems,
   onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+  onChecklistConvertToMap: legacyOnChecklistConvertToMap,
   onChecklistDelete: legacyOnChecklistDelete,
   onDueDateChange: legacyOnDueDateChange,
   onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
@@ -251,6 +254,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistItemSaveAndAddNext: legacyOnChecklistItemSaveAndAddNext,
     onChecklistPasteItems: legacyOnChecklistPasteItems,
     onChecklistDeleteItem: legacyOnChecklistDeleteItem,
+    onChecklistConvertToMap: legacyOnChecklistConvertToMap,
     onChecklistDelete: legacyOnChecklistDelete,
     onDueDateChange: legacyOnDueDateChange,
     onRemindOneDayBeforeChange: legacyOnRemindOneDayBeforeChange,
@@ -296,6 +300,7 @@ export const TodoModalDetailsPanel = ({
     onChecklistItemSaveAndAddNext,
     onChecklistPasteItems,
     onChecklistDeleteItem,
+    onChecklistConvertToMap,
     onChecklistDelete,
     onDueDateChange,
     onRemindOneDayBeforeChange,
@@ -1061,6 +1066,7 @@ export const TodoModalDetailsPanel = ({
           onChecklistItemSaveAndAddNext={(itemId, title) => onChecklistItemSaveAndAddNext?.(itemId, title)}
           onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles)}
           onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId)}
+          onChecklistConvertToMap={(itemId) => onChecklistConvertToMap?.(itemId)}
           onChecklistDelete={() => onChecklistDelete?.()}
           autoFocusOnMount={focusChecklistIndex === 0}
           onAutoFocusHandled={focusChecklistIndex === 0 ? onChecklistAutoFocusHandled : undefined}
@@ -1078,6 +1084,7 @@ export const TodoModalDetailsPanel = ({
               onChecklistItemSaveAndAddNext={(itemId, title) => onChecklistItemSaveAndAddNext?.(itemId, title, checklistIndex)}
               onChecklistPasteItems={(itemId, itemTitles) => onChecklistPasteItems?.(itemId, itemTitles, checklistIndex)}
               onChecklistDeleteItem={(itemId) => onChecklistDeleteItem?.(itemId, checklistIndex)}
+              onChecklistConvertToMap={(itemId) => onChecklistConvertToMap?.(itemId, checklistIndex)}
               onChecklistDelete={() => onChecklistDelete?.(checklistIndex)}
               autoFocusOnMount={focusChecklistIndex === checklistIndex}
               onAutoFocusHandled={focusChecklistIndex === checklistIndex ? onChecklistAutoFocusHandled : undefined}

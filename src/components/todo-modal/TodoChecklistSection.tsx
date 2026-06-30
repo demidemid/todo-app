@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, Map, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist, parseChecklistItemTitles } from '../../utils/todoChecklist';
 import { Button } from '../ui/Button';
@@ -16,6 +16,7 @@ interface TodoChecklistSectionProps {
   onChecklistItemSaveAndAddNext?: (itemId: string, title: string) => Promise<void> | void;
   onChecklistPasteItems?: (itemId: string, itemTitles: string[]) => Promise<void> | void;
   onChecklistDeleteItem?: (itemId: string) => Promise<void> | void;
+  onChecklistConvertToMap?: (itemId: string) => Promise<void> | void;
   onChecklistDelete?: () => Promise<void> | void;
   autoFocusOnMount?: boolean;
   onAutoFocusHandled?: () => void;
@@ -29,6 +30,7 @@ export const TodoChecklistSection = ({
   onChecklistItemSaveAndAddNext,
   onChecklistPasteItems,
   onChecklistDeleteItem,
+  onChecklistConvertToMap,
   onChecklistDelete,
   autoFocusOnMount = false,
   onAutoFocusHandled,
@@ -45,6 +47,18 @@ export const TodoChecklistSection = ({
   const previousChecklistItemIdsRef = useRef<string[]>(checklistItems.map((item) => item.id));
   const hadChecklistRef = useRef(Boolean(checklist));
   const hasHandledAutoFocusOnMountRef = useRef(false);
+  const pendingFocusTimeoutRef = useRef<number | null>(null);
+
+  const scheduleChecklistItemEdit = (itemId: string, initialTitle: string) => {
+    if (pendingFocusTimeoutRef.current !== null) {
+      window.clearTimeout(pendingFocusTimeoutRef.current);
+    }
+
+    pendingFocusTimeoutRef.current = window.setTimeout(() => {
+      startChecklistItemEdit(itemId, initialTitle);
+      pendingFocusTimeoutRef.current = null;
+    }, 0);
+  };
 
   const saveChecklistTitle = async () => {
     if (!onChecklistTitleChange || !checklist) {
@@ -174,9 +188,7 @@ export const TodoChecklistSection = ({
     if (autoFocusOnMount && !hasHandledAutoFocusOnMountRef.current && checklist && editingChecklistItemId === null) {
       const firstItem = checklistItems[0];
       if (firstItem && firstItem.title.trim() === '') {
-        queueMicrotask(() => {
-          startChecklistItemEdit(firstItem.id, firstItem.title);
-        });
+        scheduleChecklistItemEdit(firstItem.id, firstItem.title);
       }
 
       hasHandledAutoFocusOnMountRef.current = true;
@@ -189,9 +201,7 @@ export const TodoChecklistSection = ({
     if (!hadChecklist && checklist && editingChecklistItemId === null) {
       const firstItem = checklistItems[0];
       if (firstItem && firstItem.title.trim() === '') {
-        queueMicrotask(() => {
-          startChecklistItemEdit(firstItem.id, firstItem.title);
-        });
+        scheduleChecklistItemEdit(firstItem.id, firstItem.title);
       }
     }
 
@@ -208,6 +218,12 @@ export const TodoChecklistSection = ({
     previousChecklistItemIdsRef.current = currentItemIds;
     hadChecklistRef.current = Boolean(checklist);
   }, [autoFocusOnMount, checklist, checklistItems, editingChecklistItemId, focusNewChecklistItem, onAutoFocusHandled]);
+
+  useEffect(() => () => {
+    if (pendingFocusTimeoutRef.current !== null) {
+      window.clearTimeout(pendingFocusTimeoutRef.current);
+    }
+  }, []);
 
   const handleAddChecklistItem = async () => {
     if (!onChecklistAddItem) {
@@ -383,18 +399,39 @@ export const TodoChecklistSection = ({
                 {item.title}
               </button>
             )}
-            <IconButton
-              variant="danger"
-              size="sm"
-              label={`Delete checklist item ${item.title}`}
-              className="ml-auto h-auto! w-auto! rounded-none! border-transparent! bg-transparent! p-0! text-rose-300 hover:bg-transparent! hover:text-rose-200"
-              onClick={() => {
-                void onChecklistDeleteItem?.(item.id);
-              }}
-              data-testid={`todo-checklist-delete-${item.id}`}
-            >
-              <Trash2 size={12} />
-            </IconButton>
+            <div className="ml-auto">
+              <EllipsisMenu
+                trigger={{
+                  label: `Open checklist item actions for ${item.title || 'empty item'}`,
+                  testId: `todo-checklist-item-actions-trigger-${item.id}`,
+                }}
+                menu={{
+                  testId: `todo-checklist-item-actions-menu-${item.id}`,
+                  className: 'min-w-44',
+                }}
+                items={[
+                  {
+                    id: 'convert-to-card',
+                    label: 'Convert to card',
+                    icon: <Map size={14} />,
+                    onSelect: () => {
+                      void onChecklistConvertToMap?.(item.id);
+                    },
+                    testId: `todo-checklist-item-convert-${item.id}`,
+                  },
+                  {
+                    id: 'delete-item',
+                    label: 'Delete',
+                    icon: <Trash2 size={14} />,
+                    variant: 'danger',
+                    onSelect: () => {
+                      void onChecklistDeleteItem?.(item.id);
+                    },
+                    testId: `todo-checklist-delete-${item.id}`,
+                  },
+                ]}
+              />
+            </div>
           </li>
         ))}
       </ul>

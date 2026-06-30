@@ -9,6 +9,47 @@ const checklist: NonNullable<Todo['checklist']> = {
 };
 
 describe('TodoChecklistSection paste behavior', () => {
+  it('autofocuses the first empty item when mounted with autoFocusOnMount', async () => {
+    const onAutoFocusHandled = vi.fn();
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        autoFocusOnMount
+        onAutoFocusHandled={onAutoFocusHandled}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveFocus();
+    });
+    expect(onAutoFocusHandled).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows item ellipsis actions and forwards convert/delete handlers', async () => {
+    const onChecklistDeleteItem = vi.fn().mockResolvedValue(undefined);
+    const onChecklistConvertToMap = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        onChecklistDeleteItem={onChecklistDeleteItem}
+        onChecklistConvertToMap={onChecklistConvertToMap}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    expect(screen.getByRole('menuitem', { name: 'Convert to card' })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('todo-checklist-item-convert-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-delete-item-1'));
+
+    await waitFor(() => {
+      expect(onChecklistConvertToMap).toHaveBeenCalledWith('item-1');
+      expect(onChecklistDeleteItem).toHaveBeenCalledWith('item-1');
+    });
+  });
+
   it('saves checklist item on Enter', async () => {
     const onChecklistItemChange = vi.fn().mockResolvedValue(undefined);
     const onChecklistAddItem = vi.fn().mockResolvedValue(undefined);
