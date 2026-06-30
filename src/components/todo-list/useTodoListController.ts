@@ -421,10 +421,10 @@ export const useTodoListController = ({
       if (todoToClone.dueDate) {
         updateData.dueDate = todoToClone.dueDate;
       }
-      if (todoToClone.remindOneDayBefore) {
-        updateData.remindOneDayBefore = todoToClone.remindOneDayBefore;
+      if (todoToClone.remindOneDayBefore && todoToClone.dueDate) {
+        updateData.remindOneDayBefore = true;
         updateData.reminderScheduledAt = resolveReminderScheduledAt({
-          dueDate: todoToClone.dueDate ?? null,
+          dueDate: todoToClone.dueDate,
           remindOneDayBefore: true,
           isCompleted: false,
           completedAt: null,
