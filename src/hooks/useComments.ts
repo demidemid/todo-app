@@ -45,6 +45,8 @@ export const useComments = (todoId: string | null) => {
               todoId: typeof record.todoId === 'string' ? record.todoId : todoId,
               userId: typeof record.userId === 'string' ? record.userId : 'unknown',
               userEmail: typeof record.userEmail === 'string' ? record.userEmail : undefined,
+              userName: typeof record.userName === 'string' ? record.userName : undefined,
+              userAvatarId: typeof record.userAvatarId === 'string' ? record.userAvatarId : undefined,
               text: typeof record.text === 'string' ? record.text : '',
               createdAt: parseTimestamp(record.createdAt),
               updatedAt: 'updatedAt' in record ? parseTimestamp((record as { updatedAt?: unknown }).updatedAt) : undefined,
@@ -65,7 +67,15 @@ export const useComments = (todoId: string | null) => {
     return () => unsub();
   }, [todoId]);
 
-  const addComment = async (userId: string, text: string, userEmail?: string) => {
+  const addComment = async (
+    userId: string,
+    text: string,
+    userMeta?: {
+      email?: string;
+      name?: string;
+      avatarId?: string | null;
+    },
+  ) => {
     if (!todoId) throw new Error('No todoId');
     const todoRef = doc(db, 'todos', todoId);
     const now = Timestamp.now();
@@ -78,7 +88,9 @@ export const useComments = (todoId: string | null) => {
         id: commentId,
         todoId,
         userId,
-        userEmail,
+        userEmail: userMeta?.email,
+        userName: userMeta?.name,
+        userAvatarId: userMeta?.avatarId ?? undefined,
         text,
         createdAt: now,
       }),

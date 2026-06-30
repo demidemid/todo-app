@@ -7,6 +7,7 @@ import { db } from './firebase'
 import { AppHeader, type AppSectionMode } from './components/AppHeader'
 import { Login } from './components/Login'
 import { UserProfilePage } from './components/UserProfilePage'
+import { useCurrentUserProfile } from './hooks/useCurrentUserProfile'
 
 const TodoList = lazy(async () => {
   const module = await import('./components/TodoList')
@@ -56,6 +57,7 @@ function App() {
   const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
   const pageMode: AppPageMode = searchParams.get('page') === 'profile' ? 'profile' : 'workspace'
   const selectedTagFilters = normalizeTags(searchParams.getAll('tags'))
+  const { profile: currentUserProfile } = useCurrentUserProfile(user?.uid ?? null, user?.email)
 
   const updateSearch = useCallback((updater: (nextParams: URLSearchParams) => void) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -281,6 +283,8 @@ function App() {
         sectionMode={sectionMode}
         onSectionModeChange={setSectionMode}
         onOpenProfile={openProfilePage}
+        profileName={currentUserProfile.name}
+        profileAvatarId={currentUserProfile.avatarId}
         availableTags={availableTags}
         selectedTags={selectedTagFilters}
         onToggleTagFilter={toggleTagFilter}
@@ -303,7 +307,9 @@ function App() {
               <Suspense fallback={<div className="py-8 text-center text-slate-300">Loading workspace...</div>}>
                 <TodoList
                   userId={user.uid}
-                  userEmail={user.email ?? undefined}
+                  userEmail={currentUserProfile.email || user.email || undefined}
+                  userName={currentUserProfile.name}
+                  userAvatarId={currentUserProfile.avatarId}
                   viewMode={sectionMode}
                   tagFilters={selectedTagFilters}
                   onAddTagFilter={addTagFilter}

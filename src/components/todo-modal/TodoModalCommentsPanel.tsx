@@ -4,6 +4,7 @@ import type { Comment } from '../../types/comment';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { Textarea } from '../ui/Textarea';
+import { getAvatarImageUrl } from '../../utils/userProfileAvatars';
 
 const URL_REGEX = /https?:\/\/[^\s<>"']+/g;
 
@@ -145,6 +146,15 @@ export const TodoModalCommentsPanel = ({
     onDeleteComment,
   } = resolvedActions;
 
+  const getCommentDisplayName = (comment: Comment) => {
+    const normalizedName = comment.userName?.trim();
+    if (normalizedName) {
+      return normalizedName;
+    }
+
+    return comment.userEmail ?? comment.userId;
+  };
+
   return (
     <div className="mt-4 w-full shrink-0 overflow-visible border-t border-white/10 pt-4 pr-1 md:min-h-0 md:overflow-y-auto lg:mt-2 lg:w-80 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
       <h3 className="mb-3 text-base font-semibold text-slate-200">Comments</h3>
@@ -176,7 +186,20 @@ export const TodoModalCommentsPanel = ({
           {comments.map((comment) => (
             <li key={comment.id} className="rounded-lg bg-slate-800/60 px-3 py-2">
               <div className="mb-1 flex items-center justify-between gap-2">
-                <div className="text-xs text-slate-300">{comment.userEmail ?? comment.userId}</div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <img
+                    src={getAvatarImageUrl(comment.userAvatarId)}
+                    alt=""
+                    aria-hidden="true"
+                    className="size-6 shrink-0 rounded-full border border-white/15 bg-slate-900/70"
+                  />
+                  <div className="min-w-0 text-xs text-slate-300">
+                    <p className="truncate font-medium text-slate-200">{getCommentDisplayName(comment)}</p>
+                    {comment.userName?.trim() ? (
+                      <p className="truncate text-[11px] text-slate-400">{comment.userEmail ?? comment.userId}</p>
+                    ) : null}
+                  </div>
+                </div>
                 {comment.userId === currentUserId && editingCommentId !== comment.id && (
                   <div className="flex items-center gap-1">
                     <IconButton

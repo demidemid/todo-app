@@ -100,10 +100,14 @@ describe('useComments', () => {
     expect(result.current.comments.map((item) => item.id)).toEqual(['c-new', 'c-old']);
   });
 
-  it('passes userEmail when adding a comment', async () => {
+  it('passes user profile metadata when adding a comment', async () => {
     const { result } = renderHook(() => useComments('todo-1'));
 
-    await result.current.addComment('u-42', 'hello', 'author@example.com');
+    await result.current.addComment('u-42', 'hello', {
+      email: 'author@example.com',
+      name: 'Author',
+      avatarId: 'fox',
+    });
 
     expect(mockUpdateDoc).toHaveBeenCalledTimes(1);
     expect(mockUpdateDoc).toHaveBeenCalledWith(
@@ -114,6 +118,8 @@ describe('useComments', () => {
           todoId: 'todo-1',
           userId: 'u-42',
           userEmail: 'author@example.com',
+          userName: 'Author',
+          userAvatarId: 'fox',
           text: 'hello',
         }),
         updatedAt: expect.any(Object),

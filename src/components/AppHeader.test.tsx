@@ -103,4 +103,47 @@ describe('AppHeader tag filters', () => {
     await user.click(screen.getByTestId('header-open-profile'));
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
   });
+
+  it('shows profile name with email subtitle when name and avatar are set', () => {
+    render(
+      <AppHeader
+        user={createUser('user@example.com')}
+        sectionMode="dashboards"
+        onSectionModeChange={vi.fn()}
+        profileName="Alice"
+        profileAvatarId="fox"
+        onOpenProfile={vi.fn()}
+        availableTags={[]}
+        selectedTags={[]}
+        onToggleTagFilter={vi.fn()}
+        onRemoveTagFilter={vi.fn()}
+        onLogout={vi.fn()}
+        logoutLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
+  });
+
+  it('falls back to email when profile name or avatar is missing', () => {
+    render(
+      <AppHeader
+        user={createUser('user@example.com')}
+        sectionMode="dashboards"
+        onSectionModeChange={vi.fn()}
+        profileName=""
+        profileAvatarId={null}
+        onOpenProfile={vi.fn()}
+        availableTags={[]}
+        selectedTags={[]}
+        onToggleTagFilter={vi.fn()}
+        onRemoveTagFilter={vi.fn()}
+        onLogout={vi.fn()}
+        logoutLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
+  });
 });

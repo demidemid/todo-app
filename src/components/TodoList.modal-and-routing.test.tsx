@@ -117,7 +117,11 @@ describe('TodoList modal and routing', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() => {
-      expect(mockAddComment).toHaveBeenCalledWith('user-1', 'Need API key');
+      expect(mockAddComment).toHaveBeenCalledWith('user-1', 'Need API key', {
+        email: undefined,
+        name: undefined,
+        avatarId: undefined,
+      });
     });
 
     await waitFor(() => {

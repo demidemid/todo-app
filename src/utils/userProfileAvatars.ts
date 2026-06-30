@@ -42,3 +42,14 @@ export const USER_PROFILE_AVATARS: UserProfileAvatarOption[] = avatarSeeds.map((
 }))
 
 export const DEFAULT_USER_PROFILE_AVATAR_ID = USER_PROFILE_AVATARS[0].id
+
+export const BLANK_USER_AVATAR_URL = 'https://api.dicebear.com/9.x/shapes/svg?seed=blank-user&backgroundType=solid,gradientLinear'
+
+export const getAvatarImageUrl = (avatarId: string | null | undefined): string => {
+  if (!avatarId) {
+    return BLANK_USER_AVATAR_URL
+  }
+
+  const matched = USER_PROFILE_AVATARS.find((avatar) => avatar.id === avatarId)
+  return matched?.imageUrl ?? BLANK_USER_AVATAR_URL
+}
