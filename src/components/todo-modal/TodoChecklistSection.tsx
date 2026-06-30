@@ -411,6 +411,15 @@ export const TodoChecklistSection = ({
                 }}
                 items={[
                   {
+                    id: 'rename-item',
+                    label: 'Rename',
+                    icon: <Pencil size={14} />,
+                    onSelect: () => {
+                      startChecklistItemEdit(item.id, item.title);
+                    },
+                    testId: `todo-checklist-item-rename-${item.id}`,
+                  },
+                  {
                     id: 'convert-to-card',
                     label: 'Convert to card',
                     icon: <Map size={14} />,

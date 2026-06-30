@@ -39,6 +39,7 @@ describe('TodoChecklistSection paste behavior', () => {
     );
 
     fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Convert to card' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('todo-checklist-item-convert-item-1'));
     fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
@@ -47,6 +48,25 @@ describe('TodoChecklistSection paste behavior', () => {
     await waitFor(() => {
       expect(onChecklistConvertToMap).toHaveBeenCalledWith('item-1');
       expect(onChecklistDeleteItem).toHaveBeenCalledWith('item-1');
+    });
+  });
+
+  it('opens inline item editor from rename action', async () => {
+    render(
+      <TodoChecklistSection
+        checklist={{
+          title: 'check list',
+          items: [{ id: 'item-1', title: 'First item', checked: false }],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-rename-item-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveValue('First item');
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveFocus();
     });
   });
 

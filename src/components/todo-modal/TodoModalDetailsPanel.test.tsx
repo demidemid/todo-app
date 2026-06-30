@@ -317,6 +317,11 @@ describe('TodoModalDetailsPanel', () => {
     fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter' });
 
     fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-rename-item-1'));
+    fireEvent.change(screen.getByTestId('todo-checklist-item-input-item-1'), { target: { value: 'renamed from menu' } });
+    fireEvent.keyDown(screen.getByTestId('todo-checklist-item-input-item-1'), { key: 'Enter' });
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
     fireEvent.click(screen.getByTestId('todo-checklist-item-convert-item-1'));
     fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
     fireEvent.click(screen.getByTestId('todo-checklist-delete-item-1'));
@@ -326,6 +331,7 @@ describe('TodoModalDetailsPanel', () => {
       expect(props.onChecklistAddItem).toHaveBeenCalledTimes(1);
       expect(props.onChecklistItemChange).toHaveBeenCalledWith('item-1', { checked: true });
       expect(props.onChecklistItemChange).toHaveBeenCalledWith('item-1', { title: 'edited item' });
+      expect(props.onChecklistItemChange).toHaveBeenCalledWith('item-1', { title: 'renamed from menu' });
       expect(props.onChecklistConvertToMap).toHaveBeenCalledWith('item-1');
       expect(props.onChecklistDeleteItem).toHaveBeenCalledWith('item-1');
     });
