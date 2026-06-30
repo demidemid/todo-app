@@ -431,9 +431,6 @@ export const useTodoListController = ({
           reminderScheduledAt: null,
         });
       }
-      if (todoToClone.files && todoToClone.files.length > 0) {
-        updateData.files = todoToClone.files;
-      }
       if (todoToClone.links && todoToClone.links.length > 0) {
         updateData.links = todoToClone.links;
       }

@@ -422,6 +422,46 @@ describe('useTodoListController', () => {
     );
   });
 
+  it('does not copy file metadata when cloning to avoid shared storage paths', async () => {
+    const { args, mocks } = createArgs();
+    args.todos = [
+      {
+        ...todos[0],
+        files: [
+          {
+            id: 'file-1',
+            name: 'contract.pdf',
+            path: 'todos/t-1/file-1-contract.pdf',
+            url: 'https://example.com/contract.pdf',
+            size: 111,
+            contentType: 'application/pdf',
+            uploadedBy: 'user-1',
+            uploadedAt: new Date('2026-01-01T00:00:00Z'),
+          },
+        ],
+        links: [{ url: 'https://example.com', name: 'Docs' }],
+      },
+    ];
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleCloneTodo('t-1');
+    });
+
+    expect(mocks.updateTodo).toHaveBeenCalledWith(
+      'new-id',
+      expect.objectContaining({
+        links: [{ url: 'https://example.com', name: 'Docs' }],
+      })
+    );
+    expect(mocks.updateTodo).not.toHaveBeenCalledWith(
+      'new-id',
+      expect.objectContaining({
+        files: expect.any(Array),
+      })
+    );
+  });
+
   it('does not move blocked todo into done column', async () => {
     const { args, mocks } = createArgs();
     args.todos = [
