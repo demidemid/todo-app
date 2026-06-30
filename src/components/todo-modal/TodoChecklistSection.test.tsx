@@ -8,7 +8,7 @@ const checklist: NonNullable<Todo['checklist']> = {
   items: [{ id: 'item-1', title: '', checked: false }],
 };
 
-describe('TodoChecklistSection paste behavior', () => {
+describe('TodoChecklistSection', () => {
   it('autofocuses the first empty item when mounted with autoFocusOnMount', async () => {
     const onAutoFocusHandled = vi.fn();
 
