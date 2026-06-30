@@ -5,6 +5,7 @@ import { IconButton } from './ui/IconButton'
 import { Segmented } from './ui/Segmented'
 import { TodoozyLogo } from './TodoozyLogo'
 import { useClickOutside } from '../hooks/useClickOutside'
+import { getAvatarImageUrl } from '../utils/userProfileAvatars'
 
 export type AppSectionMode = 'dashboards' | 'archive'
 
@@ -12,6 +13,9 @@ interface AppHeaderProps {
     user: User | null
     sectionMode: AppSectionMode
     onSectionModeChange: (nextMode: AppSectionMode) => void
+    onOpenProfile?: () => void
+    profileName?: string
+    profileAvatarId?: string | null
     availableTags?: string[]
     selectedTags?: string[]
     onToggleTagFilter?: (tag: string) => void
@@ -39,6 +43,9 @@ export const AppHeader = ({
     user,
     sectionMode,
     onSectionModeChange,
+    onOpenProfile,
+    profileName,
+    profileAvatarId,
     availableTags = [],
     selectedTags = [],
     onToggleTagFilter,
@@ -61,6 +68,11 @@ export const AppHeader = ({
         onSectionModeChange(nextMode)
         setIsMobileMenuOpen(false)
     }
+
+    const normalizedProfileName = profileName?.trim() ?? ''
+    const showSavedProfile = normalizedProfileName.length > 0 && Boolean(profileAvatarId)
+    const headerDisplayTitle = showSavedProfile ? normalizedProfileName : (user?.email ?? 'Signed user')
+    const headerDisplaySubtitle = ''
 
     return (
         <header className="sticky top-0 left-0 z-50 border-b border-white/10 bg-slate-900/40 backdrop-blur-sm md:static">
@@ -180,9 +192,33 @@ export const AppHeader = ({
                             )}
                         </div>
                         <div className="flex min-w-0 items-center gap-1 md:justify-self-end md:gap-1">
-                            <p className="min-w-0 truncate text-xs text-slate-200 sm:text-sm md:max-w-64 md:text-right" title={user.email ?? 'Signed user'}>
-                                {user.email ?? 'Signed user'}
-                            </p>
+                            <button
+                                type="button"
+                                className="flex min-w-0 max-w-64 items-center gap-2 rounded-lg px-1 py-1 text-left transition hover:bg-white/5"
+                                title={user.email ?? 'Signed user'}
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false)
+                                    onOpenProfile?.()
+                                }}
+                                data-testid="header-open-profile"
+                            >
+                                <img
+                                    src={getAvatarImageUrl(showSavedProfile ? profileAvatarId : null)}
+                                    alt=""
+                                    aria-hidden="true"
+                                    className="size-8 shrink-0 rounded-full border border-white/15 bg-slate-900/70"
+                                />
+                                <span className="min-w-0">
+                                    <span className="block truncate text-xs text-cyan-200 sm:text-sm md:max-w-64 md:text-center">
+                                        {headerDisplayTitle}
+                                    </span>
+                                    {headerDisplaySubtitle ? (
+                                        <span className="block truncate text-[11px] text-slate-400 md:text-center">
+                                            {headerDisplaySubtitle}
+                                        </span>
+                                    ) : null}
+                                </span>
+                            </button>
                             <IconButton
                                 variant="danger"
                                 size="lg"

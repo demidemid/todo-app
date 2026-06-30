@@ -19,6 +19,14 @@ interface TodoModalProps {
   todo: Todo;
   userId: string;
   userEmail?: string;
+  userName?: string;
+  userAvatarId?: string | null;
+  knownUsers?: Array<{
+    id: string;
+    email: string;
+    name?: string;
+    avatarId?: string;
+  }>;
   onClose: () => void;
   addTodo?: (todo: Pick<Todo, 'title' | 'description'>, options: { boardId: string; columnId?: string }) => Promise<string>;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
@@ -90,6 +98,9 @@ export const TodoModal: FC<TodoModalProps> = ({
   todo,
   userId,
   userEmail,
+  userName,
+  userAvatarId,
+  knownUsers = [],
   onClose,
   addTodo,
   updateTodo,
@@ -204,7 +215,29 @@ export const TodoModal: FC<TodoModalProps> = ({
     todo,
     userId,
     userEmail,
+    userName,
+    userAvatarId,
   });
+
+  const commentsWithUserProfiles = useMemo(() => {
+    const userMap = new Map(knownUsers.map((user) => [user.id, user]));
+    userMap.set(userId, {
+      id: userId,
+      email: userEmail ?? '',
+      name: userName,
+      avatarId: userAvatarId ?? undefined,
+    });
+
+    return comments.map((comment) => {
+      const knownUser = userMap.get(comment.userId);
+      return {
+        ...comment,
+        userEmail: comment.userEmail ?? knownUser?.email ?? undefined,
+        userName: comment.userName ?? knownUser?.name ?? undefined,
+        userAvatarId: comment.userAvatarId ?? knownUser?.avatarId ?? undefined,
+      };
+    });
+  }, [comments, knownUsers, userAvatarId, userEmail, userId, userName]);
 
   const {
     isEditing,
@@ -773,7 +806,7 @@ export const TodoModal: FC<TodoModalProps> = ({
         <TodoModalCommentsPanel
           state={{
             currentUserId: userId,
-            comments,
+            comments: commentsWithUserProfiles,
             commentsLoading,
             commentsError,
             commentText,

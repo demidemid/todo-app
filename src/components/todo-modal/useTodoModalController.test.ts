@@ -59,9 +59,15 @@ describe('useTodoModalController', () => {
     expect(result.current.commentSubmitting).toBe(false);
   });
 
-  it('submits trimmed comments with userEmail and clears the draft', async () => {
+  it('submits trimmed comments with user profile meta and clears the draft', async () => {
     const { result } = renderHook(() =>
-      useTodoModalController({ todo, userId: 'user-1', userEmail: 'user@example.com' })
+      useTodoModalController({
+        todo,
+        userId: 'user-1',
+        userEmail: 'user@example.com',
+        userName: 'Alice',
+        userAvatarId: 'fox',
+      })
     );
 
     act(() => {
@@ -72,12 +78,16 @@ describe('useTodoModalController', () => {
       await result.current.handleAddComment({ preventDefault() {} } as React.FormEvent);
     });
 
-    expect(addComment).toHaveBeenCalledWith('user-1', 'Need follow-up', 'user@example.com');
+    expect(addComment).toHaveBeenCalledWith('user-1', 'Need follow-up', {
+      email: 'user@example.com',
+      name: 'Alice',
+      avatarId: 'fox',
+    });
     expect(result.current.commentText).toBe('');
     expect(result.current.commentError).toBe('');
   });
 
-  it('submits without userEmail and reports failures', async () => {
+  it('submits without user profile and reports failures', async () => {
     addComment.mockRejectedValueOnce(new Error('boom'));
 
     const { result } = renderHook(() =>
@@ -95,7 +105,11 @@ describe('useTodoModalController', () => {
     await waitFor(() => {
       expect(result.current.commentError).toBe('Failed to add comment');
     });
-    expect(addComment).toHaveBeenCalledWith('user-1', 'Hello');
+    expect(addComment).toHaveBeenCalledWith('user-1', 'Hello', {
+      email: undefined,
+      name: undefined,
+      avatarId: undefined,
+    });
     expect(result.current.commentSubmitting).toBe(false);
   });
 

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from 'firebase/auth';
 import { AppHeader } from './AppHeader';
@@ -78,5 +79,71 @@ describe('AppHeader tag filters', () => {
 
     fireEvent.mouseDown(document.body);
     expect(screen.queryByTestId('header-tag-filter-popover')).not.toBeInTheDocument();
+  });
+
+  it('opens profile page by clicking user email', async () => {
+    const user = userEvent.setup();
+    const onOpenProfile = vi.fn();
+
+    render(
+      <AppHeader
+        user={createUser('user@example.com')}
+        sectionMode="dashboards"
+        onSectionModeChange={vi.fn()}
+        onOpenProfile={onOpenProfile}
+        availableTags={[]}
+        selectedTags={[]}
+        onToggleTagFilter={vi.fn()}
+        onRemoveTagFilter={vi.fn()}
+        onLogout={vi.fn()}
+        logoutLoading={false}
+      />,
+    );
+
+    await user.click(screen.getByTestId('header-open-profile'));
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows only profile name when name and avatar are set', () => {
+    render(
+      <AppHeader
+        user={createUser('user@example.com')}
+        sectionMode="dashboards"
+        onSectionModeChange={vi.fn()}
+        profileName="Alice"
+        profileAvatarId="fox"
+        onOpenProfile={vi.fn()}
+        availableTags={[]}
+        selectedTags={[]}
+        onToggleTagFilter={vi.fn()}
+        onRemoveTagFilter={vi.fn()}
+        onLogout={vi.fn()}
+        logoutLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
+  });
+
+  it('falls back to email when profile name or avatar is missing', () => {
+    render(
+      <AppHeader
+        user={createUser('user@example.com')}
+        sectionMode="dashboards"
+        onSectionModeChange={vi.fn()}
+        profileName=""
+        profileAvatarId={null}
+        onOpenProfile={vi.fn()}
+        availableTags={[]}
+        selectedTags={[]}
+        onToggleTagFilter={vi.fn()}
+        onRemoveTagFilter={vi.fn()}
+        onLogout={vi.fn()}
+        logoutLoading={false}
+      />,
+    );
+
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 });

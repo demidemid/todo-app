@@ -57,6 +57,29 @@ describe('TodoModalCommentsPanel', () => {
     expect(link).toHaveAttribute('target', '_blank');
   });
 
+  it('shows profile name first and email as subtitle when available', () => {
+    render(
+      <TodoModalCommentsPanel
+        {...baseProps}
+        comments={[
+          {
+            id: 'c-1',
+            todoId: 'todo-1',
+            userId: 'user-1',
+            userEmail: 'user@example.com',
+            userName: 'Alice',
+            userAvatarId: 'fox',
+            text: 'Hello',
+            createdAt: new Date('2026-01-01T00:00:00Z'),
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
+  });
+
   it('disables sending blank or submitting comments and forwards form changes', () => {
     const onCommentTextChange = vi.fn();
     const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());

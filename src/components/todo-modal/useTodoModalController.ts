@@ -6,12 +6,16 @@ interface UseTodoModalControllerArgs {
   todo: Todo;
   userId: string;
   userEmail?: string;
+  userName?: string;
+  userAvatarId?: string | null;
 }
 
 export const useTodoModalController = ({
   todo,
   userId,
   userEmail,
+  userName,
+  userAvatarId,
 }: UseTodoModalControllerArgs) => {
   const {
     comments,
@@ -38,11 +42,11 @@ export const useTodoModalController = ({
     setCommentError('');
 
     try {
-      if (userEmail) {
-        await addComment(userId, text, userEmail);
-      } else {
-        await addComment(userId, text);
-      }
+      await addComment(userId, text, {
+        email: userEmail,
+        name: userName,
+        avatarId: userAvatarId,
+      });
       setCommentText('');
     } catch {
       setCommentError('Failed to add comment');

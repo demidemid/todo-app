@@ -85,6 +85,8 @@ const DashboardActionErrorBanner = ({ message, onTimeout }: DashboardActionError
 interface TodoListProps {
   userId: string;
   userEmail?: string;
+  userName?: string;
+  userAvatarId?: string | null;
   viewMode?: TodoListViewMode;
   tagFilters?: string[];
   onAddTagFilter?: (tag: string) => void;
@@ -104,6 +106,8 @@ const normalizeTags = (tags: string[] | undefined): string[] => {
 const TodoListContent = ({
   userId,
   userEmail,
+  userName,
+  userAvatarId,
   viewMode = 'dashboards',
   tagFilters = [],
   onAddTagFilter,
@@ -389,6 +393,9 @@ const TodoListContent = ({
             todo={modalTodo}
             userId={userId}
             userEmail={userEmail}
+            userName={userName}
+            userAvatarId={userAvatarId}
+            knownUsers={users}
             onClose={closeTodoLink}
             addTodo={addTodo}
             updateTodo={updateTodo}

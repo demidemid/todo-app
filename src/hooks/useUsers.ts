@@ -5,9 +5,13 @@ import { db } from '../firebase';
 interface UserProfile {
   id: string;
   email: string;
+  name?: string;
+  avatarId?: string;
 }
 
 const parseEmail = (value: unknown): string => (typeof value === 'string' ? value.trim().toLowerCase() : '');
+const parseName = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+const parseAvatarId = (value: unknown): string | undefined => (typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined);
 
 const parseTimestamp = (value: unknown): Date => {
   if (value instanceof Date) return value;
@@ -35,6 +39,8 @@ export const useUsers = (currentUserId: string | null) => {
             return {
               id: item.id,
               email: parseEmail(data.email),
+              name: parseName(data.name),
+              avatarId: parseAvatarId(data.avatarId),
               updatedAt: parseTimestamp(data.updatedAt),
             };
           })
@@ -44,7 +50,7 @@ export const useUsers = (currentUserId: string | null) => {
             if (byEmail !== 0) return byEmail;
             return b.updatedAt.getTime() - a.updatedAt.getTime();
           })
-          .map(({ id, email }) => ({ id, email }));
+          .map(({ id, email, name, avatarId }) => ({ id, email, name, avatarId }));
 
         setUsers(parsedUsers);
         setError(null);
