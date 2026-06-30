@@ -259,7 +259,7 @@ export const TodoChecklistSection = ({
 
   return (
     <div className="mb-4 rounded-lg border border-white/10 bg-slate-950/40 p-3" data-testid="todo-checklist-section">
-      <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-2 flex items-center justify-between gap-3">
         {isEditingChecklistTitle ? (
           <Input
             type="text"
@@ -283,6 +283,7 @@ export const TodoChecklistSection = ({
           trigger={{
             label: 'Checklist actions',
             testId: 'todo-checklist-actions-trigger',
+            className: '!ml-3 !rounded-md !border !border-white/10 !bg-white/5 hover:!border-cyan-300/30 hover:!bg-cyan-300/10',
           }}
           menu={{ testId: 'todo-checklist-actions-menu' }}
           items={[
