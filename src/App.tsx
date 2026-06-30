@@ -6,6 +6,7 @@ import { auth } from './firebase'
 import { db } from './firebase'
 import { AppHeader, type AppSectionMode } from './components/AppHeader'
 import { Login } from './components/Login'
+import { UserProfilePage } from './components/UserProfilePage'
 
 const TodoList = lazy(async () => {
   const module = await import('./components/TodoList')
@@ -42,6 +43,8 @@ type IdleWindow = Window & {
   cancelIdleCallback?: (handle: number) => void
 }
 
+type AppPageMode = 'workspace' | 'profile'
+
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,6 +54,7 @@ function App() {
   const syncedProfileKeyRef = useRef<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionMode: AppSectionMode = searchParams.get('section') === 'archive' ? 'archive' : 'dashboards'
+  const pageMode: AppPageMode = searchParams.get('page') === 'profile' ? 'profile' : 'workspace'
   const selectedTagFilters = normalizeTags(searchParams.getAll('tags'))
 
   const updateSearch = useCallback((updater: (nextParams: URLSearchParams) => void) => {
@@ -72,6 +76,19 @@ function App() {
       } else {
         nextParams.delete('section')
       }
+    })
+  }
+
+  const openProfilePage = () => {
+    updateSearch((nextParams) => {
+      nextParams.set('page', 'profile')
+      nextParams.delete('card')
+    })
+  }
+
+  const closeProfilePage = () => {
+    updateSearch((nextParams) => {
+      nextParams.delete('page')
     })
   }
 
@@ -99,7 +116,8 @@ function App() {
           {
             email: normalizedEmail,
             updatedAt: serverTimestamp(),
-          }
+          },
+          { merge: true }
         ).catch((profileError) => {
           if (profileError instanceof Error) {
             const normalizedMessage = profileError.message.toLowerCase()
@@ -262,6 +280,7 @@ function App() {
         user={user}
         sectionMode={sectionMode}
         onSectionModeChange={setSectionMode}
+        onOpenProfile={openProfilePage}
         availableTags={availableTags}
         selectedTags={selectedTagFilters}
         onToggleTagFilter={toggleTagFilter}
@@ -278,16 +297,20 @@ function App() {
             </p>
           )}
           {user ? (
-            <Suspense fallback={<div className="py-8 text-center text-slate-300">Loading workspace...</div>}>
-              <TodoList
-                userId={user.uid}
-                userEmail={user.email ?? undefined}
-                viewMode={sectionMode}
-                tagFilters={selectedTagFilters}
-                onAddTagFilter={addTagFilter}
-                onAvailableTagsChange={handleAvailableTagsChange}
-              />
-            </Suspense>
+            pageMode === 'profile' ? (
+              <UserProfilePage user={user} onBack={closeProfilePage} />
+            ) : (
+              <Suspense fallback={<div className="py-8 text-center text-slate-300">Loading workspace...</div>}>
+                <TodoList
+                  userId={user.uid}
+                  userEmail={user.email ?? undefined}
+                  viewMode={sectionMode}
+                  tagFilters={selectedTagFilters}
+                  onAddTagFilter={addTagFilter}
+                  onAvailableTagsChange={handleAvailableTagsChange}
+                />
+              </Suspense>
+            )
           ) : (
             <Login user={user} />
           )}

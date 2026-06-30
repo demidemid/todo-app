@@ -12,6 +12,7 @@ interface AppHeaderProps {
     user: User | null
     sectionMode: AppSectionMode
     onSectionModeChange: (nextMode: AppSectionMode) => void
+    onOpenProfile?: () => void
     availableTags?: string[]
     selectedTags?: string[]
     onToggleTagFilter?: (tag: string) => void
@@ -39,6 +40,7 @@ export const AppHeader = ({
     user,
     sectionMode,
     onSectionModeChange,
+    onOpenProfile,
     availableTags = [],
     selectedTags = [],
     onToggleTagFilter,
@@ -180,9 +182,18 @@ export const AppHeader = ({
                             )}
                         </div>
                         <div className="flex min-w-0 items-center gap-1 md:justify-self-end md:gap-1">
-                            <p className="min-w-0 truncate text-xs text-slate-200 sm:text-sm md:max-w-64 md:text-right" title={user.email ?? 'Signed user'}>
+                            <button
+                                type="button"
+                                className="min-w-0 max-w-52 truncate text-xs text-cyan-200 underline decoration-cyan-300/60 underline-offset-4 transition hover:text-cyan-100 sm:text-sm md:max-w-64 md:text-right"
+                                title={user.email ?? 'Signed user'}
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false)
+                                    onOpenProfile?.()
+                                }}
+                                data-testid="header-open-profile"
+                            >
                                 {user.email ?? 'Signed user'}
-                            </p>
+                            </button>
                             <IconButton
                                 variant="danger"
                                 size="lg"
