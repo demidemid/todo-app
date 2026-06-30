@@ -58,4 +58,20 @@ describe('useClickOutside', () => {
 
     expect(onOutside).not.toHaveBeenCalled();
   });
+
+  it('does not call handler when composedPath contains referenced element', () => {
+    const onOutside = vi.fn();
+
+    render(<TestComponent onOutside={onOutside} />);
+
+    const inside = screen.getByTestId('inside');
+    const event = new MouseEvent('mousedown', { bubbles: true });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [inside, document.body, document, window],
+      configurable: true,
+    });
+
+    document.dispatchEvent(event);
+    expect(onOutside).not.toHaveBeenCalled();
+  });
 });

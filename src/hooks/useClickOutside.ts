@@ -16,6 +16,11 @@ export const useClickOutside = <T extends HTMLElement>(
     }
 
     const handleOutsidePointer = (event: MouseEvent | PointerEvent) => {
+      const eventPath = typeof event.composedPath === 'function' ? event.composedPath() : null;
+      if (eventPath && ref.current && eventPath.includes(ref.current)) {
+        return;
+      }
+
       if (!(event.target instanceof Node)) {
         return;
       }

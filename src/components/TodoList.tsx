@@ -390,6 +390,7 @@ const TodoListContent = ({
             userId={userId}
             userEmail={userEmail}
             onClose={closeTodoLink}
+            addTodo={addTodo}
             updateTodo={updateTodo}
             deleteTodo={deleteTodo}
             columns={modalColumns}

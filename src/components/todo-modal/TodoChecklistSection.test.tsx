@@ -8,7 +8,68 @@ const checklist: NonNullable<Todo['checklist']> = {
   items: [{ id: 'item-1', title: '', checked: false }],
 };
 
-describe('TodoChecklistSection paste behavior', () => {
+describe('TodoChecklistSection', () => {
+  it('autofocuses the first empty item when mounted with autoFocusOnMount', async () => {
+    const onAutoFocusHandled = vi.fn();
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        autoFocusOnMount
+        onAutoFocusHandled={onAutoFocusHandled}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveFocus();
+    });
+    expect(onAutoFocusHandled).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows item ellipsis actions and forwards convert/delete handlers', async () => {
+    const onChecklistDeleteItem = vi.fn().mockResolvedValue(undefined);
+    const onChecklistConvertToMap = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <TodoChecklistSection
+        checklist={checklist}
+        onChecklistDeleteItem={onChecklistDeleteItem}
+        onChecklistConvertToMap={onChecklistConvertToMap}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Convert to card' })).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('todo-checklist-item-convert-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-delete-item-1'));
+
+    await waitFor(() => {
+      expect(onChecklistConvertToMap).toHaveBeenCalledWith('item-1');
+      expect(onChecklistDeleteItem).toHaveBeenCalledWith('item-1');
+    });
+  });
+
+  it('opens inline item editor from rename action', async () => {
+    render(
+      <TodoChecklistSection
+        checklist={{
+          title: 'check list',
+          items: [{ id: 'item-1', title: 'First item', checked: false }],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('todo-checklist-item-actions-trigger-item-1'));
+    fireEvent.click(screen.getByTestId('todo-checklist-item-rename-item-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveValue('First item');
+      expect(screen.getByTestId('todo-checklist-item-input-item-1')).toHaveFocus();
+    });
+  });
+
   it('saves checklist item on Enter', async () => {
     const onChecklistItemChange = vi.fn().mockResolvedValue(undefined);
     const onChecklistAddItem = vi.fn().mockResolvedValue(undefined);

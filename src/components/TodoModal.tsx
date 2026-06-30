@@ -20,6 +20,7 @@ interface TodoModalProps {
   userId: string;
   userEmail?: string;
   onClose: () => void;
+  addTodo?: (todo: Pick<Todo, 'title' | 'description'>, options: { boardId: string; columnId?: string }) => Promise<string>;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   deleteTodo: (id: string) => Promise<void>;
   columns?: { id: string; name: string; isDone?: boolean }[];
@@ -90,6 +91,7 @@ export const TodoModal: FC<TodoModalProps> = ({
   userId,
   userEmail,
   onClose,
+  addTodo,
   updateTodo,
   deleteTodo,
   columns,
@@ -623,6 +625,54 @@ export const TodoModal: FC<TodoModalProps> = ({
                     ...targetChecklist,
                     items: targetChecklist.items.filter((item) => item.id !== itemId),
                   }
+                  : checklist
+              ));
+
+              await updateTodo(todo.id, buildChecklistUpdates(nextChecklists));
+            },
+            onChecklistConvertToMap: async (itemId, checklistIndex = 0) => {
+              const currentChecklists = getNormalizedChecklists();
+              const targetChecklist = currentChecklists[checklistIndex];
+              if (!targetChecklist) return;
+
+              const targetItem = targetChecklist.items.find((item) => item.id === itemId);
+              if (!targetItem) return;
+
+              const normalizedItemTitle = targetItem.title.trim();
+              if (!normalizedItemTitle) {
+                setQuickActionError('Checklist item title is required to convert it to a card');
+                return;
+              }
+
+              const firstColumn = columns?.[0];
+              if (!firstColumn) {
+                setQuickActionError('No available column to create a card from checklist item');
+                return;
+              }
+
+              if (!addTodo) {
+                setQuickActionError('Card creation is not available in this context');
+                return;
+              }
+
+              setQuickActionError('');
+              await addTodo(
+                {
+                  title: normalizedItemTitle,
+                  description: '',
+                },
+                {
+                  boardId: todo.boardId,
+                  columnId: firstColumn.id,
+                }
+              );
+
+              const nextChecklists = currentChecklists.map((checklist, index) => (
+                index === checklistIndex
+                  ? {
+                      ...targetChecklist,
+                      items: targetChecklist.items.filter((item) => item.id !== itemId),
+                    }
                   : checklist
               ));
 
