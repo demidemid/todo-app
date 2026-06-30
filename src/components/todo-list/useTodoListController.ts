@@ -414,7 +414,7 @@ export const useTodoListController = ({
       );
 
       // Update the cloned todo with additional fields
-      const updateData: Record<string, unknown> = {};
+      const updateData: Partial<Todo> = {};
       if (todoToClone.tags) {
         updateData.tags = todoToClone.tags;
       }
@@ -423,6 +423,13 @@ export const useTodoListController = ({
       }
       if (todoToClone.remindOneDayBefore) {
         updateData.remindOneDayBefore = todoToClone.remindOneDayBefore;
+        updateData.reminderScheduledAt = resolveReminderScheduledAt({
+          dueDate: todoToClone.dueDate ?? null,
+          remindOneDayBefore: true,
+          isCompleted: false,
+          completedAt: null,
+          reminderScheduledAt: null,
+        });
       }
       if (todoToClone.files && todoToClone.files.length > 0) {
         updateData.files = todoToClone.files;
@@ -438,7 +445,7 @@ export const useTodoListController = ({
       }
 
       if (Object.keys(updateData).length > 0) {
-        await updateTodo(clonedTodoId, updateData as Partial<Todo>);
+        await updateTodo(clonedTodoId, updateData);
       }
     } catch (error) {
       console.error('Error cloning todo:', error);

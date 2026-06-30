@@ -386,6 +386,42 @@ describe('useTodoListController', () => {
     expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: true });
   });
 
+  it('clones todo with reminderScheduledAt when one-day reminder is enabled', async () => {
+    const { args, mocks } = createArgs();
+    args.todos = [
+      {
+        ...todos[0],
+        title: 'Original',
+        dueDate: '2099-02-01',
+        remindOneDayBefore: true,
+      },
+    ];
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleCloneTodo('t-1');
+    });
+
+    expect(mocks.addTodo).toHaveBeenCalledWith(
+      {
+        title: '[copy] Original',
+        description: '',
+      },
+      {
+        boardId: 'board-a',
+        columnId: 'todo',
+      }
+    );
+    expect(mocks.updateTodo).toHaveBeenCalledWith(
+      'new-id',
+      expect.objectContaining({
+        dueDate: '2099-02-01',
+        remindOneDayBefore: true,
+        reminderScheduledAt: expect.any(String),
+      })
+    );
+  });
+
   it('does not move blocked todo into done column', async () => {
     const { args, mocks } = createArgs();
     args.todos = [
