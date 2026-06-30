@@ -52,6 +52,7 @@ interface DashboardSectionActions {
   onEditKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => void;
   onMenuEdit: (todo: Todo) => void;
   onMenuArchive: (todoId: string) => void;
+  onMenuClone: (todoId: string) => void;
   onMenuDelete: (todoId: string) => void;
 }
 
@@ -93,6 +94,7 @@ interface DashboardSectionProps {
   onEditKeyDown?: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, todoId: string) => void;
   onMenuEdit?: (todo: Todo) => void;
   onMenuArchive?: (todoId: string) => void;
+  onMenuClone?: (todoId: string) => void;
   onMenuDelete?: (todoId: string) => void;
   onAddTagFilter?: (tag: string) => void;
 }
@@ -135,6 +137,7 @@ export const DashboardSection = ({
   onEditKeyDown: legacyOnEditKeyDown,
   onMenuEdit: legacyOnMenuEdit,
   onMenuArchive: legacyOnMenuArchive,
+  onMenuClone: legacyOnMenuClone,
   onMenuDelete: legacyOnMenuDelete,
   onAddTagFilter,
 }: DashboardSectionProps) => {
@@ -168,6 +171,7 @@ export const DashboardSection = ({
     onEditKeyDown: legacyOnEditKeyDown ?? (() => { }),
     onMenuEdit: legacyOnMenuEdit ?? (() => { }),
     onMenuArchive: legacyOnMenuArchive ?? (() => { }),
+    onMenuClone: legacyOnMenuClone ?? (() => { }),
     onMenuDelete: legacyOnMenuDelete ?? (() => { }),
   };
 
@@ -200,6 +204,7 @@ export const DashboardSection = ({
     onEditDescriptionChange,
     onEditKeyDown,
     onMenuArchive,
+    onMenuClone,
     onMenuDelete,
   } = resolvedActions;
 
@@ -388,6 +393,7 @@ export const DashboardSection = ({
                                 onCancelEdit={onCancelEdit}
                                 onSaveEdit={onSaveEdit}
                                 onMenuArchive={onMenuArchive}
+                                onMenuClone={onMenuClone}
                                 onMenuDelete={onMenuDelete}
                                 onTagClick={onAddTagFilter}
                               />
