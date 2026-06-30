@@ -386,6 +386,91 @@ describe('useTodoListController', () => {
     expect(mocks.updateTodo).toHaveBeenCalledWith('t-1', { archived: true });
   });
 
+  it('clones todo with [copy] title, moves it to first column, and copies extended fields', async () => {
+    const { args, mocks } = createArgs();
+    args.todos = [
+      {
+        ...todos[0],
+        title: 'Original card',
+        description: '<p>Original description</p>',
+        tags: ['bug', 'frontend'],
+        dueDate: '2026-02-01',
+        remindOneDayBefore: true,
+        files: [
+          {
+            id: 'file-1',
+            name: 'spec.pdf',
+            path: 'todos/t-1/spec.pdf',
+            url: 'https://example.com/spec.pdf',
+            size: 120,
+            contentType: 'application/pdf',
+            uploadedBy: 'user-1',
+            uploadedAt: new Date('2026-01-01T00:00:00Z'),
+          },
+        ],
+        links: [{ url: 'https://example.com/docs', name: 'Docs' }],
+        checklists: [
+          {
+            title: 'QA',
+            items: [{ id: 'i-1', title: 'Run tests', checked: false }],
+          },
+        ],
+      },
+    ];
+
+    args.dashboards = [
+      {
+        ...dashboards[0],
+        columns: [
+          { id: 'later', name: 'Later', order: 3, isDone: false },
+          { id: 'first', name: 'First', order: 0, isDone: false },
+        ],
+      },
+      ...dashboards.slice(1),
+    ];
+
+    const { result } = renderHook(() => useTodoListController(args));
+
+    await act(async () => {
+      await result.current.handleCloneTodo('t-1');
+    });
+
+    expect(mocks.addTodo).toHaveBeenCalledWith(
+      {
+        title: '[copy] Original card',
+        description: '<p>Original description</p>',
+      },
+      {
+        boardId: 'board-a',
+        columnId: 'first',
+      }
+    );
+    expect(mocks.updateTodo).toHaveBeenCalledWith('new-id', {
+      tags: ['bug', 'frontend'],
+      dueDate: '2026-02-01',
+      remindOneDayBefore: true,
+      files: [
+        {
+          id: 'file-1',
+          name: 'spec.pdf',
+          path: 'todos/t-1/spec.pdf',
+          url: 'https://example.com/spec.pdf',
+          size: 120,
+          contentType: 'application/pdf',
+          uploadedBy: 'user-1',
+          uploadedAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ],
+      links: [{ url: 'https://example.com/docs', name: 'Docs' }],
+      checklists: [
+        {
+          title: 'QA',
+          items: [{ id: 'i-1', title: 'Run tests', checked: false }],
+        },
+      ],
+    });
+  });
+
   it('does not move blocked todo into done column', async () => {
     const { args, mocks } = createArgs();
     args.todos = [

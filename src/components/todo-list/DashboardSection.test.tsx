@@ -72,6 +72,7 @@ const createProps = (): ComponentProps<typeof DashboardSection> => ({
   onEditKeyDown: vi.fn(),
   onMenuEdit: vi.fn(),
   onMenuArchive: vi.fn(),
+  onMenuClone: vi.fn(),
   onMenuDelete: vi.fn(),
 });
 
@@ -378,7 +379,7 @@ describe('DashboardSection', () => {
     expect(props.onOpenTodoModal).not.toHaveBeenCalled();
   });
 
-  it('forwards card menu archive/delete actions and hides edit action', () => {
+  it('forwards card menu archive/clone/delete actions and hides edit action', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);
 
@@ -387,10 +388,13 @@ describe('DashboardSection', () => {
     expect(screen.queryByTestId('card-menu-edit')).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('card-menu-archive'));
     fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
+    fireEvent.click(screen.getByTestId('card-menu-clone'));
+    fireEvent.click(screen.getByTestId('card-menu-trigger-todo-1'));
     fireEvent.click(screen.getByTestId('card-menu-delete'));
 
     expect(props.onMenuEdit).not.toHaveBeenCalled();
     expect(props.onMenuArchive).toHaveBeenCalledWith('todo-1');
+    expect(props.onMenuClone).toHaveBeenCalledWith('todo-1');
     expect(props.onMenuDelete).toHaveBeenCalledWith('todo-1');
   });
 
