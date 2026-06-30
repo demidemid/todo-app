@@ -72,7 +72,7 @@ export const AppHeader = ({
     const normalizedProfileName = profileName?.trim() ?? ''
     const showSavedProfile = normalizedProfileName.length > 0 && Boolean(profileAvatarId)
     const headerDisplayTitle = showSavedProfile ? normalizedProfileName : (user?.email ?? 'Signed user')
-    const headerDisplaySubtitle = showSavedProfile ? (user?.email ?? '') : ''
+    const headerDisplaySubtitle = ''
 
     return (
         <header className="sticky top-0 left-0 z-50 border-b border-white/10 bg-slate-900/40 backdrop-blur-sm md:static">
@@ -206,14 +206,14 @@ export const AppHeader = ({
                                     src={getAvatarImageUrl(showSavedProfile ? profileAvatarId : null)}
                                     alt=""
                                     aria-hidden="true"
-                                    className="size-7 shrink-0 rounded-full border border-white/15 bg-slate-900/70"
+                                    className="size-8 shrink-0 rounded-full border border-white/15 bg-slate-900/70"
                                 />
                                 <span className="min-w-0">
-                                    <span className="block truncate text-xs text-cyan-200 underline decoration-cyan-300/60 underline-offset-4 sm:text-sm md:max-w-64 md:text-right">
+                                    <span className="block truncate text-xs text-cyan-200 sm:text-sm md:max-w-64 md:text-center">
                                         {headerDisplayTitle}
                                     </span>
                                     {headerDisplaySubtitle ? (
-                                        <span className="block truncate text-[11px] text-slate-400 md:text-right">
+                                        <span className="block truncate text-[11px] text-slate-400 md:text-center">
                                             {headerDisplaySubtitle}
                                         </span>
                                     ) : null}

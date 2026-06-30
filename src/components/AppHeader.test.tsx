@@ -104,7 +104,7 @@ describe('AppHeader tag filters', () => {
     expect(onOpenProfile).toHaveBeenCalledTimes(1);
   });
 
-  it('shows profile name with email subtitle when name and avatar are set', () => {
+  it('shows only profile name when name and avatar are set', () => {
     render(
       <AppHeader
         user={createUser('user@example.com')}
@@ -123,7 +123,7 @@ describe('AppHeader tag filters', () => {
     );
 
     expect(screen.getByText('Alice')).toBeInTheDocument();
-    expect(screen.getByText('user@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('user@example.com')).not.toBeInTheDocument();
   });
 
   it('falls back to email when profile name or avatar is missing', () => {
