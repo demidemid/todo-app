@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
@@ -7,7 +6,9 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
+import { useShallow } from 'zustand/react/shallow';
 import { auth } from '../firebase';
+import { LoginStoreProvider, useLoginStore } from '../stores/useLoginStore';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 
@@ -45,19 +46,44 @@ const getErrorMessage = (error: unknown) => {
   return 'Unexpected auth error';
 };
 
-export const Login = ({ user }: LoginProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
-  const [loading, setLoading] = useState(false);
+const LoginContent = ({ user }: LoginProps) => {
+  const {
+    email,
+    password,
+    isSignUp,
+    error,
+    info,
+    loading,
+    setEmail,
+    setPassword,
+    toggleSignUp,
+    setError,
+    setInfo,
+    startLoading,
+    stopLoading,
+    clearMessages,
+  } = useLoginStore(
+    useShallow((state) => ({
+      email: state.email,
+      password: state.password,
+      isSignUp: state.isSignUp,
+      error: state.error,
+      info: state.info,
+      loading: state.loading,
+      setEmail: state.setEmail,
+      setPassword: state.setPassword,
+      toggleSignUp: state.toggleSignUp,
+      setError: state.setError,
+      setInfo: state.setInfo,
+      startLoading: state.startLoading,
+      stopLoading: state.stopLoading,
+      clearMessages: state.clearMessages,
+    })),
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setInfo('');
-    setLoading(true);
+    startLoading();
 
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -70,14 +96,13 @@ export const Login = ({ user }: LoginProps) => {
     } catch (err: unknown) {
       setError(getErrorMessage(err));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   };
 
   const handleResetPassword = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    setError('');
-    setInfo('');
+    clearMessages();
 
     if (!normalizedEmail) {
       setError('Enter your email first, then click Forgot password.');
@@ -154,7 +179,7 @@ export const Login = ({ user }: LoginProps) => {
           {loading ? 'Please wait...' : isSignUp ? 'Create account' : 'Sign in'}
         </Button>
 
-        <Button variant="secondary" className="mt-3 w-full" onClick={() => setIsSignUp((prev) => !prev)}>
+        <Button variant="secondary" className="mt-3 w-full" onClick={toggleSignUp}>
           {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
         </Button>
 
@@ -171,3 +196,9 @@ export const Login = ({ user }: LoginProps) => {
     </div>
   );
 };
+
+export const Login = ({ user }: LoginProps) => (
+  <LoginStoreProvider>
+    <LoginContent user={user} />
+  </LoginStoreProvider>
+);

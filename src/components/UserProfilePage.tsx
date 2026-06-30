@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { User } from 'firebase/auth'
 import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
+import {
+  UserProfilePageStoreProvider,
+  useUserProfilePageStore,
+} from '../stores/useUserProfilePageStore'
 import {
   DEFAULT_USER_PROFILE_AVATAR_ID,
   USER_PROFILE_AVATARS,
@@ -27,40 +31,46 @@ const parseAvatarId = (value: unknown) => {
   return exists ? value : DEFAULT_USER_PROFILE_AVATAR_ID
 }
 
-export const UserProfilePage = ({ user, onBack }: UserProfilePageProps) => {
-  const [name, setName] = useState('')
-  const [avatarId, setAvatarId] = useState(DEFAULT_USER_PROFILE_AVATAR_ID)
-  const [loadingProfile, setLoadingProfile] = useState(true)
-  const [profileError, setProfileError] = useState('')
-  const [saveLoading, setSaveLoading] = useState(false)
-  const [saveError, setSaveError] = useState('')
-  const [saveSuccess, setSaveSuccess] = useState('')
+const UserProfilePageContent = ({ user, onBack }: UserProfilePageProps) => {
+  const name = useUserProfilePageStore((state) => state.name)
+  const avatarId = useUserProfilePageStore((state) => state.avatarId)
+  const loadingProfile = useUserProfilePageStore((state) => state.loadingProfile)
+  const profileError = useUserProfilePageStore((state) => state.profileError)
+  const saveLoading = useUserProfilePageStore((state) => state.saveLoading)
+  const saveError = useUserProfilePageStore((state) => state.saveError)
+  const saveSuccess = useUserProfilePageStore((state) => state.saveSuccess)
+  const setName = useUserProfilePageStore((state) => state.setName)
+  const setAvatarId = useUserProfilePageStore((state) => state.setAvatarId)
+  const completeProfileLoading = useUserProfilePageStore((state) => state.completeProfileLoading)
+  const failProfileLoading = useUserProfilePageStore((state) => state.failProfileLoading)
+  const startSaving = useUserProfilePageStore((state) => state.startSaving)
+  const completeSaving = useUserProfilePageStore((state) => state.completeSaving)
+  const failSaving = useUserProfilePageStore((state) => state.failSaving)
+  const resetState = useUserProfilePageStore((state) => state.resetState)
   const userDocRef = useMemo(() => doc(db, 'users', user.uid), [user.uid])
+
+  useEffect(() => {
+    resetState()
+  }, [resetState, user.uid])
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
       userDocRef,
       (snapshot) => {
         const data = snapshot.data() ?? {}
-        setName(parseName(data.name))
-        setAvatarId(parseAvatarId(data.avatarId))
-        setProfileError('')
-        setLoadingProfile(false)
+        completeProfileLoading(parseName(data.name), parseAvatarId(data.avatarId))
       },
       (error) => {
-        setProfileError(error.message || 'Failed to load user profile')
-        setLoadingProfile(false)
+        failProfileLoading(error.message || 'Failed to load user profile')
       },
     )
 
     return () => unsubscribe()
-  }, [userDocRef])
+  }, [completeProfileLoading, failProfileLoading, userDocRef])
 
   const handleSaveProfile = async (event: React.FormEvent) => {
     event.preventDefault()
-    setSaveLoading(true)
-    setSaveError('')
-    setSaveSuccess('')
+    startSaving()
 
     try {
       const normalizedEmail = normalizeEmail(user.email)
@@ -76,12 +86,9 @@ export const UserProfilePage = ({ user, onBack }: UserProfilePageProps) => {
         },
         { merge: true },
       )
-      setName(normalizedName)
-      setSaveSuccess('Profile saved')
+      completeSaving(normalizedName)
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Failed to save profile')
-    } finally {
-      setSaveLoading(false)
+      failSaving(error instanceof Error ? error.message : 'Failed to save profile')
     }
   }
 
@@ -163,3 +170,9 @@ export const UserProfilePage = ({ user, onBack }: UserProfilePageProps) => {
     </section>
   )
 }
+
+export const UserProfilePage = ({ user, onBack }: UserProfilePageProps) => (
+  <UserProfilePageStoreProvider>
+    <UserProfilePageContent user={user} onBack={onBack} />
+  </UserProfilePageStoreProvider>
+)
