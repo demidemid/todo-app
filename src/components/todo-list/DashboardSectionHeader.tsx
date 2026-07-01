@@ -3,9 +3,16 @@ import { Archive, Pencil, Share2, Trash2 } from 'lucide-react';
 import { EllipsisMenu } from '../ui/EllipsisMenu';
 import { IconButton } from '../ui/IconButton';
 
+export interface DashboardSharedViewer {
+  key: string;
+  label: string;
+  avatarUrl: string;
+}
+
 interface DashboardSectionHeaderProps {
   dashboardId: string;
   dashboardName: string;
+  sharedViewers?: DashboardSharedViewer[];
   dashboardsLength: number;
   canManageDashboard: boolean;
   isExpanded: boolean;
@@ -23,6 +30,7 @@ interface DashboardSectionHeaderProps {
 export const DashboardSectionHeader = ({
   dashboardId,
   dashboardName,
+  sharedViewers = [],
   dashboardsLength,
   canManageDashboard,
   isExpanded,
@@ -77,6 +85,22 @@ export const DashboardSectionHeader = ({
         </IconButton>
 
         <span className="truncate text-sm font-semibold text-slate-100">{dashboardName}</span>
+        {sharedViewers.length > 0 && (
+          <div className="ml-1 flex items-center -space-x-2" data-testid={`dashboard-shared-viewers-${dashboardId}`}>
+            {sharedViewers.map((viewer, index) => (
+              <img
+                key={viewer.key}
+                src={viewer.avatarUrl}
+                alt={viewer.label}
+                title={viewer.label}
+                aria-label={viewer.label}
+                data-testid={`dashboard-shared-avatar-${dashboardId}-${index}`}
+                className="size-5 rounded-full border border-slate-700 bg-slate-800 object-cover"
+                loading="lazy"
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {canManageDashboard && (

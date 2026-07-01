@@ -162,8 +162,9 @@ export const DashboardTodoCardContent = ({
   }
 
   return (
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex gap-1 flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold leading-tight text-slate-100">{todo.title}</p>
           {tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5" data-testid={`card-tags-${todo.id}`}>
@@ -252,7 +253,7 @@ export const DashboardTodoCardContent = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(event) => event.stopPropagation()}
-                        className="truncate max-w-30 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
+                        className="truncate max-w-60 underline decoration-cyan-300/50 underline-offset-2 hover:text-cyan-100"
                         title={safeUrl}
                       >
                         {link.name ? link.name : safeUrl}
@@ -271,6 +272,7 @@ export const DashboardTodoCardContent = ({
           }}
           menu={{ testId: 'card-menu' }}
           stopPropagation
+          classNames={{ root: 'shrink' }}
           items={[
             {
               id: 'archive',
@@ -280,34 +282,35 @@ export const DashboardTodoCardContent = ({
               testId: 'card-menu-archive',
             },
             {
-             id: 'clone',
-             label: 'Clone',
-             icon: <Copy size={14} aria-hidden="true" />,
-             onSelect: () => onMenuClone(todo.id),
-             testId: 'card-menu-clone',
-           },
-           {
-             id: 'delete',
-             label: 'Delete',
-             icon: <Trash2 size={14} aria-hidden="true" />,
-             onSelect: () => onMenuDelete(todo.id),
-             testId: 'card-menu-delete',
-             variant: 'danger' as const,
-           },
+              id: 'clone',
+              label: 'Clone',
+              icon: <Copy size={14} aria-hidden="true" />,
+              onSelect: () => onMenuClone(todo.id),
+              testId: 'card-menu-clone',
+            },
+            {
+              id: 'delete',
+              label: 'Delete',
+              icon: <Trash2 size={14} aria-hidden="true" />,
+              onSelect: () => onMenuDelete(todo.id),
+              testId: 'card-menu-delete',
+              variant: 'danger' as const,
+            },
           ]}
         />
-        <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
-          <span className="inline-flex items-center gap-1">
-            <MessageCircle size={12} className="text-white" aria-hidden="true" />
-            <span>{todo.comments?.length ?? 0}</span>
-          </span>
-          <TodoCardDueDateBadge
-            dueLabel={dueLabel}
-            dueState={dueState}
-            testId={`card-due-badge-${todo.id}`}
-            title={dueDateHint}
-          />
-        </div>
       </div>
+      <div className="pointer-events-none absolute bottom-3 left-3 right-3 inline-flex pr-1 items-center justify-between gap-2 text-[11px] font-medium text-white">
+        <span className="inline-flex items-center gap-1">
+          <MessageCircle size={12} className="text-white" aria-hidden="true" />
+          <span>{todo.comments?.length ?? 0}</span>
+        </span>
+        <TodoCardDueDateBadge
+          dueLabel={dueLabel}
+          dueState={dueState}
+          testId={`card-due-badge-${todo.id}`}
+          title={dueDateHint}
+        />
+      </div>
+    </div>
   );
 };

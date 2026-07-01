@@ -6,7 +6,7 @@ import { normalizeTodoChecklists } from '../../utils/todoChecklist';
 import { formatDueDateBadgeLabel, getDueDateState } from '../../utils/dueDate';
 import { useHotkeyHandler } from '../../hooks/useHotkey';
 import { DashboardColumn as DashboardColumnSection } from './DashboardColumn';
-import { DashboardSectionHeader } from './DashboardSectionHeader';
+import { DashboardSectionHeader, type DashboardSharedViewer } from './DashboardSectionHeader';
 import { DashboardTodoCardContent } from './DashboardTodoCardContent';
 import { DashboardTouchDragPreview } from './DashboardTouchDragPreview';
 import { buildCardDropHandlers } from './dashboardCardDnd';
@@ -59,6 +59,7 @@ interface DashboardSectionActions {
 interface DashboardSectionProps {
   sectionRef?: (element: HTMLElement | null) => void;
   dashboard: Dashboard;
+  sharedViewers?: DashboardSharedViewer[];
   isExpanded: boolean;
   isDragging?: boolean;
   isDropTarget?: boolean;
@@ -102,6 +103,7 @@ interface DashboardSectionProps {
 export const DashboardSection = ({
   sectionRef,
   dashboard,
+  sharedViewers = [],
   isExpanded,
   isDragging = false,
   isDropTarget = false,
@@ -289,6 +291,7 @@ export const DashboardSection = ({
       <DashboardSectionHeader
         dashboardId={dashboard.id}
         dashboardName={dashboard.name}
+        sharedViewers={sharedViewers}
         dashboardsLength={dashboardsLength}
         canManageDashboard={canManageDashboard}
         isExpanded={isExpanded}
@@ -305,7 +308,7 @@ export const DashboardSection = ({
 
       {isExpanded && (
         <div className="border-t border-white/10 p-4">
-          <div ref={scrollContainerRef} className="overflow-x-auto pb-2">
+          <div ref={scrollContainerRef} className="overflow-x-auto pb-10">
             <div
               className="grid min-w-full gap-4"
               style={{ gridTemplateColumns: `repeat(${Math.max(columns.length, 1)}, minmax(16rem, 1fr))` }}

@@ -41,11 +41,19 @@ interface EllipsisMenuContentProps {
   menuContent: (helpers: { closeMenu: () => void }) => ReactNode;
 }
 
+export interface EllipsisMenuClassNames {
+  root?: string;
+  trigger?: string;
+  menu?: string;
+  item?: string;
+}
+
 type EllipsisMenuProps = {
   trigger: EllipsisMenuTrigger;
   menu?: EllipsisMenuConfig;
   onOpenChange?: (open: boolean) => void;
   stopPropagation?: boolean;
+  classNames?: EllipsisMenuClassNames;
 } & (EllipsisMenuItemsProps | EllipsisMenuContentProps);
 
 export const EllipsisMenu = ({
@@ -55,6 +63,7 @@ export const EllipsisMenu = ({
   menuContent,
   onOpenChange,
   stopPropagation = false,
+  classNames,
 }: EllipsisMenuProps) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -112,7 +121,7 @@ export const EllipsisMenu = ({
       <button
         key={item.id}
         type="button"
-        className={className}
+        className={[className, classNames?.item].filter(Boolean).join(' ')}
         disabled={item.disabled}
         data-testid={item.testId}
         role="menuitem"
@@ -142,7 +151,7 @@ export const EllipsisMenu = ({
   return (
     <div
       ref={rootRef}
-      className="relative flex items-center"
+      className={['relative flex items-center', classNames?.root].filter(Boolean).join(' ')}
       onMouseDown={onContainerMouseDown}
       onClick={onContainerClick}
     >
@@ -158,6 +167,7 @@ export const EllipsisMenu = ({
           triggerVariantClassName,
           open ? triggerOpenClassName : null,
           normalizedTrigger.className,
+          classNames?.trigger,
         ]
           .filter(Boolean)
           .join(' ')}
@@ -179,7 +189,10 @@ export const EllipsisMenu = ({
 
       {open && (
         <div
-          className={`absolute ${menuAlignClassName} ${menuOffsetClassName} z-50 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl ${normalizedMenu.className}`.trim()}
+          className={[
+            `absolute ${menuAlignClassName} ${menuOffsetClassName} z-50 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 py-2 shadow-xl ${normalizedMenu.className}`.trim(),
+            classNames?.menu,
+          ].filter(Boolean).join(' ')}
           data-testid={normalizedMenu.testId}
           role="menu"
           aria-label={normalizedMenu.ariaLabel ?? normalizedTrigger.label}
