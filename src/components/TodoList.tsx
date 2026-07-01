@@ -233,8 +233,8 @@ const TodoListContent = ({
           }
           : usersById.get(sharedUserId);
         const email = normalizeEmail(matchedUser?.email);
-        const label = buildViewerLabel(matchedUser?.name, matchedUser?.email, sharedUserId);
-
+        const labelFallback = sharedUserId === userId ? 'You' : 'Shared user';
+        const label = buildViewerLabel(matchedUser?.name, matchedUser?.email, labelFallback);
         if (seenUserIds.has(sharedUserId)) {
           return;
         }
