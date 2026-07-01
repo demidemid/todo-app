@@ -13,11 +13,13 @@ import { useSyncDashboardQueryParam, useTodoListUrlState } from './todo-list/use
 import { CreateCardModal, CreateDashboardModal, EditDashboardModal, ShareDashboardModal } from './todo-list/TodoListModals';
 import { useTodoListBoardData } from './todo-list/useTodoListBoardData';
 import { useTodoListController } from './todo-list/useTodoListController';
+import type { DashboardSharedViewer } from './todo-list/DashboardSectionHeader';
 import { IconButton } from './ui/IconButton';
 import { useTodos } from '../hooks/useTodos.ts';
 import { useDueDateReminders } from '../hooks/useDueDateReminders';
 import { TodoListStoresProvider } from '../stores/TodoListStoresProvider';
 import { useTodoListUiStoreScoped } from '../stores/todoListStoresContext';
+import { getAvatarImageUrl } from '../utils/userProfileAvatars';
 
 const TodoModal = lazy(async () => {
   const module = await import('./TodoModal');
@@ -101,6 +103,22 @@ const normalizeTags = (tags: string[] | undefined): string[] => {
     .filter((tag) => tag.length > 0);
 
   return Array.from(new Set(normalizedTags));
+};
+
+const normalizeEmail = (value: string | undefined): string => value?.trim().toLowerCase() ?? '';
+const buildViewerLabel = (
+  name: string | undefined,
+  email: string | undefined,
+  fallback: string,
+): string => {
+  const normalizedName = name?.trim() ?? '';
+  const normalizedEmail = normalizeEmail(email);
+
+  if (normalizedName && normalizedEmail) {
+    return `${normalizedName} (${normalizedEmail})`;
+  }
+
+  return normalizedName || normalizedEmail || fallback;
 };
 
 const TodoListContent = ({
@@ -187,6 +205,97 @@ const TodoListContent = ({
 
   useDueDateReminders({ todos, updateTodo });
   const { users, loading: usersLoading, error: usersError } = useUsers(userId);
+  const normalizedCurrentUserEmail = normalizeEmail(userEmail);
+  const normalizedCurrentUserName = userName?.trim() ?? '';
+  const usersById = useMemo(
+    () => new Map(users.map((user) => [user.id, user])),
+    [users],
+  );
+  const usersByEmail = useMemo(
+    () => new Map(users.map((user) => [normalizeEmail(user.email), user])),
+    [users],
+  );
+  const dashboardSharedViewersByDashboardId = useMemo(() => {
+    const byDashboardId = new Map<string, DashboardSharedViewer[]>();
+
+    dashboards.forEach((dashboard) => {
+      const viewers: DashboardSharedViewer[] = [];
+      const seenUserIds = new Set<string>();
+      const seenEmails = new Set<string>();
+
+      (dashboard.sharedWith ?? []).forEach((sharedUserId) => {
+        const matchedUser = sharedUserId === userId
+          ? {
+            id: userId,
+            email: normalizedCurrentUserEmail,
+            name: normalizedCurrentUserName,
+            avatarId: userAvatarId ?? undefined,
+          }
+          : usersById.get(sharedUserId);
+        const email = normalizeEmail(matchedUser?.email);
+        const label = buildViewerLabel(matchedUser?.name, matchedUser?.email, sharedUserId);
+
+        if (seenUserIds.has(sharedUserId)) {
+          return;
+        }
+
+        viewers.push({
+          key: `id:${sharedUserId}`,
+          label,
+          avatarUrl: getAvatarImageUrl(matchedUser?.avatarId),
+        });
+        seenUserIds.add(sharedUserId);
+        if (email) {
+          seenEmails.add(email);
+        }
+      });
+
+      (dashboard.sharedWithEmails ?? []).forEach((sharedEmailRaw) => {
+        const sharedEmail = normalizeEmail(sharedEmailRaw);
+        if (!sharedEmail || seenEmails.has(sharedEmail)) {
+          return;
+        }
+
+        const matchedUser = sharedEmail === normalizedCurrentUserEmail
+          ? {
+            id: userId,
+            email: normalizedCurrentUserEmail,
+            name: normalizedCurrentUserName,
+            avatarId: userAvatarId ?? undefined,
+          }
+          : usersByEmail.get(sharedEmail);
+        const label = buildViewerLabel(matchedUser?.name, matchedUser?.email, sharedEmail);
+        const sharedUserId = matchedUser?.id;
+
+        if (sharedUserId && seenUserIds.has(sharedUserId)) {
+          seenEmails.add(sharedEmail);
+          return;
+        }
+
+        viewers.push({
+          key: `email:${sharedEmail}`,
+          label,
+          avatarUrl: getAvatarImageUrl(matchedUser?.avatarId),
+        });
+        if (sharedUserId) {
+          seenUserIds.add(sharedUserId);
+        }
+        seenEmails.add(sharedEmail);
+      });
+
+      byDashboardId.set(dashboard.id, viewers);
+    });
+
+    return byDashboardId;
+  }, [
+    dashboards,
+    normalizedCurrentUserEmail,
+    normalizedCurrentUserName,
+    userAvatarId,
+    userId,
+    usersByEmail,
+    usersById,
+  ]);
   const dashboardsById = useMemo(
     () => new Map(dashboards.map((dashboard) => [dashboard.id, dashboard])),
     [dashboards]
@@ -360,6 +469,7 @@ const TodoListContent = ({
               key={dashboard.id}
               sectionRef={sectionRef}
               dashboard={dashboard}
+              sharedViewers={dashboardSharedViewersByDashboardId.get(dashboard.id) ?? []}
               isExpanded={isExpanded}
               isDragging={isDragging}
               isDropTarget={isDropTarget}

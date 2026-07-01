@@ -100,6 +100,24 @@ describe('DashboardSection', () => {
     expect(props.onDeleteDashboard).toHaveBeenCalledWith('board-1', 'Board 1');
   });
 
+  it('renders shared viewers avatars with name/email tooltip next to dashboard title', () => {
+    const props = createProps();
+    props.sharedViewers = [
+      { key: 'id:user-2', label: 'Alice', avatarUrl: '/avatars/fox.svg' },
+      { key: 'email:bob@example.com', label: 'bob@example.com', avatarUrl: '/avatars/blank-user.svg' },
+    ];
+
+    render(<DashboardSection {...props} />);
+
+    const firstAvatar = screen.getByTestId('dashboard-shared-avatar-board-1-0');
+    const secondAvatar = screen.getByTestId('dashboard-shared-avatar-board-1-1');
+
+    expect(firstAvatar).toHaveAttribute('src', '/avatars/fox.svg');
+    expect(firstAvatar).toHaveAttribute('title', 'Alice');
+    expect(secondAvatar).toHaveAttribute('src', '/avatars/blank-user.svg');
+    expect(secondAvatar).toHaveAttribute('title', 'bob@example.com');
+  });
+
   it('handles dashboard drag start and drag end callbacks', () => {
     const props = createProps();
     render(<DashboardSection {...props} />);

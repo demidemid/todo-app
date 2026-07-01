@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Map, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { Todo } from '../../types/todo';
 import { normalizeTodoChecklist, parseChecklistItemTitles } from '../../utils/todoChecklist';
@@ -49,7 +49,12 @@ export const TodoChecklistSection = ({
   const hasHandledAutoFocusOnMountRef = useRef(false);
   const pendingFocusTimeoutRef = useRef<number | null>(null);
 
-  const scheduleChecklistItemEdit = (itemId: string, initialTitle: string) => {
+  const startChecklistItemEdit = useCallback((itemId: string, initialTitle: string) => {
+    setEditingChecklistItemId(itemId);
+    setChecklistItemTitleDraft(initialTitle);
+  }, []);
+
+  const scheduleChecklistItemEdit = useCallback((itemId: string, initialTitle: string) => {
     if (pendingFocusTimeoutRef.current !== null) {
       window.clearTimeout(pendingFocusTimeoutRef.current);
     }
@@ -58,7 +63,7 @@ export const TodoChecklistSection = ({
       startChecklistItemEdit(itemId, initialTitle);
       pendingFocusTimeoutRef.current = null;
     }, 0);
-  };
+  }, [startChecklistItemEdit]);
 
   const saveChecklistTitle = async () => {
     if (!onChecklistTitleChange || !checklist) {
@@ -68,11 +73,6 @@ export const TodoChecklistSection = ({
 
     await onChecklistTitleChange(checklistTitleDraft);
     setIsEditingChecklistTitle(false);
-  };
-
-  const startChecklistItemEdit = (itemId: string, initialTitle: string) => {
-    setEditingChecklistItemId(itemId);
-    setChecklistItemTitleDraft(initialTitle);
   };
 
   const cancelChecklistItemEdit = () => {
@@ -217,7 +217,16 @@ export const TodoChecklistSection = ({
 
     previousChecklistItemIdsRef.current = currentItemIds;
     hadChecklistRef.current = Boolean(checklist);
-  }, [autoFocusOnMount, checklist, checklistItems, editingChecklistItemId, focusNewChecklistItem, onAutoFocusHandled]);
+  }, [
+    autoFocusOnMount,
+    checklist,
+    checklistItems,
+    editingChecklistItemId,
+    focusNewChecklistItem,
+    onAutoFocusHandled,
+    scheduleChecklistItemEdit,
+    startChecklistItemEdit,
+  ]);
 
   useEffect(() => () => {
     if (pendingFocusTimeoutRef.current !== null) {

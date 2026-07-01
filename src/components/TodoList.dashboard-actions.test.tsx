@@ -356,4 +356,30 @@ describe('TodoList dashboard actions', () => {
 
     expect(mockReorderDashboards).not.toHaveBeenCalled();
   });
+
+  it('shows current user name and avatar on shared dashboard viewer chip', () => {
+    setDashboardsState([
+      createDashboard({ id: 'board-1', userId: 'user-1', order: 0 }),
+      createDashboard({
+        id: 'board-2',
+        userId: 'user-2',
+        name: 'Shared dashboard',
+        order: 1,
+        sharedWith: ['user-1'],
+        sharedWithEmails: ['me@example.com'],
+        createdAt: new Date('2026-01-02T00:00:00Z'),
+        updatedAt: new Date('2026-01-02T00:00:00Z'),
+      }),
+    ]);
+
+    renderTodoList(['/?dashboard=board-1'], {
+      userEmail: 'me@example.com',
+      userName: 'Me',
+      userAvatarId: 'fox',
+    });
+
+    const sharedAvatar = screen.getByTestId('dashboard-shared-avatar-board-2-0');
+    expect(sharedAvatar).toHaveAttribute('src', '/avatars/fox.svg');
+    expect(sharedAvatar).toHaveAttribute('title', 'Me (me@example.com)');
+  });
 });
